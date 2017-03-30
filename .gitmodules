@@ -1,0 +1,3 @@
+[submodule "smoothie-nuttx"]
+	path = smoothie-nuttx
+	url = https://github.com/Smoothieware/smoothie-nuttx
