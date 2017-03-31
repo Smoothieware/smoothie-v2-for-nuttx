@@ -4,7 +4,7 @@ require 'fileutils'
 
 verbose(ENV['verbose'] == '1')
 
-PROG = 'pintest'
+PROG = ENV['prog'].nil? ? 'pintest' :  ENV['prog']
 TARGET = "Bambino"
 
 DEBUG = ENV['debug'] == '1'
