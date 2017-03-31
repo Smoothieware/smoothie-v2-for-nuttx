@@ -1,0 +1,7 @@
+arm-none-eabi-g++ -c -nostdinc++  -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -I./nuttx-export -isystem ./nuttx-export/include -isystem ./nuttx-export/include/cxx -isystem ./nuttx-export/include/libcxx -isystem ./nuttx-export/arch/chip -pipe -std=c++11 -DCLOCK_MONOTONIC -D__NuttX__  -fno-builtin -fno-exceptions -fcheck-new -fno-rtti -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS -I./nuttx-export/include  Pin.cpp
+
+arm-none-eabi-g++ -c -nostdinc++  -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -I./nuttx-export -isystem ./nuttx-export/include -isystem ./nuttx-export/include/cxx -isystem ./nuttx-export/include/libcxx -isystem ./nuttx-export/arch/chip -pipe -std=c++11 -DCLOCK_MONOTONIC -D__NuttX__  -fno-builtin -fno-exceptions -fcheck-new -fno-rtti -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS -I./nuttx-export/include  pin_test.cpp
+
+arm-none-eabi-ld --entry=__start -nostartfiles -nodefaultlibs -T./nuttx-export/build/spificonfig.ld -L./nuttx-export/libs Pin.o pin_test.o -o nuttx.elf --start-group -lnuttx "/usr/lib/gcc/arm-none-eabi/6.3.1/thumb/v7e-m/libgcc.a" --end-group
+
+arm-none-eabi-objcopy -S -O binary nuttx.elf nuttx.bin

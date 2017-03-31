@@ -1,0 +1,2 @@
+ARCHCFLAGS   = -fno-builtin -mcpu=cortex-m4 -mthumb -mfloat-abi=soft
+ARCHCXXFLAGS =  -mcpu=cortex-m4 -mthumb -mfloat-abi=soft
