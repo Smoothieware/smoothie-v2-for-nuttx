@@ -74,9 +74,14 @@
 #include "Pin.h"
 #include <array>
 
+float test_floats(float a, float b)
+{
+	return a * b;
+}
+
 extern "C"
 {
-    int main(int argc, char *argv[])
+    int smoothie_main(int argc, char *argv[])
     {
         // If C++ initialization for static constructors is supported, then do
         // that first
@@ -85,6 +90,9 @@ extern "C"
         up_cxxinitialize();
 #endif
 
+//		float x= test_floats(10.0F, 20.0F);
+//		printf("float = %f\n", x);
+		
         int cnt = 0;
         printf("defining pins...\n");
         Pin myleds[]= {

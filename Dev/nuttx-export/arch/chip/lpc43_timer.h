@@ -1,7 +1,7 @@
 /****************************************************************************
  * arch/arm/src/sam34/lpc43_tc.h
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Alan Carvalho de Assis <acassis@gmail.com>
  *
@@ -42,6 +42,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/timers/timer.h>
 
 #include "chip.h"
 #include "chip/lpc43_timer.h"
@@ -51,7 +52,25 @@
 
 /****************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
+/* Helpers **************************************************************************/
+
+#define LPC43_TMR_SETMODE(d,mode)       ((d)->ops->setmode(d,mode))
+#define LPC43_TMR_SETCLOCK(d,freq)      ((d)->ops->setclock(d,freq))
+#define LPC43_TMR_SETPERIOD(d,period)   ((d)->ops->settimeout(d,period))
+#define LPC43_TMR_GETCOUNTER(d)         ((d)->ops->getcounter(d))
+#define LPC43_TMR_SETCHANNEL(d,ch,mode) ((d)->ops->setchannel(d,ch,mode))
+#define LPC43_TMR_SETCOMPARE(d,ch,comp) ((d)->ops->setcompare(d,ch,comp))
+#define LPC43_TMR_GETCAPTURE(d,ch)      ((d)->ops->getcapture(d,ch))
+#define LPC43_TMR_SETISR(d,hnd,s)       ((d)->ops->setisr(d,hnd,s))
+#define LPC43_TMR_ENABLEINT(d,s)        ((d)->ops->enableint(d,s))
+#define LPC43_TMR_DISABLEINT(d,s)       ((d)->ops->disableint(d,s))
+#define LPC43_TMR_ACKINT(d,s)           ((d)->ops->ackint(d,s))
+#define LPC43_TMR_CHECKINT(d,s)         ((d)->ops->checkint(d,s))
+
+/************************************************************************************
+ * Public Types
+ ************************************************************************************/
 
 #ifndef __ASSEMBLY__
 
@@ -64,9 +83,19 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/****************************************************************************
+struct lpc43_lowerhalf_s;
+
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
+
+/* Power-up timer and get its structure */
+
+FAR struct lpc43_lowerhalf_s *lpc43_tmr_init(int timer);
+
+/* Power-down timer, mark it as unused */
+
+int lpc43_tmr_deinit(FAR struct lpc43_lowerhalf_s * dev);
 
 /****************************************************************************
  * Name: lpc43_tmrinitialize

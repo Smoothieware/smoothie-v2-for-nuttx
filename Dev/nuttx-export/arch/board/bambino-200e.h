@@ -79,6 +79,12 @@
 
 #define BAMBINO_BUT1 (GPIO_INTBOTH | GPIO_FLOAT | GPIO_PORT0 | GPIO_PIN7)
 
+/* Used by High Priority Test */
+
+#define GPIO_TEST      (GPIO_MODE_OUTPUT | GPIO_VALUE_ONE | GPIO_PORT1 | GPIO_PIN10)
+
+#define PINCONFIG_TEST PINCONF_GPIO1p10
+
 /* Button IRQ numbers */
 
 #define BAMBINO_BUT1_IRQ  LPC43_IRQ_P0p23
