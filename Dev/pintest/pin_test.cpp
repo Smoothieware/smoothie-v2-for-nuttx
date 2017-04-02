@@ -90,8 +90,11 @@ extern "C"
         up_cxxinitialize();
 #endif
 
-//		float x= test_floats(10.0F, 20.0F);
-//		printf("float = %f\n", x);
+		float a= 10.123F;
+		float b= 20.456F;
+		float x= test_floats(a, b);
+		printf("float = %f\n", x); // NOTE thisis broken in NUTTX
+		printf("float = %10.8f\n", x); // this works
 		
         int cnt = 0;
         printf("defining pins...\n");
