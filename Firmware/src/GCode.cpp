@@ -22,7 +22,7 @@ void GCode::clear()
 void GCode::dump() const
 {
 	OutputStream o;
-	o.printf("%c%u", is_g?"G":is_m?"M":"", code);
+	o.printf("%s%u", is_g?"G":is_m?"M":"", code);
 	if(subcode != 0) {
 		o.printf(".%u",  subcode);
 	}

@@ -59,6 +59,7 @@ end
 # Install the handler
 Rake.application.add_loader('d', DfileLoader.new)
 
+ARMVERSION = ENV['ARMVERSION'].nil? ? '6.3.1' :  ENV['ARMVERSION']
 #TOOLSDIR = '/home/morris/work/reprap/Smoothie/gcc-arm-none-eabi/bin'
 TOOLSDIR = ENV['ARMTOOLS'].nil? ? '/usr/bin' :  ENV['ARMTOOLS']
 TOOLSBIN = "#{TOOLSDIR}/arm-none-eabi-"
@@ -116,7 +117,7 @@ CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fcheck-new -fno-
 LSCRIPT = "./nuttx-export/build/spificonfig.ld"
 
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
-   "--start-group", "-lnuttx", "/usr/lib/gcc/arm-none-eabi/6.3.1/thumb/v7e-m/fpv4-sp/hard/libgcc.a", "--end-group"]
+   "--start-group", "-lnuttx", "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a", "--end-group"]
 
 LDFLAGS = " -T#{LSCRIPT} " + LOPTIONS.join(" ")
 

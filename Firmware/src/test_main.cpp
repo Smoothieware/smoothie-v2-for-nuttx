@@ -5,9 +5,9 @@
 
 #include <stdio.h>
 
-#include <nuttx/config.h>
-#include <nuttx/init.h>
-#include <nuttx/arch.h>
+// #include <nuttx/config.h>
+// #include <nuttx/init.h>
+// #include <nuttx/arch.h>
 
 // Configuration ************************************************************
 // C++ initialization requires CXX initializer support
@@ -57,7 +57,7 @@ extern "C"
 
             if(!THEDISPATCHER.dispatch(gcodes[0])) printf("dispatch 0 failed\n");
             if(!THEDISPATCHER.dispatch(gcodes[1])) printf("dispatch 1 failed\n");
-            if(!THEDISPATCHER.dispatch(gcodes[2])) printf("dispatch 2 failed\n");
+            if(THEDISPATCHER.dispatch(gcodes[2])) printf("dispatch 2 didn't fail\n");
 
             if(!cb1) printf("callback 1 failed\n");
             if(!cb2) printf("callback 2 failed\n");
@@ -66,4 +66,9 @@ extern "C"
 
       return 0;
     }
+}
+
+int main()
+{
+	smoothie_main(0, 0);
 }
