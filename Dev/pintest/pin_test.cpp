@@ -79,6 +79,16 @@ float test_floats(float a, float b)
 	return a * b;
 }
 
+#include <sstream>
+void test_sstream()
+{
+	std::ostringstream oss;
+	oss << "Hello\n";
+	std::string result= oss.str();
+	printf("test sstream: %s", result.c_str());
+}
+
+
 extern "C"
 {
     int smoothie_main(int argc, char *argv[])
