@@ -13,7 +13,7 @@ public:
 	using GCodes_t = std::vector<GCode>;
 
 	bool parse(const char *line, GCodes_t& gcodes);
-	int getLineNumber() const { return line_no; }
+	int get_line_number() const { return line_no; }
 
 private:
 	// modal settings

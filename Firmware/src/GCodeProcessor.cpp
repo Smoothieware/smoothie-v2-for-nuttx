@@ -14,7 +14,7 @@
 
 using namespace std;
 
-static tuple<uint16_t, uint16_t, float> parseCode(const char *&p)
+static tuple<uint16_t, uint16_t, float> parse_code(const char *&p)
 {
 	int a= 0, b= 0;
 	float f= strtof(p, nullptr);
@@ -116,24 +116,24 @@ bool GCodeProcessor::parse(const char *line, GCodes_t& gcodes)
 		}
 
 		// extract gcode word G01{.123}
-		tuple<uint16_t, uint16_t, float> code= parseCode(p);
+		tuple<uint16_t, uint16_t, float> code= parse_code(p);
 		if(start) {
 			if(c == 'G' || c == 'M'){
-				gc.setCommand(c, get<0>(code), get<1>(code));
+				gc.set_command(c, get<0>(code), get<1>(code));
 				if(c == 'G' && get<0>(code) <= 3) {
 					group1.clear();
-					group1.setCommand(c, get<0>(code), get<1>(code));
+					group1.set_command(c, get<0>(code), get<1>(code));
 				}
 
 			}else{
-				gc.setCommand('G', group1.getCode(), group1.getSubcode()); // modal group1, copies G code and subcode for this line
-				gc.addArg(c, get<2>(code));
+				gc.set_command('G', group1.get_code(), group1.get_subcode()); // modal group1, copies G code and subcode for this line
+				gc.add_arg(c, get<2>(code));
 			}
 
 			start= false;
 
 		}else{
-			gc.addArg(c, get<2>(code));
+			gc.add_arg(c, get<2>(code));
 		}
 	}
 	gcodes.push_back(gc);

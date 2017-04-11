@@ -18,25 +18,25 @@ using namespace std;
 // it can also be called concurrently from different threads, so no changing class context, that is why it is const
 bool Dispatcher::dispatch(GCode& gc) const
 {
-	if(gc.hasM() && gc.getCode() == 503) {
+	if(gc.has_m() && gc.get_code() == 503) {
 		// alias M503 to M500.3
-		gc.setCommand('M', 500, 3);
+		gc.set_command('M', 500, 3);
 	}
 
-	auto& handler= gc.hasG() ? gcode_handlers : mcode_handlers;
-	const auto& f= handler.equal_range(gc.getCode());
+	auto& handler= gc.has_g() ? gcode_handlers : mcode_handlers;
+	const auto& f= handler.equal_range(gc.get_code());
 	bool ret= false;
 
 	for (auto it=f.first; it!=f.second; ++it) {
 		if(it->second(gc)) {
 			ret= true;
 		}else{
-			DEBUG_WARNING("handler did not handle %c%d\n", gc.hasG() ? 'G':'M', gc.getCode());
+			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G':'M', gc.get_code());
 		}
 	}
 
 	// special case is M500 - M503
-	if(gc.hasM() && gc.getCode() >= 500 && gc.getCode() <= 503) {
+	if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
 		ret= handleConfigurationCommands(gc);
 	}
 
@@ -78,15 +78,15 @@ bool Dispatcher::dispatch(char cmd, uint16_t code, ...) const
     va_start(args, code);
     char c= va_arg(args, int); // get first arg
     if(c > 0 && c < 'A') { // infer subcommand
-		gc.setCommand(cmd, code, (uint16_t)c);
+		gc.set_command(cmd, code, (uint16_t)c);
 		c= va_arg(args, int); // get next arg
 	}else{
-		gc.setCommand(cmd, code);
+		gc.set_command(cmd, code);
 	}
 
     while(c != 0) {
     	float v= (float)va_arg(args, double);
-    	gc.addArg(c, v);
+    	gc.add_arg(c, v);
     	c= va_arg(args, int); // get next arg
     }
 
@@ -121,7 +121,7 @@ void Dispatcher::clearHandlers()
 
 bool Dispatcher::handleConfigurationCommands(GCode& gc) const
 {
-	// if(gc.getCode() == 500) {
+	// if(gc.get_code() == 500) {
 	// 	if(gc.getSubcode() == 3) {
 	// 		if(loaded_configuration)
 	// 			gc.getOS().printf("// Saved configuration is active\n");
@@ -132,10 +132,10 @@ bool Dispatcher::handleConfigurationCommands(GCode& gc) const
 	// 		return writeConfiguration(gc.getOS());
 	// 	}
 
-	// }else if(gc.getCode() == 501) {
+	// }else if(gc.get_code() == 501) {
 	// 	return loadConfiguration(gc.getOS());
 
-	// }else if(gc.getCode() == 502) {
+	// }else if(gc.get_code() == 502) {
 	// 	// delete the saved configuration
 	// 	uint32_t zero= 0xFFFFFFFFUL;
 	// 	if(THEKERNEL.nonVolatileWrite(&zero, 4, 0) == 4) {
@@ -206,7 +206,7 @@ bool Dispatcher::loadConfiguration(OutputStream& output_stream) const
 	// 			gp.parse(line.c_str(), gcodes);
 	// 			// dispatch it
 	// 			for(auto& i : gcodes) {
-	// 				if(i.getCode() >= 500 && i.getCode() <= 503) continue; // avoid recursion death
+	// 				if(i.get_code() >= 500 && i.get_code() <= 503) continue; // avoid recursion death
 	// 				dispatch(i);
 	// 			}
 	// 		}
