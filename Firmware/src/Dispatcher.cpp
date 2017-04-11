@@ -37,7 +37,7 @@ bool Dispatcher::dispatch(GCode& gc) const
 
 	// special case is M500 - M503
 	if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
-		ret= handleConfigurationCommands(gc);
+		ret= handle_configuration_commands(gc);
 	}
 
 	if(ret) {
@@ -94,7 +94,7 @@ bool Dispatcher::dispatch(char cmd, uint16_t code, ...) const
     return dispatch(gc);
 }
 
-Dispatcher::Handlers_t::iterator Dispatcher::addHandler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc)
+Dispatcher::Handlers_t::iterator Dispatcher::add_handler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc)
 {
 	Handlers_t::iterator ret;
 	switch(gcode) {
@@ -104,7 +104,7 @@ Dispatcher::Handlers_t::iterator Dispatcher::addHandler(HANDLER_NAME gcode, uint
 	return ret;
 }
 
-void Dispatcher::removeHandler(HANDLER_NAME gcode, Handlers_t::iterator i)
+void Dispatcher::remove_handler(HANDLER_NAME gcode, Handlers_t::iterator i)
 {
 	switch(gcode) {
 		case GCODE_HANDLER: gcode_handlers.erase(i); break;
@@ -113,13 +113,13 @@ void Dispatcher::removeHandler(HANDLER_NAME gcode, Handlers_t::iterator i)
 }
 
 // mainly used for testing
-void Dispatcher::clearHandlers()
+void Dispatcher::clear_handlers()
 {
 	gcode_handlers.clear();
 	mcode_handlers.clear();
 }
 
-bool Dispatcher::handleConfigurationCommands(GCode& gc) const
+bool Dispatcher::handle_configuration_commands(GCode& gc) const
 {
 	// if(gc.get_code() == 500) {
 	// 	if(gc.getSubcode() == 3) {
@@ -149,7 +149,7 @@ bool Dispatcher::handleConfigurationCommands(GCode& gc) const
 	return false;
 }
 
-bool Dispatcher::writeConfiguration(OutputStream& output_stream) const
+bool Dispatcher::write_configuration(OutputStream& output_stream) const
 {
 	// write stream to non volatile memory
 	// prepend magic number so we know there is a valid configuration saved
@@ -167,13 +167,13 @@ bool Dispatcher::writeConfiguration(OutputStream& output_stream) const
 	return true;
 }
 
-bool Dispatcher::loadConfiguration() const
+bool Dispatcher::load_configuration() const
 {
 	OutputStream os;
-	return loadConfiguration(os);
+	return load_configuration(os);
 }
 
-bool Dispatcher::loadConfiguration(OutputStream& output_stream) const
+bool Dispatcher::load_configuration(OutputStream& output_stream) const
 {
 	// load configuration from non volatile memory
 	// char buf[64];

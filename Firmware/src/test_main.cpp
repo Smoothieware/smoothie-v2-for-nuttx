@@ -45,10 +45,10 @@ extern "C"
 
         printf( "Dispatch GCodes\n");
 
-            THEDISPATCHER.clearHandlers();
-            THEDISPATCHER.addHandler(Dispatcher::GCODE_HANDLER, 1, fnc1);
-            THEDISPATCHER.addHandler(Dispatcher::MCODE_HANDLER, 1, fnc2);
-            THEDISPATCHER.addHandler(Dispatcher::GCODE_HANDLER, 1, fnc3);
+            THEDISPATCHER.clear_handlers();
+            THEDISPATCHER.add_handler(Dispatcher::GCODE_HANDLER, 1, fnc1);
+            THEDISPATCHER.add_handler(Dispatcher::MCODE_HANDLER, 1, fnc2);
+            THEDISPATCHER.add_handler(Dispatcher::GCODE_HANDLER, 1, fnc3);
 
             if(!THEDISPATCHER.dispatch(gcodes[0])) printf("dispatch 0 failed\n");
             if(!THEDISPATCHER.dispatch(gcodes[1])) printf("dispatch 1 failed\n");

@@ -24,20 +24,20 @@ public:
     using Handlers_t = std::multimap<uint16_t, Handler_t>;
     enum HANDLER_NAME { GCODE_HANDLER, MCODE_HANDLER };
 
-    Handlers_t::iterator addHandler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc);
-    void removeHandler(HANDLER_NAME gcode, Handlers_t::iterator);
+    Handlers_t::iterator add_handler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc);
+    void remove_handler(HANDLER_NAME gcode, Handlers_t::iterator);
     bool dispatch(GCode &gc) const;
     bool dispatch(char cmd, uint16_t code, ...) const;
-    bool loadConfiguration() const;
-    void clearHandlers();
+    bool load_configuration() const;
+    void clear_handlers();
 
 private:
     Dispatcher() {};
     Dispatcher(Dispatcher const &) = delete;
     void operator=(Dispatcher const &) = delete;
-    bool handleConfigurationCommands(GCode& gc) const;
-    bool writeConfiguration(OutputStream& output_stream) const;
-    bool loadConfiguration(OutputStream& output_stream) const;
+    bool handle_configuration_commands(GCode& gc) const;
+    bool write_configuration(OutputStream& output_stream) const;
+    bool load_configuration(OutputStream& output_stream) const;
 
     // use multimap as multiple handlers may be needed per gcode
     Handlers_t gcode_handlers;
