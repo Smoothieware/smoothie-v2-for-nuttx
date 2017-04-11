@@ -68,7 +68,7 @@ extern "C"
     }
 }
 
-int main()
-{
-	smoothie_main(0, 0);
-}
+// int main()
+// {
+// 	smoothie_main(0, 0);
+// }

@@ -19,7 +19,7 @@ public:
 	bool hasNoArgs() const { return argbitmap == 0; }
 	float getArg(char c) const { return args.at(c); }
 	const Args_t& getArgs() const { return args; }
-
+	size_t getNumArgs() const { return args.size(); }
 	bool hasG() const { return is_g; }
 	bool hasM() const { return is_m; }
 	void setG() { is_g= true; }
@@ -30,7 +30,7 @@ public:
 	GCode& setCommand(char c, uint16_t cd, uint16_t scode=0) { is_g= c=='G'; is_m= c=='M'; this->code= cd; this->subcode= scode; return *this; }
 	GCode& addArg(char c, float f) { args[c]= f; setArg(c); return *this; }
 	void dump() const;
-	//friend std::ostream& operator<<(std::ostream& o, const GCode& f) { f.dump(o); return o; }
+	friend std::ostream& operator<<(std::ostream& o, const GCode& f) { f.dump(); return o; }
 
 private:
 	void setArg(char c) { argbitmap |= (1<<(c-'A')); }

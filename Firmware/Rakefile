@@ -111,13 +111,14 @@ DEFINES= defines.join(' ')
 DEPFLAGS = '-MMD '
 CSTD = '-std=c99'
 CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 " + (DEBUG ? "-O0 -g " : "-O2 ")
-CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fcheck-new -fno-rtti -std=gnu++11'
+CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fno-rtti -std=gnu++11'
 
 # Linker script to be used.
 LSCRIPT = "./nuttx-export/build/spificonfig.ld"
-
+# TODO need to figure this out from tool path
+LIBGCC = "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
-   "--start-group", "-lnuttx", "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a", "--end-group"]
+   "--start-group", "-lnuttx", LIBGCC, "--end-group"]
 
 LDFLAGS = " -T#{LSCRIPT} " + LOPTIONS.join(" ")
 
