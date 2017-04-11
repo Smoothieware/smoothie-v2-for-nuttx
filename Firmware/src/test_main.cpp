@@ -9,13 +9,6 @@
 #include <nuttx/init.h>
 #include <nuttx/arch.h>
 
-// Configuration ************************************************************
-// C++ initialization requires CXX initializer support
-
-#if !defined(CONFIG_HAVE_CXX) || !defined(CONFIG_HAVE_CXXINITIALIZE)
-#  undef CONFIG_SMOOTHIEWARE_CXXINITIALIZE
-#endif
-
 extern void TEST_main();
 
 bool cb1= false;
@@ -65,7 +58,6 @@ extern "C"
             if(!cb2) printf("callback 2 failed\n");
             if(!cb3) printf("callback 3 failed\n");
 
-			TEST_main();
       return 0;
     }
 }

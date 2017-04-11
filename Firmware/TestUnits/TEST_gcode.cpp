@@ -1,50 +1,41 @@
 #include "GCode.h"
 #include "GCodeProcessor.h"
 
-#include <vector>
-#include <stdio.h>
-#include <string.h>
+#include "../easyunit/test.h"
 
-#include "easyunit/testharness.h"
-#include "easyunit/test.h"
-
-void TEST_main()
+TEST(GCodeTest,basic)
 {
-	printf("Starting tests...\n");
+    GCodeProcessor gp;
+    GCodeProcessor::GCodes_t gca;
 
-	TestRegistry::runAndPrint();
-
-	printf("Done\n");
-}
-
-
-TEST(GCodeTest,subcode)
-{
-	GCodeProcessor gp;
-	GCodeProcessor::GCodes_t gca;
-	
     const char *g1("G32 X1.2 Y2.3");
-	bool ok= gp.parse(g1, gca);
-	ASSERT_TRUE(ok);
-	ASSERT_EQUALS_V(1, gca.size());
-	GCode gc1= gca[0];
+    bool ok= gp.parse(g1, gca);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUALS_V(1, gca.size());
+    GCode gc1= gca[0];
     ASSERT_TRUE(gc1.hasG());
     ASSERT_TRUE(!gc1.hasM());
     ASSERT_EQUALS_V(32, gc1.getCode());
     ASSERT_EQUALS_V(0, gc1.getSubcode());
     ASSERT_EQUALS_V(2, gc1.getNumArgs());
     ASSERT_TRUE(gc1.hasArg('X'));
-	ASSERT_TRUE(gc1.hasArg('Y'));
-	ASSERT_TRUE(!gc1.hasArg('Z'));
+    ASSERT_TRUE(gc1.hasArg('Y'));
+    ASSERT_TRUE(!gc1.hasArg('Z'));
     ASSERT_EQUALS_DELTA_V(1.2, gc1.getArg('X'), 0.001);
     ASSERT_EQUALS_DELTA_V(2.3, gc1.getArg('Y'), 0.001);
+}
 
-	gca.clear();
-	const char *g2("G32.2 X1.2 Y2.3");
-	ok= gp.parse(g2, gca);
-	ASSERT_TRUE(ok);
-	ASSERT_EQUALS_V(1, gca.size());
-	GCode gc2= gca[0];
+GCode gc2;
+
+TEST(GCodeTest,subcode)
+{
+    GCodeProcessor gp;
+    GCodeProcessor::GCodes_t gca;
+    const char *g2("G32.2 X1.2 Y2.3");
+    bool ok= gp.parse(g2, gca);
+    ASSERT_TRUE(ok);
+    ASSERT_EQUALS_V(1, gca.size());
+    gc2= gca[0];
 
     ASSERT_TRUE(gc2.hasG());
     ASSERT_TRUE(!gc2.hasM());
@@ -55,7 +46,10 @@ TEST(GCodeTest,subcode)
     ASSERT_TRUE(gc2.hasArg('Y'));
     ASSERT_EQUALS_DELTA_V(1.2, gc2.getArg('X'), 0.001);
     ASSERT_EQUALS_DELTA_V(2.3, gc2.getArg('Y'), 0.001);
+}
 
+TEST(GCodeTest,copy)
+{
     // test equals
     GCode gc3;
     gc3= gc2;
