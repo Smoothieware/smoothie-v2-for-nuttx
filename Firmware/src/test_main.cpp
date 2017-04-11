@@ -16,6 +16,8 @@
 #  undef CONFIG_SMOOTHIEWARE_CXXINITIALIZE
 #endif
 
+extern void TEST_main();
+
 bool cb1= false;
 bool cb2= false;
 bool cb3= false;
@@ -63,7 +65,7 @@ extern "C"
             if(!cb2) printf("callback 2 failed\n");
             if(!cb3) printf("callback 3 failed\n");
 
-
+			TEST_main();
       return 0;
     }
 }

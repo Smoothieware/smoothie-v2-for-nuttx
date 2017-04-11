@@ -39,7 +39,7 @@
 
 #include <nuttx/config.h>
 
-#include <cstdio>
+#include <stdio.h>
 #include <debug.h>
 
 #include <nuttx/init.h>
@@ -79,13 +79,32 @@ float test_floats(float a, float b)
 	return a * b;
 }
 
-#include <sstream>
-void test_sstream()
+// #include <sstream>
+// void test_sstream()
+// {
+// 	std::ostringstream oss;
+// 	oss << "Hello\n";
+// 	std::string result= oss.str();
+// 	printf("test sstream: %s", result.c_str());
+// }
+
+#include <vector>
+void test_vector()
 {
-	std::ostringstream oss;
-	oss << "Hello\n";
-	std::string result= oss.str();
-	printf("test sstream: %s", result.c_str());
+	std::vector<int> v;
+	v.push_back(1);
+	int i= v.at(0);
+	printf("vector size: %d, value: %d\n", v.size(), i);
+}
+
+#include <string>
+void test_string()
+{
+ 	std::string s;
+	s= "abcd";
+	char c= s.at(1);
+	s.erase(1,2);
+ 	printf("string: %s, %c\n", s.c_str(), c);
 }
 
 
