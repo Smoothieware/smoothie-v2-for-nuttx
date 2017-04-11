@@ -118,7 +118,7 @@ LSCRIPT = "./nuttx-export/build/spificonfig.ld"
 # TODO need to figure this out from tool path
 LIBGCC = "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
-   "--start-group", "-lnuttx", LIBGCC, "--end-group"]
+   "--start-group", "-lnuttx", "-lapps", LIBGCC, "--end-group"]
 
 LDFLAGS = " -T#{LSCRIPT} " + LOPTIONS.join(" ")
 

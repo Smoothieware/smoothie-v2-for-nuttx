@@ -5,9 +5,9 @@
 
 #include <stdio.h>
 
-// #include <nuttx/config.h>
-// #include <nuttx/init.h>
-// #include <nuttx/arch.h>
+#include <nuttx/config.h>
+#include <nuttx/init.h>
+#include <nuttx/arch.h>
 
 // Configuration ************************************************************
 // C++ initialization requires CXX initializer support
@@ -28,9 +28,9 @@ extern "C"
         // If C++ initialization for static constructors is supported, then do
         // that first
 
-#ifdef CONFIG_SMOOTHIEWARE_CXXINITIALIZE
+
         up_cxxinitialize();
-#endif
+
         OutputStream o;
         GCodeProcessor gp;
 
