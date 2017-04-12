@@ -84,7 +84,7 @@ load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 
 if TESTING
   SRC = FileList['easyunit/*.cpp', 'TestUnits/*.cpp', 'src/**/*.{c,cpp,s}']
-  SRC.exclude(/test_main.cpp/)
+  #SRC.exclude(/Planner.cpp/)
   puts "Building Test Cases"
 else
   SRC = FileList['src/**/*.{c,cpp,s}']

@@ -14,10 +14,10 @@ class PlannerQueue
 public:
     PlannerQueue(size_t length)
     {
-        m_size= length;
-        m_buffer= new Block[length];
-        m_rIndex= 0;
-        m_wIndex= 0;
+        m_size = length;
+        m_buffer = new Block[length];
+        m_rIndex = 0;
+        m_wIndex = 0;
     }
 
     ~PlannerQueue()
@@ -28,6 +28,12 @@ public:
     size_t next(size_t n) const
     {
         return (n + 1) % m_size;
+    }
+
+    size_t prev(size_t n) const
+    {
+        if(n == 0) return m_size - 1;
+        return n - 1;
     }
 
     bool empty() const
@@ -74,10 +80,44 @@ public:
         m_rIndex = next(m_rIndex);
     }
 
+    void start_iteration()
+    {
+        // starts at head
+        iter = m_wIndex;
+    }
+
+    Block* tailward_get()
+    {
+        // sets iterator to point to prior item returns that block
+        // walks from head to tail
+        iter = prev(iter);
+        return &m_buffer[iter];
+    }
+
+    Block* headward_get()
+    {
+        // sets iterator to point to next item and returns that block
+        // walks from tail to head
+        iter = next(iter);
+        return &m_buffer[iter];
+    }
+
+    bool is_at_tail()
+    {
+        return iter == m_rIndex;
+    }
+
+    bool is_at_head()
+    {
+        return iter == m_wIndex;
+    }
 
 private:
     size_t          m_size;
     Block          *m_buffer;
+
+    // used for iterating by planner forward and backward
+    size_t iter;
 
     // volatile is only used to keep compiler from placing values in registers.
     // volatile does NOT make the index thread safe.
