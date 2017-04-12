@@ -83,7 +83,15 @@ load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 #puts "#{BUILDTYPE} build"
 
 if TESTING
-  SRC = FileList['easyunit/*.cpp', 'TestUnits/*.cpp', 'src/**/*.{c,cpp,s}']
+  src = FileList['easyunit/*.cpp', 'src/**/*.{c,cpp,s}']
+  if ENV['test'].nil?
+    # all tests
+    src += FileList['TestUnits/*.cpp']
+  else
+    # just named test
+    src += FileList["TestUnits/TEST_#{ENV['test']}.cpp", 'TestUnits/main.cpp']
+  end
+  SRC= src
   #SRC.exclude(/Planner.cpp/)
   puts "Building Test Cases"
 else
