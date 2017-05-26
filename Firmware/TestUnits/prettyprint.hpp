@@ -189,7 +189,7 @@ namespace pretty_print
         }
 
         static void tuple_print(const element_type & c, ostream_type & stream,
-                                typename std::conditional<sizeof...(Args) != 0, Int<0>, std::nullptr_t>::type)
+                                typename std::conditional<sizeof...(Args) != 0, Int<0>, nullptr_t>::type)
         {
             stream << std::get<0>(c);
             tuple_print(c, stream, Int<1>());

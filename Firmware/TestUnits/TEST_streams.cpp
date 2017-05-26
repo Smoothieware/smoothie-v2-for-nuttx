@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <set>
+#include <tuple>
 
 #include "prettyprint.hpp"
 
@@ -16,7 +17,11 @@ TEST(OutputStreamsTest,basic)
 	s.insert(3);
 	s.insert(4);
 	
-	std::cout << s;
+	std::cout << "set: " << s << "\n";
+
+	auto t= std::make_tuple(1,2,3,4);
+	std::cout << "tuple: " << t << "\n";
+	
 }
 
 
