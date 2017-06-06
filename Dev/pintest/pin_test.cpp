@@ -45,28 +45,6 @@
 #include <nuttx/init.h>
 #include <nuttx/arch.h>
 
-//***************************************************************************
-// Definitions
-//***************************************************************************
-// Configuration ************************************************************
-// C++ initialization requires CXX initializer support
-
-#if !defined(CONFIG_HAVE_CXX) || !defined(CONFIG_HAVE_CXXINITIALIZE)
-#  undef CONFIG_SMOOTHIEWARE_CXXINITIALIZE
-#endif
-
-// Debug ********************************************************************
-// Non-standard debug that may be enabled just for testing the constructors
-
-#ifndef CONFIG_DEBUG_FEATURES
-#  undef CONFIG_DEBUG_CXX
-#endif
-
-#ifdef CONFIG_DEBUG_CXX
-#  define cxxinfo     _info
-#else
-#  define cxxinfo(x...)
-#endif
 
 /****************************************************************************
  * Name: helloxx_main
@@ -107,23 +85,29 @@ void test_string()
  	printf("string: %s, %c\n", s.c_str(), c);
 }
 
-
-extern "C"
+#if 0
+#include <sstream>
+void test_sstream()
 {
-    int smoothie_main(int argc, char *argv[])
-    {
-        // If C++ initialization for static constructors is supported, then do
-        // that first
-
-#ifdef CONFIG_SMOOTHIEWARE_CXXINITIALIZE
-        up_cxxinitialize();
+	printf("Testing sstream...\n");
+	std::ostringstream oss;
+	oss << "Hello World!";
+	printf("oss = %s\n", oss.str().c_str());
+}
 #endif
 
+extern "C" int smoothie_main(int argc, char *argv[])
+{
+       // up_cxxinitialize();
+
+/*
 		float a= 10.123F;
 		float b= 20.456F;
 		float x= test_floats(a, b);
 		printf("float = %f\n", x); // NOTE thisis broken in NUTTX
 		printf("float = %10.8f\n", x); // this works
+*/
+		//test_sstream();
 		
         int cnt = 0;
         printf("defining pins...\n");
@@ -154,7 +138,8 @@ extern "C"
             }
         }
 
-        printf("Running...\n");
+		printf("Running...\n");
+
         cnt= 0;
         while(button.get() == 0){
             uint8_t m= 1;
@@ -167,6 +152,10 @@ extern "C"
         }
         printf("Done\n");
 
+		while(1) {
+			// sit here
+		}
+		
         return 0;
     }
-}
+
