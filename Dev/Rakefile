@@ -113,9 +113,9 @@ DEPFLAGS = '-MMD '
 CSTD = '-std=c99'
 
 if NOFPU
-	CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb " + (DEBUG ? "-O0 -g " : "-O2 ")
+	CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -g" + (DEBUG ? "-O0 " : "-O2 ")
 else
-	CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 " + (DEBUG ? "-O0 -g " : "-O2 ")
+	CFLAGS = DEPFLAGS + " -g -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 " + (DEBUG ? "-O0 " : "-O2 ")
 end
 
 CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fcheck-new -fno-rtti -std=gnu++11'
@@ -124,9 +124,9 @@ CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fcheck-new -fno-
 LSCRIPT = "./nuttx-export/build/spificonfig.ld"
 
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
-            "--start-group", 
-            "-lnuttx", "-lapps", 
-            (NOFPU ? "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/softfp/libgcc.a" : "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"), 
+            "--start-group",
+            "-lnuttx", "-lapps",
+            (NOFPU ? "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/softfp/libgcc.a" : "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"),
             "--end-group"]
 
 LDFLAGS = " -T#{LSCRIPT} " + LOPTIONS.join(" ")
