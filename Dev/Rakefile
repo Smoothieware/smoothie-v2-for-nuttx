@@ -129,7 +129,7 @@ LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-exp
             (NOFPU ? "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/softfp/libgcc.a" : "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"),
             "--end-group"]
 
-LDFLAGS = " -T#{LSCRIPT} " + LOPTIONS.join(" ")
+LDFLAGS = " -Map=#{OBJDIR}/#{PROG}.map -T#{LSCRIPT} " + LOPTIONS.join(" ")
 
 # tasks
 # desc "Upload via stlink"
