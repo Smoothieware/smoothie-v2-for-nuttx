@@ -64,6 +64,7 @@ ARMVERSION = ENV['ARMVERSION'].nil? ? '6.3.1' :  ENV['ARMVERSION']
 #TOOLSDIR = '/home/morris/work/reprap/Smoothie/gcc-arm-none-eabi/bin'
 TOOLSDIR = ENV['ARMTOOLS'].nil? ? '/usr/bin' :  ENV['ARMTOOLS']
 TOOLSBIN = "#{TOOLSDIR}/arm-none-eabi-"
+LIBSDIR = "#{TOOLSDIR}/../lib"
 CC = "#{TOOLSBIN}gcc"
 CCPP = "#{TOOLSBIN}g++"
 LD = "#{TOOLSBIN}ld"
@@ -132,7 +133,7 @@ CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fno-rtti -std=gn
 # Linker script to be used.
 LSCRIPT = "./nuttx-export/build/spificonfig.ld"
 # TODO need to figure this out from tool path
-LIBGCC = "/usr/lib/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"
+LIBGCC = "#{LIBSDIR}/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
    "--start-group", "-lnuttx", "-lapps", LIBGCC, "--end-group"]
 
