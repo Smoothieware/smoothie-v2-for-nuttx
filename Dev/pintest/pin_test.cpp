@@ -96,6 +96,12 @@ void test_sstream()
 }
 #endif
 
+void do_crash()
+{
+	int *p = (int *)0xCCCCCCCC;
+	int x= *p;
+
+}
 extern "C" int smoothie_main(int argc, char *argv[])
 {
        // up_cxxinitialize();
@@ -152,9 +158,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
         }
         printf("Done\n");
 
-		while(1) {
-			// sit here
-		}
+		//do_crash();
 		
         return 0;
     }
