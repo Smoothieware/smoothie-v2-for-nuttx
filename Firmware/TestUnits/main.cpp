@@ -6,12 +6,8 @@
 
 #include <stdio.h>
 
-//#include <iostream>
-
 extern "C" int smoothie_main(int argc, char *argv[])
 {
-//	auto toEnsureInitialization= new std::ios_base::Init;
-
 	// do C++ initialization for static constructors first
     up_cxxinitialize();
 
