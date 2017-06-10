@@ -3,7 +3,7 @@ require 'pathname'
 require 'fileutils'
 
 verbose(ENV['verbose'] == '1')
-TESTING = ENV['testing'] == '1'
+TESTING = ENV['testing'].nil? ? true : ENV['testing'] == '1'
 
 PROG = 'smoothiev2'
 TARGET = "Bambino"

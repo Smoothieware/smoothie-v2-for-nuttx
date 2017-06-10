@@ -7,6 +7,14 @@
 
 #include "../easyunit/test.h"
 
+
+TEST(StringStreamsTest,basic)
+{
+	std::ostringstream oss;
+	oss << "Hello World!";
+	ASSERT_TRUE(oss.str() == "Hello World!");
+}
+
 TEST(OutputStreamsTest,basic)
 {
 	std::cout << "Hello World!" << "\n";
@@ -16,22 +24,22 @@ TEST(OutputStreamsTest,basic)
 	s.insert(2);
 	s.insert(3);
 	s.insert(4);
-	
-	std::cout << "set: " << s << "\n";
+
+	// test prettyprint (also tests stringstrem)
+	{
+		std::ostringstream oss;
+		oss << s;
+		ASSERT_TRUE(oss.str() == "{1, 2, 3, 4}");
+	}
 
 	auto t= std::make_tuple(1,2,3,4);
-	std::cout << "tuple: " << t << "\n";
-	
+	{
+		std::ostringstream oss;
+		oss << t;
+		printf("tuple: %s\n", oss.str().c_str());
+		ASSERT_TRUE(oss.str() == "(1, 2, 3, 4)");
+	}
 }
 
 
-TEST(StringStreamsTest,basic)
-{
-	std::ostringstream oss;
-	oss << "Hello World!";
-
-	
-	ASSERT_TRUE(oss.str() == "Hello World!");  
-	
-}
 
