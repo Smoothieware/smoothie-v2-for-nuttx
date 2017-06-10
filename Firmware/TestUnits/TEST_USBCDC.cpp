@@ -12,6 +12,7 @@
 
 TEST(USBCDCTest, basic)
 {
+    #if 0
     struct boardioc_usbdev_ctrl_s ctrl;
     FAR void *handle;
     int ret;
@@ -58,7 +59,7 @@ TEST(USBCDCTest, basic)
     size_t n= write(fd, "Hello USB World\n", 16);
     ASSERT_EQUALS_V(16, n);
     close(fd);
-
+    #endif
 }
 
 
