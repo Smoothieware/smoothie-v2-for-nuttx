@@ -58,7 +58,7 @@ misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.iv
                 ASSERT_TRUE(type == "digital");
                 ASSERT_TRUE(ipb == "momentary");
                 ASSERT_EQUALS_V(123, iv);
-                ASSERT_EQUALS_V(123.456F, fv);
+                ASSERT_EQUALS_DELTA_V(123.456F, fv, 0.001F);
                 miscok= true;
 
             } else if(name == "psu") {
