@@ -1,4 +1,4 @@
-# GDB initialization script with commands to make debugging Smoothiev2 more convenient.
+# GDB initialization script with commands to make debugging Smoothie-v2 more convenient.
 #
 # This gdbinit file is placed here in the root folder of the repository so that it can be included from the various
 # locations in the source tree from which a user might want to launch rake/make and GDB.
@@ -33,8 +33,8 @@ User can pass in a parameter of 0 to disable this feature.
 end
 
 
-# Command to dump information about an ARMv7-M fault if one is currently active in the current frame.
-define dumpfault
+# Command to display information about an ARMv7-M fault if one is currently active in the current frame.
+define showfault
     set var $ipsr_val = $xpsr & 0xF
     if ($ipsr_val >= 3 && $ipsr_val <= 6)
         # Dump Hard Fault.
@@ -138,8 +138,8 @@ define dumpfault
     
 end
 
-document dumpfault
-Dumps ARMv7-M fault information if current stack frame is in a fault handler.
+document showfault
+Display ARMv7-M fault information if current stack frame is in a fault handler.
 end
 
 
@@ -379,6 +379,110 @@ end
 
 document kernel
 Switches back to the 'kernel' mode portion of NuttX stack.
+end
+
+
+# Dumps a core dump that is compatible with CrashDebug (https://github.com/adamgreen/CrashDebug).
+define gcore
+    if ($stk_swapped)
+        kernel
+    end
+    select-frame 0
+
+    # Starts with a header that indicates this is a CrashCatcher dump file.
+    dump binary value crash.dump (unsigned int)0x00024363
+
+    # Hardcoding flags to indicate that there will be floating point registers in dump file.
+    append binary value crash.dump (unsigned int)0x00000001
+
+    # Dump the integer registers.
+    append binary value crash.dump (unsigned int)$r0
+    append binary value crash.dump (unsigned int)$r1
+    append binary value crash.dump (unsigned int)$r2
+    append binary value crash.dump (unsigned int)$r3
+    append binary value crash.dump (unsigned int)$r4
+    append binary value crash.dump (unsigned int)$r5
+    append binary value crash.dump (unsigned int)$r6
+    append binary value crash.dump (unsigned int)$r7
+    append binary value crash.dump (unsigned int)$r8
+    append binary value crash.dump (unsigned int)$r9
+    append binary value crash.dump (unsigned int)$r10
+    append binary value crash.dump (unsigned int)$r11
+    append binary value crash.dump (unsigned int)$r12
+    append binary value crash.dump (unsigned int)$sp
+    append binary value crash.dump (unsigned int)$lr
+    append binary value crash.dump (unsigned int)$pc
+    append binary value crash.dump (unsigned int)$xpsr
+
+    # The exception PSR and crashing PSR are one in the same.
+    append binary value crash.dump (unsigned int)$xpsr
+
+    # Dump the floating point registers
+    append binary value crash.dump (float)$s0
+    append binary value crash.dump (float)$s1
+    append binary value crash.dump (float)$s2
+    append binary value crash.dump (float)$s3
+    append binary value crash.dump (float)$s4
+    append binary value crash.dump (float)$s5
+    append binary value crash.dump (float)$s6
+    append binary value crash.dump (float)$s7
+    append binary value crash.dump (float)$s8
+    append binary value crash.dump (float)$s9
+    append binary value crash.dump (float)$s10
+    append binary value crash.dump (float)$s11
+    append binary value crash.dump (float)$s12
+    append binary value crash.dump (float)$s13
+    append binary value crash.dump (float)$s14
+    append binary value crash.dump (float)$s15
+    append binary value crash.dump (float)$s16
+    append binary value crash.dump (float)$s17
+    append binary value crash.dump (float)$s18
+    append binary value crash.dump (float)$s19
+    append binary value crash.dump (float)$s20
+    append binary value crash.dump (float)$s21
+    append binary value crash.dump (float)$s22
+    append binary value crash.dump (float)$s23
+    append binary value crash.dump (float)$s24
+    append binary value crash.dump (float)$s25
+    append binary value crash.dump (float)$s26
+    append binary value crash.dump (float)$s27
+    append binary value crash.dump (float)$s28
+    append binary value crash.dump (float)$s29
+    append binary value crash.dump (float)$s30
+    append binary value crash.dump (float)$s31
+    append binary value crash.dump (unsigned int)$fpscr
+
+    # Dump 128k of RAM starting at 0x10000000.
+    #   First two words indicate memory range.
+    append binary value crash.dump (unsigned int)0x10000000
+    append binary value crash.dump (unsigned int)(0x10000000 + 128*1024)
+    append binary memory crash.dump 0x10000000 (0x10000000 + 128*1024)
+
+    # Dump 72k of RAM starting at 0x10080000.
+    #   First two words indicate memory range.
+    append binary value crash.dump (unsigned int)0x10080000
+    append binary value crash.dump (unsigned int)(0x10080000 + 72*1024)
+    append binary memory crash.dump 0x10080000 (0x10080000 + 72*1024)
+
+    # Dump 64k of RAM starting at 0x20000000.
+    #   First two words indicate memory range.
+    append binary value crash.dump (unsigned int)0x20000000
+    append binary value crash.dump (unsigned int)(0x20000000 + 64*1024)
+    append binary memory crash.dump 0x20000000 (0x20000000 + 64*1024)
+
+    # Dump the fault status registers as well.
+    append binary value crash.dump (unsigned int)0xE000ED28
+    append binary value crash.dump (unsigned int)(0xE000ED28 + 5*4)
+    append binary memory crash.dump 0xE000ED28 (0xE000ED28 + 5*4)
+end
+
+document gcore
+Generate core dump.
+
+The generated core dump can be used with CrashDebug 
+(https://github.com/adamgreen/CrashDebug) to reload into GDB at a later point
+in time or on another machine. The dump will be generated to a file named
+"crash.dump".
 end
 
 
