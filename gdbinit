@@ -452,11 +452,23 @@ define gcore
     append binary value crash.dump (float)$s31
     append binary value crash.dump (unsigned int)$fpscr
 
-    # Dump all 128k of RAM starting at 0x10000000.
+    # Dump 128k of RAM starting at 0x10000000.
     #   First two words indicate memory range.
     append binary value crash.dump (unsigned int)0x10000000
     append binary value crash.dump (unsigned int)(0x10000000 + 128*1024)
     append binary memory crash.dump 0x10000000 (0x10000000 + 128*1024)
+
+    # Dump 72k of RAM starting at 0x10080000.
+    #   First two words indicate memory range.
+    append binary value crash.dump (unsigned int)0x10080000
+    append binary value crash.dump (unsigned int)(0x10080000 + 72*1024)
+    append binary memory crash.dump 0x10080000 (0x10080000 + 72*1024)
+
+    # Dump 64k of RAM starting at 0x20000000.
+    #   First two words indicate memory range.
+    append binary value crash.dump (unsigned int)0x20000000
+    append binary value crash.dump (unsigned int)(0x20000000 + 64*1024)
+    append binary memory crash.dump 0x20000000 (0x20000000 + 64*1024)
 
     # Dump the fault status registers as well.
     append binary value crash.dump (unsigned int)0xE000ED28
