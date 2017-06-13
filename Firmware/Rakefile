@@ -3,7 +3,7 @@ require 'pathname'
 require 'fileutils'
 
 verbose(ENV['verbose'] == '1')
-TESTING = ENV['testing'].nil? ? true : ENV['testing'] == '1'
+TESTING = ENV['testing'].nil? ? false : ENV['testing'] == '1'
 
 PROG = 'smoothiev2'
 TARGET = "Bambino"
@@ -85,6 +85,8 @@ load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 
 if TESTING
   src = FileList['easyunit/*.cpp', 'src/**/*.{c,cpp,s}']
+  src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
+
   if ENV['test'].nil?
     # all tests
     src += FileList['TestUnits/*.cpp']
@@ -93,8 +95,8 @@ if TESTING
     src += FileList["TestUnits/TEST_#{ENV['test']}.cpp", 'TestUnits/main.cpp']
   end
   SRC= src
-  #SRC.exclude(/Planner.cpp/)
   puts "Building Test Cases"
+
 else
   SRC = FileList['src/**/*.{c,cpp,s}']
   puts "Building Firmware"
@@ -121,7 +123,7 @@ sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./n
 
 INCLUDE = (include_dirs).collect { |d| "-I#{d}" }.join(" ") + " " + (sys_include_dirs).collect { |d| "-isystem #{d}" }.join(" ")
 
-defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTION)
+defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS)
 
 DEFINES= defines.join(' ')
 
