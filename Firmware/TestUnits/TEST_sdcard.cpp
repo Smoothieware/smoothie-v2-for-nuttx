@@ -90,6 +90,12 @@ TEST(SDCardTest, write_read)
     fclose(fp);
 }
 
+TEST(SDCardTest,read_config_init)
+{
+
+}
+
+
 TEST(SDCardTest,unmount)
 {
     int ret = umount(g_target);
