@@ -19,9 +19,8 @@ void GCode::clear()
 	code= subcode= 0;
 }
 
-void GCode::dump() const
+void GCode::dump(OutputStream &o) const
 {
-	OutputStream o;
 	o.printf("%s%u", is_g?"G":is_m?"M":"", code);
 	if(subcode != 0) {
 		o.printf(".%u",  subcode);
@@ -32,3 +31,4 @@ void GCode::dump() const
 	}
 	o.printf("\n");
 }
+

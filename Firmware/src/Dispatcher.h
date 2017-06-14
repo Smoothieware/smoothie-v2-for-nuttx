@@ -26,8 +26,8 @@ public:
 
     Handlers_t::iterator add_handler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc);
     void remove_handler(HANDLER_NAME gcode, Handlers_t::iterator);
-    bool dispatch(GCode &gc) const;
-    bool dispatch(char cmd, uint16_t code, ...) const;
+    bool dispatch(GCode &gc, OutputStream& os) const;
+    bool dispatch(OutputStream& os, char cmd, uint16_t code, ...) const;
     bool load_configuration() const;
     void clear_handlers();
 

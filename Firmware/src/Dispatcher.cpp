@@ -16,7 +16,7 @@ using namespace std;
 
 // NOTE this can be called recursively by commands handlers that need to issue their own commands
 // it can also be called concurrently from different threads, so no changing class context, that is why it is const
-bool Dispatcher::dispatch(GCode& gc) const
+bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 {
 	if(gc.has_m() && gc.get_code() == 503) {
 		// alias M503 to M500.3
@@ -41,25 +41,22 @@ bool Dispatcher::dispatch(GCode& gc) const
 	}
 
 	if(ret) {
-		// get output stream
-		OutputStream output_stream;
-
 		bool send_ok= true;
-		if(output_stream.isPrependOK()) {
+		if(os.isPrependOK()) {
 			// output the result after the ok
-			output_stream.setPrependOK(false);
-			output_stream.printf("ok ");
-			output_stream.printf("FLUSH"); // this flushes the internally stored string to the IO Device
+			os.setPrependOK(false);
+			os.printf("ok ");
+			os.printf("FLUSH"); // this flushes the internally stored string to the output
 			send_ok= false;
 		}
 
-		if(output_stream.isAppendNL()) {
+		if(os.isAppendNL()) {
 			// append newline
-			output_stream.printf("\r\n");
+			os.printf("\n");
 		}
 
 		if(send_ok) {
-			output_stream.printf("ok\r\n");
+			os.printf("ok\n");
 		}
 
 		return true;
@@ -69,9 +66,9 @@ bool Dispatcher::dispatch(GCode& gc) const
 }
 
 // convenience to dispatch a one off command
-// Usage: dispatch('M', 123, [subcode,] 'X', 456, 'Y', 789, ..., 0); // must terminate with 0
-// dispatch('M', 123, 0);
-bool Dispatcher::dispatch(char cmd, uint16_t code, ...) const
+// Usage: dispatch(os, 'M', 123, [subcode,] 'X', 456, 'Y', 789, ..., 0); // must terminate with 0
+// dispatch(os, 'M', 123, 0);
+bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 {
 	GCode gc;
     va_list args;
@@ -91,7 +88,7 @@ bool Dispatcher::dispatch(char cmd, uint16_t code, ...) const
     }
 
     va_end(args);
-    return dispatch(gc);
+    return dispatch(gc, os);
 }
 
 Dispatcher::Handlers_t::iterator Dispatcher::add_handler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc)
@@ -169,8 +166,9 @@ bool Dispatcher::write_configuration(OutputStream& output_stream) const
 
 bool Dispatcher::load_configuration() const
 {
-	OutputStream os;
-	return load_configuration(os);
+	// OutputStream os;
+	// return load_configuration(os);
+	return false;
 }
 
 bool Dispatcher::load_configuration(OutputStream& output_stream) const

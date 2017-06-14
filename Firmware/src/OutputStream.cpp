@@ -1,44 +1,32 @@
 #include "OutputStream.h"
-#include "IODeviceSTDIO.h"
 
 #include <cstdarg>
 #include <cstring>
 #include <stdio.h>
 
-OutputStream::OutputStream() : append_nl(false), prepend_ok(false)
+OutputStream::OutputStream(int fd) : append_nl(false), prepend_ok(false), deleteos(true)
 {
-	io= new IODeviceSTDIO(); std_io= true;
-};
+	// create an output stream using the given fd
+    fdbuf= new FdBuf(fd);
+    os= new std::ostream(fdbuf);
+    *os << std::unitbuf; // auto flush on every write
+}
 
 OutputStream::~OutputStream()
 {
-	if(std_io) delete io;
+	if(deleteos)
+		delete os;
+	if(fdbuf)
+		delete fdbuf;
 };
-
-OutputStream::OutputStream(const OutputStream &to_copy)
-{
-	io= to_copy.io;
-	append_nl= to_copy.append_nl;
-	prepend_ok= to_copy.prepend_ok;
-	prepending= to_copy.prepending;
-}
-
-OutputStream &OutputStream::operator= (const OutputStream &to_copy)
-{
-	if( this != &to_copy ) {
-		io= to_copy.io;
-		append_nl= to_copy.append_nl;
-		prepend_ok= to_copy.prepend_ok;
-		prepending= to_copy.prepending;
-	}
-	return *this;
-}
 
 int OutputStream::printf(const char *format, ...)
 {
+	if(os == nullptr) return 0;
+
 	if(prepend_ok && strcmp(format, "FLUSH")) {
 		int n= prepending.size();
-		io->write(prepending.c_str(), append_nl);
+		os->write(prepending.c_str(), prepending.size());
 		prepending.clear();
 		prepend_ok= false;
 		return n;
@@ -61,7 +49,7 @@ int OutputStream::printf(const char *format, ...)
 	if(prepend_ok) {
 		prepending.append(buffer, size);
 	}else{
-		io->write((const char*)buffer, size);
+		os->write((const char*)buffer, size);
 	}
 
 	return size;

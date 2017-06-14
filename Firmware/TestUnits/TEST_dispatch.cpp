@@ -4,6 +4,9 @@
 
 #include "../easyunit/test.h"
 
+#include <sstream>
+#include "OutputStream.h"
+
 #define ASSERT_FALSE(x) ASSERT_TRUE(!(x))
 
 DECLARE(Dispatcher)
@@ -47,7 +50,11 @@ TESTF(Dispatcher, check_callbacks)
     ASSERT_FALSE(cb2);
     ASSERT_FALSE(cb3);
 
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0]));
+    std::ostringstream oss;
+    OutputStream os(&oss);
+    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
+    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
+
     ASSERT_TRUE( cb1 );
     ASSERT_FALSE(cb2);
     ASSERT_TRUE( cb3 );
@@ -55,9 +62,13 @@ TESTF(Dispatcher, check_callbacks)
     ASSERT_EQUALS_V(1, args['X']);
     ASSERT_EQUALS_V(2, args['Y']);
 
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[1]));
+    oss.str("");
+    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[1], os));
+    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
     ASSERT_TRUE( cb2 );
-    ASSERT_FALSE(THEDISPATCHER.dispatch(gcodes[2]));
+    oss.str("");
+    ASSERT_FALSE(THEDISPATCHER.dispatch(gcodes[2], os));
+    ASSERT_EQUALS_V(0, oss.str().size());
 }
 
 TESTF(Dispatcher, Remove_second_G1_handler)
@@ -67,16 +78,22 @@ TESTF(Dispatcher, Remove_second_G1_handler)
     ASSERT_FALSE(cb3);
 
     THEDISPATCHER.remove_handler(Dispatcher::GCODE_HANDLER, h3);
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0]));
+    OutputStream os; // NULL output stream
+    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
     ASSERT_TRUE ( cb1 );
     ASSERT_FALSE ( cb3 );
 }
 
 TESTF(Dispatcher, one_off_dispatch)
 {
+    std::ostringstream oss;
+    OutputStream os(&oss);
+
     ASSERT_FALSE(cb1);
     ASSERT_TRUE(args.empty());
-    THEDISPATCHER.dispatch('G', 1, 'X', 456.0, 'Y', 789.0, 'Z', 123.0, 0);
+    THEDISPATCHER.dispatch(os, 'G', 1, 'X', 456.0, 'Y', 789.0, 'Z', 123.0, 0);
+    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
+
     ASSERT_TRUE ( cb1 );
     for(auto &i : args) {
         printf("%c: %f\n", i.first, i.second);

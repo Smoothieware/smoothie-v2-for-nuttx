@@ -14,6 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <unistd.h>
+#include <iostream>
 
 static int setup_CDC()
 {
@@ -46,7 +47,7 @@ static int setup_CDC()
             if(errno == ENOTCONN) {
                 sleep(2);
 
-            }else{
+            } else {
                 printf("ttyACM0 Got error: %d\n", errno);
                 return -1;
             }
@@ -59,9 +60,65 @@ static int setup_CDC()
     return fd;
 }
 
-static void dispatch_line(char *line, int cnt)
+// Hack to allow us to create a ostream writing to the USBCDC fd we have open
+#include <sstream>
+class FdBuf : public std::stringbuf
+{
+public:
+    FdBuf(int f) : fd(f) {};
+    virtual int sync()
+    {
+        size_t len = this->str().size();
+        if(len > 0) {
+            printf("fdBuf: %s", this->str().c_str());
+            write(fd, this->str().c_str(), len);
+            this->str("");
+        }
+        return 0;
+    }
+private:
+    int fd;
+};
+
+
+#include "GCode.h"
+#include "GCodeProcessor.h"
+#include "Dispatcher.h"
+#include "OutputStream.h"
+
+static GCodeProcessor gp;
+static bool dispatch_line(int fd, char *line, int cnt)
 {
     printf("Got line %s\n", line);
+
+    // Handle Gcode
+    GCodeProcessor::GCodes_t gcodes;
+
+    // Parse gcode
+    if(!gp.parse(line, gcodes)) {
+        // line failed checksum, send resend request
+        char buf[32];
+        size_t n = snprintf(buf, 32, "rs N%d\n", gp.get_line_number() + 1);
+        write(fd, buf, n);
+        return true;
+
+    } else if(gcodes.empty()) {
+        // if gcodes is empty then was a M110, just send ok
+        write(fd, "ok\n", 3);
+        return true;
+    }
+
+    // crete an output stream that writes to the already open fd
+    OutputStream os(fd);
+    // dispatch gcode to MotionControl and Planner
+    for(auto& i : gcodes) {
+        if(!THEDISPATCHER.dispatch(i, os)) {
+            // no handler for this gcode, return ok - nohandler
+            os.printf("ok - nohandler\n");
+        }
+    }
+
+    return true;
 }
 
 static std::mutex m;
@@ -70,53 +127,55 @@ void comms()
 {
     printf("Comms thread running\n");
 
-    int fd= setup_CDC();
-    if(fd == -1){
+    int fd = setup_CDC();
+    if(fd == -1) {
         printf("CDC setup failed\n");
         return;
     }
 
-    // Manual unlocking is done before notifying, to avoid waking up
-    // the waiting thread only to block again (see notify_one for details)
-    std::unique_lock<std::mutex> lk(m);
-    lk.unlock();
-    cv.notify_one();
+    {
+        // Manual unlocking is done before notifying, to avoid waking up
+        // the waiting thread only to block again (see notify_one for details)
+        std::unique_lock<std::mutex> lk(m);
+        lk.unlock();
+        cv.notify_one();
+    }
 
     // on first connect we send a welcome message
-    static const char *welcome_message= "Welcome to Smoothie\nok\n";
+    static const char *welcome_message = "Welcome to Smoothie\nok\n";
 
     size_t n;
-    char buf[1];
-    n = read(fd, buf, 1);
+    char line[132];
+    n = read(fd, line, 1);
     if(n == 1) {
         n = write(fd, welcome_message, strlen(welcome_message));
         if(n < 0) {
             printf("ttyACM0: Error writing welcome: %d\n", errno);
             close(fd);
-            fd= -1;
+            fd = -1;
             return;
         }
 
-    }else{
+    } else {
         printf("ttyACM0: Error reading: %d\n", errno);
-        fd= -1;
+        fd = -1;
         return;
     }
 
     // now read lines and dispatch them
-    char line[132];
-    size_t cnt= 0;
+    size_t cnt = 0;
     for(;;) {
-        n = read(fd, buf, 1);
+        n = read(fd, &line[cnt], 1);
         if(n == 1) {
-            line[cnt++]= buf[0];
-            if(buf[0] == '\n' || cnt >= sizeof(line)-1) {
-                line[cnt]= '\0';
-                dispatch_line(line, cnt);
-                write(fd, "ok\n", 3);
-                cnt= 0;
+            if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
+                line[cnt + 1] = '\0';
+                dispatch_line(fd, line, cnt);
+                cnt = 0;
+
+            } else {
+                ++cnt;
             }
-        }else{
+        } else {
             printf("ttyACM0: read error: %d\n", errno);
             break;
         }

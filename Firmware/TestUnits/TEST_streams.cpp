@@ -3,6 +3,8 @@
 #include <set>
 #include <tuple>
 
+#include "OutputStream.h"
+
 #include "prettyprint.hpp"
 
 #include "../easyunit/test.h"
@@ -13,9 +15,13 @@ TEST(StringStreamsTest,basic)
 	std::ostringstream oss;
 	oss << "Hello World!";
 	ASSERT_TRUE(oss.str() == "Hello World!");
+
+	std::ostringstream oss2;
+	oss2.write("hello", 5);
+	ASSERT_TRUE(oss2.str() == "hello");
 }
 
-TEST(OutputStreamsTest,basic)
+TEST(ostreamsTest,basic)
 {
 	std::cout << "Hello World!" << "\n";
 	std::cout << "Hello World, " << 1.234F << " that was a number\n";
@@ -25,7 +31,7 @@ TEST(OutputStreamsTest,basic)
 	s.insert(3);
 	s.insert(4);
 
-	// test prettyprint (also tests stringstrem)
+	// test prettyprint (also tests stringstream)
 	{
 		std::ostringstream oss;
 		oss << s;
@@ -41,5 +47,30 @@ TEST(OutputStreamsTest,basic)
 	}
 }
 
+TEST(OutputStreamTest,null)
+{
+	OutputStream os;
+	os.printf("hello");
+}
+
+TEST(OutputStreamTest,sstream)
+{
+	std::ostringstream oss;
+	OutputStream os(&oss);
+	os.printf("hello world");
+	printf("oss = %s\n", oss.str().c_str());
+	std::cout << oss.str() << "\n";
+	ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "hello world"));
+}
+
+TEST(OutputStreamTest,fdstream)
+{
+	OutputStream os(1); // stdout
+	os.printf("hello world on fd stdout OutputStream\n");
+
+	// also test cout
+	OutputStream os2(std::cout);
+	os2.printf("hello world from cout OutputStream\n");
+}
 
 
