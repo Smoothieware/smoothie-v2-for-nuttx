@@ -84,20 +84,37 @@ load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 #puts "#{BUILDTYPE} build"
 
 if TESTING
-  src = FileList['easyunit/*.cpp', 'src/**/*.{c,cpp,s}']
-  src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
+  # OLD easyunit tests
+  # src = FileList['easyunit/*.cpp', 'src/**/*.{c,cpp,s}']
+  # src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
+  # if ENV['test'].nil?
+  #   # all tests
+  #   src += FileList['TestUnits/*.cpp']
+  # else
+  #   # just named tests
+  #   tests= ENV['test'].split(',')
+  #   tests.each do |t|
+  #     src += FileList["TestUnits/TEST_#{t}.cpp"]
+  #   end
+  #   src += FileList['TestUnits/main.cpp']
+  # end
 
+  # Unity tests
+  src = FileList['Unity/src/*.c', 'src/**/*.{c,cpp,s}']
+  src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
   if ENV['test'].nil?
     # all tests
-    src += FileList['TestUnits/*.cpp']
+    src += FileList['TestUnits/TEST_*.cpp']
   else
     # just named tests
     tests= ENV['test'].split(',')
     tests.each do |t|
       src += FileList["TestUnits/TEST_#{t}.cpp"]
     end
-    src += FileList['TestUnits/main.cpp']
   end
+  src += FileList['TestUnits/main.cpp']
+
+
   SRC= src
   puts "Building Test Cases"
 
@@ -127,7 +144,7 @@ sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./n
 
 INCLUDE = (include_dirs).collect { |d| "-I#{d}" }.join(" ") + " " + (sys_include_dirs).collect { |d| "-isystem #{d}" }.join(" ")
 
-defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS)
+defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS -DUNITY_EXCLUDE_SETJMP_H)
 
 DEFINES= defines.join(' ')
 

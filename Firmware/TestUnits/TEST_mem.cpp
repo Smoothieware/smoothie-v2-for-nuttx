@@ -1,8 +1,10 @@
-#include "../easyunit/test.h"
+#include "../Unity/src/unity.h"
 #include <stdlib.h>
 #include <stdio.h>
 
-TEST(MemoryTest,stats)
+#include "TestRegistry.h"
+
+REGISTER_TEST(MemoryTest, stats)
 {
     struct mallinfo mem= mallinfo();
     printf("             total       used       free    largest\n");
@@ -11,10 +13,10 @@ TEST(MemoryTest,stats)
 
 char test_ahb0_ram[100] __attribute__ ((section ("AHBSRAM0")));
 char test_ahb1_ram[100] __attribute__ ((section ("AHBSRAM1")));
-TEST(MemoryTest,AHBn)
+REGISTER_TEST(MemoryTest, AHBn)
 {
-    ASSERT_EQUALS_V(0x20000000, (unsigned int)&test_ahb0_ram);
-    ASSERT_EQUALS_V(0x20008000, (unsigned int)&test_ahb1_ram);
+    TEST_ASSERT_EQUAL_INT(0x20000000, (unsigned int)&test_ahb0_ram);
+    TEST_ASSERT_EQUAL_INT(0x20008000, (unsigned int)&test_ahb1_ram);
 
     for (int i = 0; i < 100; ++i) {
         test_ahb0_ram[i]= i;
@@ -22,7 +24,7 @@ TEST(MemoryTest,AHBn)
     }
 
     for (int i = 0; i < 100; ++i) {
-        ASSERT_EQUALS_V(i, test_ahb0_ram[i]);
-        ASSERT_EQUALS_V(i+10, test_ahb1_ram[i]);
+        TEST_ASSERT_EQUAL_INT(i, test_ahb0_ram[i]);
+        TEST_ASSERT_EQUAL_INT(i+10, test_ahb1_ram[i]);
     }
 }

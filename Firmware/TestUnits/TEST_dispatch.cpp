@@ -2,25 +2,25 @@
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
 
-#include "../easyunit/test.h"
-
 #include <sstream>
 #include "OutputStream.h"
 
-#define ASSERT_FALSE(x) ASSERT_TRUE(!(x))
+#include "../Unity/src/unity.h"
+#include "TestRegistry.h"
 
-DECLARE(Dispatcher)
+// just swaps the parameters
+#define TEST_ASSERT_STRING_S(a, b) TEST_ASSERT_EQUAL_STRING(b, a)
 
-bool cb1;
-bool cb2;
-bool cb3;
-GCodeProcessor gp;
-GCodeProcessor::GCodes_t gcodes;
-Dispatcher::Handlers_t::iterator h3;
-GCode::Args_t args;
-END_DECLARE
+#if 0
+static bool cb1;
+static bool cb2;
+static bool cb3;
+static GCodeProcessor gp;
+static GCodeProcessor::GCodes_t gcodes;
+static Dispatcher::Handlers_t::iterator h3;
+static GCode::Args_t args;
 
-SETUP(Dispatcher)
+static void setup()
 {
     cb1= false;
     cb2= false;
@@ -34,73 +34,74 @@ SETUP(Dispatcher)
     h3= THEDISPATCHER.add_handler(Dispatcher::GCODE_HANDLER, 1, fnc3);
     gcodes.clear();
     bool ok= gp.parse("G1 X1 Y2 M1 G4 S10", gcodes);
-    ASSERT_TRUE(ok);
-    ASSERT_EQUALS_V(3, gcodes.size());
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_INT(3, gcodes.size());
     args.clear();
 }
 
-TEARDOWN(Dispatcher)
+static void teardown()
 {
     THEDISPATCHER.clear_handlers();
 }
 
-TESTF(Dispatcher, check_callbacks)
+REGISTER_TEST(Dispatcher, check_callbacks)
 {
-    ASSERT_FALSE(cb1);
-    ASSERT_FALSE(cb2);
-    ASSERT_FALSE(cb3);
+    TEST_ASSERT_FALSE(cb1);
+    TEST_ASSERT_FALSE(cb2);
+    TEST_ASSERT_FALSE(cb3);
 
     std::ostringstream oss;
     OutputStream os(&oss);
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
-    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
+    TEST_ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
+    TEST_ASSERT_STRING_S(oss.str().c_str(), "ok\n");
 
-    ASSERT_TRUE( cb1 );
-    ASSERT_FALSE(cb2);
-    ASSERT_TRUE( cb3 );
-    ASSERT_EQUALS_V(2, args.size());
-    ASSERT_EQUALS_V(1, args['X']);
-    ASSERT_EQUALS_V(2, args['Y']);
+    TEST_ASSERT_TRUE( cb1 );
+    TEST_ASSERT_FALSE(cb2);
+    TEST_ASSERT_TRUE( cb3 );
+    TEST_ASSERT_EQUAL_INT(2, args.size());
+    TEST_ASSERT_EQUAL_INT(1, args['X']);
+    TEST_ASSERT_EQUAL_INT(2, args['Y']);
 
     oss.str("");
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[1], os));
-    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
-    ASSERT_TRUE( cb2 );
+    TEST_ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[1], os));
+    TEST_ASSERT_STRING_S(oss.str().c_str(), "ok\n");
+    TEST_ASSERT_TRUE( cb2 );
     oss.str("");
-    ASSERT_FALSE(THEDISPATCHER.dispatch(gcodes[2], os));
-    ASSERT_EQUALS_V(0, oss.str().size());
+    TEST_ASSERT_FALSE(THEDISPATCHER.dispatch(gcodes[2], os));
+    TEST_ASSERT_EQUAL_INT(0, oss.str().size());
 }
 
-TESTF(Dispatcher, Remove_second_G1_handler)
+REGISTER_TEST(Dispatcher, Remove_second_G1_handler)
 {
-    ASSERT_FALSE(cb1);
-    ASSERT_FALSE(cb2);
-    ASSERT_FALSE(cb3);
+    TEST_ASSERT_FALSE(cb1);
+    TEST_ASSERT_FALSE(cb2);
+    TEST_ASSERT_FALSE(cb3);
 
     THEDISPATCHER.remove_handler(Dispatcher::GCODE_HANDLER, h3);
     OutputStream os; // NULL output stream
-    ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
-    ASSERT_TRUE ( cb1 );
-    ASSERT_FALSE ( cb3 );
+    TEST_ASSERT_TRUE(THEDISPATCHER.dispatch(gcodes[0], os));
+    TEST_ASSERT_TRUE ( cb1 );
+    TEST_ASSERT_FALSE ( cb3 );
 }
 
-TESTF(Dispatcher, one_off_dispatch)
+REGISTER_TEST(Dispatcher, one_off_dispatch)
 {
     std::ostringstream oss;
     OutputStream os(&oss);
 
-    ASSERT_FALSE(cb1);
-    ASSERT_TRUE(args.empty());
+    TEST_ASSERT_FALSE(cb1);
+    TEST_ASSERT_TRUE(args.empty());
     THEDISPATCHER.dispatch(os, 'G', 1, 'X', 456.0, 'Y', 789.0, 'Z', 123.0, 0);
-    ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "ok\n"));
+    TEST_ASSERT_STRING_S(oss.str().c_str(), "ok\n");
 
-    ASSERT_TRUE ( cb1 );
+    TEST_ASSERT_TRUE ( cb1 );
     for(auto &i : args) {
         printf("%c: %f\n", i.first, i.second);
     }
-    ASSERT_EQUALS_V(3, args.size());
-    ASSERT_EQUALS_V(456, args['X']);
-    ASSERT_EQUALS_V(789, args['Y']);
-    ASSERT_EQUALS_V(123, args['Z']);
+    TEST_ASSERT_EQUAL_INT(3, args.size());
+    TEST_ASSERT_EQUAL_INT(456, args['X']);
+    TEST_ASSERT_EQUAL_INT(789, args['Y']);
+    TEST_ASSERT_EQUAL_INT(123, args['Z']);
 }
 
+#endif

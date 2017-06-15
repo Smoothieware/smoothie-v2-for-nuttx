@@ -1,4 +1,5 @@
-#include "../easyunit/test.h"
+#include "../Unity/src/unity.h"
+#include "TestRegistry.h"
 
 #include <sys/mount.h>
 #include <sys/types.h>
@@ -15,23 +16,23 @@ static const char g_target[]         = "/mnt/fs";
 static const char g_filesystemtype[] = "vfat";
 static const char g_source[]         = "/dev/mmcsd0";
 
-TEST(SDCardTest, mount)
+REGISTER_TEST(SDCardTest, mount)
 {
     int ret;
     ret = boardctl(BOARDIOC_INIT, 0);
-    ASSERT_EQUALS_V(OK, ret);
+    TEST_ASSERT_EQUAL_INT(OK, ret);
 
     ret = mount(g_source, g_target, g_filesystemtype, 0, nullptr);
-    ASSERT_EQUALS_V(0, ret);
+    TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
-TEST(SDCardTest, directory)
+REGISTER_TEST(SDCardTest, directory)
 {
     DIR *dirp;
 
     /* Open the directory */
     dirp = opendir(g_target);
-    ASSERT_TRUE(dirp != NULL);
+    TEST_ASSERT_NOT_NULL(dirp);
 
     /* Read each directory entry */
     int cnt= 0;
@@ -46,10 +47,10 @@ TEST(SDCardTest, directory)
         cnt++;
     }
     closedir(dirp);
-    ASSERT_TRUE(cnt > 0);
+    TEST_ASSERT_TRUE(cnt > 0);
 }
 
-TEST(SDCardTest, write_read)
+REGISTER_TEST(SDCardTest, write_read)
 {
     char fn[64];
     strcpy(fn, g_target);
@@ -60,44 +61,44 @@ TEST(SDCardTest, write_read)
 
     FILE *fp;
     fp = fopen(fn, "w");
-    ASSERT_TRUE(fp != NULL);
+    TEST_ASSERT_NOT_NULL(fp);
 
     for (int i = 1; i <= 10; ++i) {
         char buf[32];
         int n= snprintf(buf, sizeof(buf), "Line %d\n", i);
         int x= fwrite(buf, 1, n, fp);
-        ASSERT_EQUALS_V(n, x);
+        TEST_ASSERT_EQUAL_INT(n, x);
     }
 
     fclose(fp);
 
     // Open file
     fp = fopen(fn, "r");
-    ASSERT_TRUE(fp != NULL);
+    TEST_ASSERT_NOT_NULL(fp);
 
     // check each line of the file
     for (int i = 1; i <= 10; ++i) {
-        ASSERT_TRUE(!feof(fp));
+        TEST_ASSERT_TRUE(!feof(fp));
         char buf[32];
         char *l= fgets(buf, sizeof(buf), fp);
-        ASSERT_TRUE(l != NULL);
+        TEST_ASSERT_NOT_NULL(l);
         printf("test: %s", buf);
         // now verify
         char vbuf[32];
         int n= snprintf(vbuf, sizeof(vbuf), "Line %d\n", i);
-        ASSERT_EQUALS_V(0, strncmp(buf, vbuf, n));
+        TEST_ASSERT_EQUAL_INT(0, strncmp(buf, vbuf, n));
     }
     fclose(fp);
 }
 
-TEST(SDCardTest,read_config_init)
+REGISTER_TEST(SDCardTest,read_config_init)
 {
-
+    TEST_IGNORE();
 }
 
 
-TEST(SDCardTest,unmount)
+REGISTER_TEST(SDCardTest,unmount)
 {
     int ret = umount(g_target);
-    ASSERT_EQUALS_V(0, ret);
+    TEST_ASSERT_EQUAL_INT(0, ret);
 }

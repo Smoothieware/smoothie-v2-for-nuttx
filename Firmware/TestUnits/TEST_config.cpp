@@ -1,7 +1,8 @@
-#include "../easyunit/test.h"
+#include "../Unity/src/unity.h"
 #include <sstream>
 
 #include "ConfigReader.h"
+#include "TestRegistry.h"
 
 static ConfigReader cr;
 static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106\nfan.input_off_command = M107\n\
@@ -11,21 +12,22 @@ misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.iv
 
 static ConfigReader::sections_t sections;
 static std::stringstream ss1(str);
-TEST(Config,sections)
+REGISTER_TEST(ConfigTest, sections)
 {
-    ASSERT_TRUE(cr.get_sections(ss1, sections));
-    ASSERT_TRUE(sections.find("switch") != sections.end());
-    ASSERT_TRUE(sections.find("dummy") != sections.end());
-    ASSERT_TRUE(sections.find("none") == sections.end());
+    TEST_ASSERT_TRUE(cr.get_sections(ss1, sections));
+    TEST_ASSERT_TRUE(sections.find("switch") != sections.end());
+    TEST_ASSERT_TRUE(sections.find("dummy") != sections.end());
+    TEST_ASSERT_TRUE(sections.find("none") == sections.end());
 }
+
 
 static ConfigReader::sub_section_map_t ssmap;
 static std::stringstream ss2(str);
-TEST(Config,load_switches)
+REGISTER_TEST(ConfigTest, load_switches)
 {
-    ASSERT_TRUE(ssmap.empty());
-    ASSERT_TRUE(cr.get_sub_sections(ss2, "switch", ssmap));
-    ASSERT_TRUE(cr.get_current_section() == "switch");
+    TEST_ASSERT_TRUE(ssmap.empty());
+    TEST_ASSERT_TRUE(cr.get_sub_sections(ss2, "switch", ssmap));
+    TEST_ASSERT_EQUAL_STRING("switch", cr.get_current_section().c_str());
 
     bool fanok= false;
     bool miscok= false;
@@ -46,38 +48,38 @@ TEST(Config,load_switches)
             float fv= cr.get_float(m, "value", 0.0F);
 
             if(name == "fan") {
-                ASSERT_TRUE(pin == "2.6");
-                ASSERT_TRUE(input_on_command == "M106");
-                ASSERT_TRUE(input_off_command == "M107");
-                ASSERT_TRUE(output_on_command.empty());
-                ASSERT_TRUE(output_off_command.empty());
-                ASSERT_TRUE(type == "pwm");
-                ASSERT_TRUE(ipb == "momentary");
-                ASSERT_EQUALS_V(0, iv);
-                ASSERT_EQUALS_V(0.0F, fv);
+                TEST_ASSERT_EQUAL_STRING("2.6", pin.c_str());
+                TEST_ASSERT_EQUAL_STRING("M106", input_on_command.c_str());
+                TEST_ASSERT_EQUAL_STRING("M107", input_off_command.c_str());
+                TEST_ASSERT_TRUE(output_on_command.empty());
+                TEST_ASSERT_TRUE(output_off_command.empty());
+                TEST_ASSERT_EQUAL_STRING(type.c_str(), "pwm");
+                TEST_ASSERT_EQUAL_STRING(ipb.c_str(), "momentary");
+                TEST_ASSERT_EQUAL_INT(0, iv);
+                TEST_ASSERT_EQUAL_FLOAT(0.0F, fv);
                 fanok= true;
 
             } else if(name == "misc") {
-                ASSERT_TRUE(pin == "2.4");
-                ASSERT_TRUE(input_on_command == "M42");
-                ASSERT_TRUE(input_off_command == "M43");
-                ASSERT_TRUE(output_on_command.empty());
-                ASSERT_TRUE(output_off_command.empty());
-                ASSERT_TRUE(type == "digital");
-                ASSERT_TRUE(ipb == "momentary");
-                ASSERT_EQUALS_V(123, iv);
-                ASSERT_EQUALS_DELTA_V(123.456F, fv, 0.001F);
+                TEST_ASSERT_EQUAL_STRING("2.4", pin.c_str());
+                TEST_ASSERT_EQUAL_STRING("M42", input_on_command.c_str());
+                TEST_ASSERT_EQUAL_STRING("M43", input_off_command.c_str());
+                TEST_ASSERT_TRUE(output_on_command.empty());
+                TEST_ASSERT_TRUE(output_off_command.empty());
+                TEST_ASSERT_EQUAL_STRING("digital", type.c_str());
+                TEST_ASSERT_EQUAL_STRING("momentary", ipb.c_str());
+                TEST_ASSERT_EQUAL_INT(123, iv);
+                TEST_ASSERT_EQUAL_FLOAT(123.456F, fv);
                 miscok= true;
 
             } else if(name == "psu") {
                 psuok= true;
 
             } else {
-                FAIL_M("unexpected switch name");
+                TEST_FAIL();
             }
         }
     }
-    ASSERT_TRUE(fanok);
-    ASSERT_TRUE(miscok);
-    ASSERT_TRUE(!psuok);
+    TEST_ASSERT_TRUE(fanok);
+    TEST_ASSERT_TRUE(miscok);
+    TEST_ASSERT_FALSE(psuok);
 }

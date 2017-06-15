@@ -4,24 +4,26 @@
 #include <tuple>
 
 #include "OutputStream.h"
-
 #include "prettyprint.hpp"
+#include "../Unity/src/unity.h"
 
-#include "../easyunit/test.h"
+#include "TestRegistry.h"
 
+// just swaps the parameters
+#define TEST_ASSERT_STRING_S(a, b) TEST_ASSERT_EQUAL_STRING(b, a)
 
-TEST(StringStreamsTest,basic)
+REGISTER_TEST(StreamsTest, stringstream)
 {
 	std::ostringstream oss;
 	oss << "Hello World!";
-	ASSERT_TRUE(oss.str() == "Hello World!");
+	TEST_ASSERT_STRING_S(oss.str().c_str(), "Hello World!");
 
 	std::ostringstream oss2;
 	oss2.write("hello", 5);
-	ASSERT_TRUE(oss2.str() == "hello");
+	TEST_ASSERT_STRING_S(oss2.str().c_str(), "hello");
 }
 
-TEST(ostreamsTest,basic)
+REGISTER_TEST(StreamsTest, cout)
 {
 	std::cout << "Hello World!" << "\n";
 	std::cout << "Hello World, " << 1.234F << " that was a number\n";
@@ -35,7 +37,7 @@ TEST(ostreamsTest,basic)
 	{
 		std::ostringstream oss;
 		oss << s;
-		ASSERT_TRUE(oss.str() == "{1, 2, 3, 4}");
+		TEST_ASSERT_STRING_S(oss.str().c_str(), "{1, 2, 3, 4}");
 	}
 
 	auto t= std::make_tuple(1,2,3,4);
@@ -43,27 +45,27 @@ TEST(ostreamsTest,basic)
 		std::ostringstream oss;
 		oss << t;
 		printf("tuple: %s\n", oss.str().c_str());
-		ASSERT_TRUE(oss.str() == "(1, 2, 3, 4)");
+		TEST_ASSERT_STRING_S(oss.str().c_str(), "(1, 2, 3, 4)");
 	}
 }
 
-TEST(OutputStreamTest,null)
+REGISTER_TEST(StreamsTest, OutputStream_null)
 {
 	OutputStream os;
 	os.printf("hello");
 }
 
-TEST(OutputStreamTest,sstream)
+REGISTER_TEST(StreamsTest, OutputStream_sstream)
 {
 	std::ostringstream oss;
 	OutputStream os(&oss);
 	os.printf("hello world");
 	printf("oss = %s\n", oss.str().c_str());
 	std::cout << oss.str() << "\n";
-	ASSERT_EQUALS_V(0, strcmp(oss.str().c_str(), "hello world"));
+	TEST_ASSERT_EQUAL_INT(0, strcmp(oss.str().c_str(), "hello world"));
 }
 
-TEST(OutputStreamTest,fdstream)
+REGISTER_TEST(StreamsTest, OutputStream_fdstream)
 {
 	OutputStream os(1); // stdout
 	os.printf("hello world on fd stdout OutputStream\n");
