@@ -3,20 +3,28 @@
 
 #include "ConfigReader.h"
 
-TEST(Config,load_switches)
-{
-    std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106\nfan.input_off_command = M107\n\
+static ConfigReader cr;
+static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106\nfan.input_off_command = M107\n\
 fan.output_pin = 2.6\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
 misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\n\
 [dummy]\nenable = false");
-    std::stringstream ss(str);
 
-    ConfigReader cr;
-    ConfigReader::sub_section_map_t ssmap;
-    if(!cr.get_sub_sections(ss, "switch", ssmap)) {
-        FAIL_M("no section found");
-    }
+static ConfigReader::sections_t sections;
+static std::stringstream ss1(str);
+TEST(Config,sections)
+{
+    ASSERT_TRUE(cr.get_sections(ss1, sections));
+    ASSERT_TRUE(sections.find("switch") != sections.end());
+    ASSERT_TRUE(sections.find("dummy") != sections.end());
+    ASSERT_TRUE(sections.find("none") == sections.end());
+}
 
+static ConfigReader::sub_section_map_t ssmap;
+static std::stringstream ss2(str);
+TEST(Config,load_switches)
+{
+    ASSERT_TRUE(ssmap.empty());
+    ASSERT_TRUE(cr.get_sub_sections(ss2, "switch", ssmap));
     ASSERT_TRUE(cr.get_current_section() == "switch");
 
     bool fanok= false;

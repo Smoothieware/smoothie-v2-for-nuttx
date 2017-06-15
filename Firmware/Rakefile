@@ -91,8 +91,12 @@ if TESTING
     # all tests
     src += FileList['TestUnits/*.cpp']
   else
-    # just named test
-    src += FileList["TestUnits/TEST_#{ENV['test']}.cpp", 'TestUnits/main.cpp']
+    # just named tests
+    tests= ENV['test'].split(',')
+    tests.each do |t|
+      src += FileList["TestUnits/TEST_#{t}.cpp"]
+    end
+    src += FileList['TestUnits/main.cpp']
   end
   SRC= src
   puts "Building Test Cases"
