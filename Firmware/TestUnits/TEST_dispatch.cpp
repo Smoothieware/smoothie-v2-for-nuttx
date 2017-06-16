@@ -26,9 +26,9 @@ TEST_SETUP(Dispatcher)
     cb1= false;
     cb2= false;
     cb3= false;
-    auto fnc1= [this](GCode& gc) { args= gc.get_args(); cb1= true; return true; };
-    auto fnc2= [this](GCode& gc) { cb2= true; return true; };
-    auto fnc3= [this](GCode& gc) { cb3= true; return true; };
+    auto fnc1= [this](GCode& gc, OutputStream& os) { args= gc.get_args(); cb1= true; return true; };
+    auto fnc2= [this](GCode& gc, OutputStream& os) { cb2= true; return true; };
+    auto fnc3= [this](GCode& gc, OutputStream& os) { cb3= true; return true; };
     THEDISPATCHER.clear_handlers();
     THEDISPATCHER.add_handler(Dispatcher::GCODE_HANDLER, 1, fnc1);
     THEDISPATCHER.add_handler(Dispatcher::MCODE_HANDLER, 1, fnc2);
@@ -96,9 +96,8 @@ REGISTER_TESTF(Dispatcher, one_off_dispatch)
     TEST_ASSERT_STRING_S(oss.str().c_str(), "ok\n");
 
     TEST_ASSERT_TRUE ( cb1 );
-    for(auto &i : args) {
-        printf("%c: %f\n", i.first, i.second);
-    }
+    //for(auto &i : args) printf("%c: %f\n", i.first, i.second);
+
     TEST_ASSERT_EQUAL_INT(3, args.size());
     TEST_ASSERT_EQUAL_INT(456, args['X']);
     TEST_ASSERT_EQUAL_INT(789, args['Y']);

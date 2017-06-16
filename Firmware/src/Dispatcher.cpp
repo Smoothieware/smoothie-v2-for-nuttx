@@ -28,7 +28,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 	bool ret= false;
 
 	for (auto it=f.first; it!=f.second; ++it) {
-		if(it->second(gc)) {
+		if(it->second(gc, os)) {
 			ret= true;
 		}else{
 			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G':'M', gc.get_code());
@@ -37,7 +37,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 
 	// special case is M500 - M503
 	if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
-		ret= handle_configuration_commands(gc);
+		ret= handle_configuration_commands(gc, os);
 	}
 
 	if(ret) {
@@ -91,6 +91,41 @@ bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
     return dispatch(gc, os);
 }
 
+// Separate command from arguments
+// return command and stripit from line
+// TODO goes into helpers
+static std::string get_command_arguments(std::string& line )
+{
+    std::string t= line;
+    size_t pos = line.find_first_of(" ");
+    if( pos == string::npos ) {
+    	line= "";
+        return t;
+    }
+
+    line= line.substr( pos + 1);
+    return t.substr(0, pos);
+}
+
+// dispatch command to a commadn handler if one is registered
+bool Dispatcher::dispatch(const char *line, OutputStream& os) const
+{
+	std::string params(line);
+	std::string cmd= get_command_arguments(params);
+	const auto& f= command_handlers.equal_range(cmd);
+	bool ret= false;
+
+	for (auto it=f.first; it!=f.second; ++it) {
+		if(it->second(params, os)) {
+			ret= true;
+		}else{
+			DEBUG_WARNING("command handler did not handle %s\n", line);
+		}
+	}
+
+	return ret;
+}
+
 Dispatcher::Handlers_t::iterator Dispatcher::add_handler(HANDLER_NAME gcode, uint16_t code, Handler_t fnc)
 {
 	Handlers_t::iterator ret;
@@ -109,14 +144,20 @@ void Dispatcher::remove_handler(HANDLER_NAME gcode, Handlers_t::iterator i)
 	}
 }
 
+Dispatcher::CommandHandlers_t::iterator Dispatcher::add_handler(std::string cmd, CommandHandler_t fnc)
+{
+	return command_handlers.insert( CommandHandlers_t::value_type(cmd, fnc) );
+}
+
 // mainly used for testing
 void Dispatcher::clear_handlers()
 {
 	gcode_handlers.clear();
 	mcode_handlers.clear();
+	command_handlers.clear();
 }
 
-bool Dispatcher::handle_configuration_commands(GCode& gc) const
+bool Dispatcher::handle_configuration_commands(GCode& gc, OutputStream& os) const
 {
 	// if(gc.get_code() == 500) {
 	// 	if(gc.getSubcode() == 3) {

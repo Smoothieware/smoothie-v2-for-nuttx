@@ -60,36 +60,31 @@ static int setup_CDC()
     return fd;
 }
 
-// Hack to allow us to create a ostream writing to the USBCDC fd we have open
-#include <sstream>
-class FdBuf : public std::stringbuf
-{
-public:
-    FdBuf(int f) : fd(f) {};
-    virtual int sync()
-    {
-        size_t len = this->str().size();
-        if(len > 0) {
-            printf("fdBuf: %s", this->str().c_str());
-            write(fd, this->str().c_str(), len);
-            this->str("");
-        }
-        return 0;
-    }
-private:
-    int fd;
-};
-
-
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
 #include "OutputStream.h"
+#include "CommandShell.h"
 
 static GCodeProcessor gp;
 static bool dispatch_line(int fd, char *line, int cnt)
 {
     printf("Got line %s\n", line);
+
+    // see if a command
+    if(islower(line[0]) || line[0] == '$') {
+        // create an output stream that writes to the already open fd
+        OutputStream os(fd);
+        if(!THEDISPATCHER.dispatch(line, os)) {
+            if(line[0] == '$'){
+                os.printf("error:Invalid statement\n");
+            }else{
+                os.printf("error:Unsupported command - %s\n", line);
+            }
+        }
+
+        return true;
+    }
 
     // Handle Gcode
     GCodeProcessor::GCodes_t gcodes;
@@ -108,7 +103,7 @@ static bool dispatch_line(int fd, char *line, int cnt)
         return true;
     }
 
-    // crete an output stream that writes to the already open fd
+    // create an output stream that writes to the already open fd
     OutputStream os(fd);
     // dispatch gcode to MotionControl and Planner
     for(auto& i : gcodes) {
@@ -190,6 +185,10 @@ extern "C" int smoothie_main(int argc, char *argv[])
     up_cxxinitialize();
 
     printf("Smoothie V2.0alpha starting up\n");
+
+    // create the commandshell
+    CommandShell shell;
+    shell.initialize();
 
     // Launch the comms thread
     std::thread comms_thread(comms);
