@@ -20,6 +20,7 @@ REGISTER_TEST(StreamsTest, stringstream)
 
 	std::ostringstream oss2;
 	oss2.write("hello", 5);
+
 	TEST_ASSERT_STRING_S(oss2.str().c_str(), "hello");
 }
 
@@ -62,7 +63,7 @@ REGISTER_TEST(StreamsTest, OutputStream_sstream)
 	os.printf("hello world");
 	printf("oss = %s\n", oss.str().c_str());
 	std::cout << oss.str() << "\n";
-	TEST_ASSERT_EQUAL_INT(0, strcmp(oss.str().c_str(), "hello world"));
+	TEST_ASSERT_EQUAL_STRING("hello world", oss.str().c_str());
 }
 
 REGISTER_TEST(StreamsTest, OutputStream_fdstream)
@@ -71,8 +72,29 @@ REGISTER_TEST(StreamsTest, OutputStream_fdstream)
 	os.printf("hello world on fd stdout OutputStream\n");
 
 	// also test cout
-	OutputStream os2(std::cout);
+	OutputStream os2(&std::cout);
 	os2.printf("hello world from cout OutputStream\n");
 }
 
+REGISTER_TEST(StreamsTest, OutputStream_prependok)
+{
+	std::ostringstream oss;
+	OutputStream os(&oss);
+	// output the result after the ok
+	os.setPrependOK(true);
+	os.printf("This is after the ok\n");
+	os.setPrependOK(false);
+	os.printf("ok ");
+	int n= os.flush_prepend(); // this flushes the internally stored string to the output
+	TEST_ASSERT_EQUAL_INT(21, n);
+	TEST_ASSERT_EQUAL_STRING("ok This is after the ok\n", oss.str().c_str());
+}
 
+REGISTER_TEST(StreamsTest, OutputStream_long_line)
+{
+	std::ostringstream oss;
+	OutputStream os(&oss);
+	int n= os.printf("12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890");
+	TEST_ASSERT_EQUAL_INT(135, n);
+	TEST_ASSERT_EQUAL_STRING("123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012...", oss.str().c_str());
+}

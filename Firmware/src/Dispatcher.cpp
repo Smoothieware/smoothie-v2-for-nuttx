@@ -46,7 +46,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 			// output the result after the ok
 			os.setPrependOK(false);
 			os.printf("ok ");
-			os.printf("FLUSH"); // this flushes the internally stored string to the output
+			os.flush_prepend(); // this flushes the internally stored prepend string to the output
 			send_ok= false;
 		}
 

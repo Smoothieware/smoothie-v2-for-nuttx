@@ -3,6 +3,7 @@
 #include <string>
 #include <ostream>
 #include <sstream>
+#include <unistd.h>
 
 /**
 	Handles an output stream from gcode/mcode handlers
@@ -26,7 +27,7 @@ public:
 	void setPrependOK(bool flg = true) { prepend_ok = flg; }
 	bool isAppendNL() const { return append_nl; }
 	bool isPrependOK() const { return prepend_ok; }
-
+	int flush_prepend();
 
 private:
 	// Hack to allow us to create a ostream writing to the USBCDC fd we have open
