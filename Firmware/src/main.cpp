@@ -118,14 +118,14 @@ static bool dispatch_line(int fd, char *line, int cnt)
 
 static std::mutex m;
 static std::condition_variable cv;
-void usb_comms()
+static int usb_comms(int , char )
 {
     printf("Comms thread running\n");
 
     int fd = setup_CDC();
     if(fd == -1) {
         printf("CDC setup failed\n");
-        return;
+        return 0;
     }
 
     {
@@ -148,13 +148,13 @@ void usb_comms()
             printf("ttyACM0: Error writing welcome: %d\n", errno);
             close(fd);
             fd = -1;
-            return;
+            return 0;
         }
 
     } else {
         printf("ttyACM0: Error reading: %d\n", errno);
         fd = -1;
-        return;
+        return 0;
     }
 
     // now read lines and dispatch them
@@ -163,8 +163,8 @@ void usb_comms()
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
             if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
-                line[cnt + 1] = '\0';
-                dispatch_line(fd, line, cnt);
+                line[cnt] = '\0';
+                dispatch_line(fd, line, cnt-1);
                 cnt = 0;
 
             } else {
@@ -177,6 +177,8 @@ void usb_comms()
     }
 
     printf("Comms thread exiting\n");
+
+    return 1;
 }
 
 extern "C" int smoothie_main(int argc, char *argv[])
@@ -191,12 +193,17 @@ extern "C" int smoothie_main(int argc, char *argv[])
     shell.initialize();
 
     // Launch the comms thread
-    std::thread usb_comms_thread(usb_comms);
+    //std::thread usb_comms_thread(usb_comms);
     // sched_param sch_params;
     // sch_params.sched_priority = 10;
     // if(pthread_setschedparam(usb_comms_thread.native_handle(), SCHED_RR, &sch_params)) {
     //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
     // }
+    task_create("usb_comms_thread", SCHED_PRIORITY_DEFAULT,
+                10000,
+                (main_t)usb_comms,
+                (FAR char * const *)NULL);
+
 
     // wait for comms thread to start
     std::unique_lock<std::mutex> lk(m);
@@ -205,7 +212,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     printf("USB Comms thread started\n");
 
     // Join the comms thread with the main thread
-    usb_comms_thread.join();
+    //usb_comms_thread.join();
 
     printf("Exiting main\n");
 
