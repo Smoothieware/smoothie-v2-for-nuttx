@@ -6,11 +6,32 @@
 
 #include <vector>
 #include <tuple>
+#include <functional>
 
 #include "../Unity/src/unity.h"
 #include "TestRegistry.h"
 
-int test_runner(void)
+static std::function<void(void)> setup_fnc;
+void setUp(void)
+{
+    if(setup_fnc)
+        setup_fnc();
+}
+
+static std::function<void(void)> teardown_fnc;
+void tearDown(void)
+{
+    if(teardown_fnc)
+        teardown_fnc();
+}
+
+static std::function<void(void)> test_wrapper_fnc;
+static void test_wrapper(void)
+{
+    test_wrapper_fnc();
+}
+
+static int test_runner(void)
 {
     auto tests= TestRegistry::instance().get_tests();
     printf("There are %d registered tests...\n", tests.size());
@@ -18,19 +39,30 @@ int test_runner(void)
         printf("  %s\n", std::get<1>(i));
     }
 
-    UnityBegin("TestUnits.new");
+    UnityBegin("TestUnits");
 
     for(auto i : tests) {
-        UnityTestFunction fnc= std::get<0>(i);
+        TestBase *fnc= std::get<0>(i);
         const char *name= std::get<1>(i);
         int ln= std::get<2>(i);
-        UnityDefaultTestRun(fnc, name, ln);
+        Unity.TestFile= std::get<3>(i);
+        test_wrapper_fnc= std::bind(&TestBase::test, fnc);
+        bool st= std::get<4>(i);
+        if(st) {
+            setup_fnc= std::bind(&TestBase::setUp, fnc);
+            teardown_fnc= std::bind(&TestBase::tearDown, fnc);
+        }else{
+            setup_fnc= nullptr;
+            teardown_fnc= nullptr;
+        }
+
+        UnityDefaultTestRun(test_wrapper, name, ln);
     }
 
     return (UnityEnd());
 }
 
-int run_tests(int argc, char *argv[])
+static int run_tests(int argc, char *argv[])
 {
     // do C++ initialization for static constructors first
     up_cxxinitialize();

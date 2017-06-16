@@ -11,16 +11,17 @@
 // just swaps the parameters
 #define TEST_ASSERT_STRING_S(a, b) TEST_ASSERT_EQUAL_STRING(b, a)
 
-#if 0
-static bool cb1;
-static bool cb2;
-static bool cb3;
-static GCodeProcessor gp;
-static GCodeProcessor::GCodes_t gcodes;
-static Dispatcher::Handlers_t::iterator h3;
-static GCode::Args_t args;
+TEST_DECLARE(Dispatcher)
+    bool cb1;
+    bool cb2;
+    bool cb3;
+    GCodeProcessor gp;
+    GCodeProcessor::GCodes_t gcodes;
+    Dispatcher::Handlers_t::iterator h3;
+    GCode::Args_t args;
+TEST_END_DECLARE
 
-static void setup()
+TEST_SETUP(Dispatcher)
 {
     cb1= false;
     cb2= false;
@@ -39,12 +40,12 @@ static void setup()
     args.clear();
 }
 
-static void teardown()
+TEST_TEARDOWN(Dispatcher)
 {
     THEDISPATCHER.clear_handlers();
 }
 
-REGISTER_TEST(Dispatcher, check_callbacks)
+REGISTER_TESTF(Dispatcher, check_callbacks)
 {
     TEST_ASSERT_FALSE(cb1);
     TEST_ASSERT_FALSE(cb2);
@@ -71,7 +72,7 @@ REGISTER_TEST(Dispatcher, check_callbacks)
     TEST_ASSERT_EQUAL_INT(0, oss.str().size());
 }
 
-REGISTER_TEST(Dispatcher, Remove_second_G1_handler)
+REGISTER_TESTF(Dispatcher, Remove_second_G1_handler)
 {
     TEST_ASSERT_FALSE(cb1);
     TEST_ASSERT_FALSE(cb2);
@@ -84,7 +85,7 @@ REGISTER_TEST(Dispatcher, Remove_second_G1_handler)
     TEST_ASSERT_FALSE ( cb3 );
 }
 
-REGISTER_TEST(Dispatcher, one_off_dispatch)
+REGISTER_TESTF(Dispatcher, one_off_dispatch)
 {
     std::ostringstream oss;
     OutputStream os(&oss);
@@ -103,5 +104,3 @@ REGISTER_TEST(Dispatcher, one_off_dispatch)
     TEST_ASSERT_EQUAL_INT(789, args['Y']);
     TEST_ASSERT_EQUAL_INT(123, args['Z']);
 }
-
-#endif
