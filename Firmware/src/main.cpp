@@ -118,7 +118,7 @@ static bool dispatch_line(int fd, char *line, int cnt)
 
 static std::mutex m;
 static std::condition_variable cv;
-void comms()
+void usb_comms()
 {
     printf("Comms thread running\n");
 
@@ -191,10 +191,10 @@ extern "C" int smoothie_main(int argc, char *argv[])
     shell.initialize();
 
     // Launch the comms thread
-    std::thread comms_thread(comms);
+    std::thread usb_comms_thread(usb_comms);
     // sched_param sch_params;
     // sch_params.sched_priority = 10;
-    // if(pthread_setschedparam(comms_thread.native_handle(), SCHED_RR, &sch_params)) {
+    // if(pthread_setschedparam(usb_comms_thread.native_handle(), SCHED_RR, &sch_params)) {
     //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
     // }
 
@@ -202,10 +202,10 @@ extern "C" int smoothie_main(int argc, char *argv[])
     std::unique_lock<std::mutex> lk(m);
     cv.wait(lk);
 
-    printf("Comms thread started\n");
+    printf("USB Comms thread started\n");
 
     // Join the comms thread with the main thread
-    comms_thread.join();
+    usb_comms_thread.join();
 
     printf("Exiting main\n");
 
