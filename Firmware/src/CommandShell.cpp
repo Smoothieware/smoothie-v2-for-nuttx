@@ -9,6 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+CommandShell::CommandShell()
+{
+    mounted = false;
+}
 
 bool CommandShell::initialize()
 {
@@ -18,6 +22,8 @@ bool CommandShell::initialize()
 
     THEDISPATCHER.add_handler( "ls", std::bind( &CommandShell::ls_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
 
     return true;
 }
@@ -83,5 +89,44 @@ bool CommandShell::rm_cmd(std::string& params, OutputStream& os)
     std::string fn = shift_parameter( params );
     int s = remove(fn.c_str());
     if (s != 0) os.printf("Could not delete %s\n", fn.c_str());
+    return true;
+}
+
+bool CommandShell::mem_cmd(std::string& params, OutputStream& os)
+{
+    struct mallinfo mem = mallinfo();
+    os.printf("             total       used       free    largest\n");
+    os.printf("Mem:   %11d%11d%11d%11d\n", mem.arena, mem.uordblks, mem.fordblks, mem.mxordblk);
+    return true;
+}
+
+#include <sys/mount.h>
+#include <sys/boardctl.h>
+bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
+{
+    if(mounted) {
+        os.printf("Already mounted\n");
+        return true;
+    }
+
+    int ret;
+    ret = boardctl(BOARDIOC_INIT, 0);
+    if(OK != ret) {
+        os.printf("Failed to INIT SDIO\n");
+        return true;
+    }
+
+    const char g_target[]         = "/sd";
+    const char g_filesystemtype[] = "vfat";
+    const char g_source[]         = "/dev/mmcsd0";
+
+    ret = mount(g_source, g_target, g_filesystemtype, 0, nullptr);
+    if(0 != ret) {
+        os.printf("Failed to mount sdcard\n");
+        return true;
+    }
+
+    mounted = true;
+    os.printf("Mounted %s on %s\n", g_source, g_target);
     return true;
 }

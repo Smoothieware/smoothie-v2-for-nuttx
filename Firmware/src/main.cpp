@@ -69,16 +69,14 @@ static int setup_CDC()
 static GCodeProcessor gp;
 static bool dispatch_line(int fd, char *line, int cnt)
 {
-    printf("Got line %s\n", line);
-
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
         // create an output stream that writes to the already open fd
         OutputStream os(fd);
         if(!THEDISPATCHER.dispatch(line, os)) {
-            if(line[0] == '$'){
+            if(line[0] == '$') {
                 os.printf("error:Invalid statement\n");
-            }else{
+            } else {
                 os.printf("error:Unsupported command - %s\n", line);
             }
         }
@@ -116,9 +114,14 @@ static bool dispatch_line(int fd, char *line, int cnt)
     return true;
 }
 
+#define USE_PTHREAD
 static std::mutex m;
 static std::condition_variable cv;
-static int usb_comms(int , char )
+#ifdef USE_PTHREAD
+static void *usb_comms(void *)
+#else
+static int usb_comms(int , char)
+#endif
 {
     printf("Comms thread running\n");
 
@@ -163,8 +166,8 @@ static int usb_comms(int , char )
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
             if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
-                line[cnt] = '\0';
-                dispatch_line(fd, line, cnt-1);
+                line[cnt] = '\0'; // remove the \n  and nul terminate
+                dispatch_line(fd, line, cnt - 1);
                 cnt = 0;
 
             } else {
@@ -178,7 +181,11 @@ static int usb_comms(int , char )
 
     printf("Comms thread exiting\n");
 
+    #ifdef USE_PTHREAD
+    return (void *)1;
+    #else
     return 1;
+    #endif
 }
 
 extern "C" int smoothie_main(int argc, char *argv[])
@@ -194,16 +201,49 @@ extern "C" int smoothie_main(int argc, char *argv[])
 
     // Launch the comms thread
     //std::thread usb_comms_thread(usb_comms);
+
     // sched_param sch_params;
     // sch_params.sched_priority = 10;
     // if(pthread_setschedparam(usb_comms_thread.native_handle(), SCHED_RR, &sch_params)) {
     //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
     // }
-    task_create("usb_comms_thread", SCHED_PRIORITY_DEFAULT,
-                10000,
-                (main_t)usb_comms,
-                (FAR char * const *)NULL);
 
+    #ifdef USE_PTHREAD
+    pthread_t usb_comms_thread;
+    void *result;
+    pthread_attr_t attr;
+    struct sched_param sparam;
+    int prio_min;
+    int prio_max;
+    int prio_mid;
+    int status;
+
+    prio_min = sched_get_priority_min(SCHED_FIFO);
+    prio_max = sched_get_priority_max(SCHED_FIFO);
+    prio_mid = (prio_min + prio_max) / 2;
+
+    status = pthread_attr_init(&attr);
+    if (status != 0) {
+        printf("main: pthread_attr_init failed, status=%d\n", status);
+    }
+
+    status = pthread_attr_setstacksize(&attr, 10000);
+    if (status != 0) {
+        printf("main: pthread_attr_setstacksize failed, status=%d\n", status);
+    }
+
+    sparam.sched_priority = (prio_min + prio_mid) / 2;
+    status = pthread_attr_setschedparam(&attr, &sparam);
+    if (status != OK) {
+        printf("main: pthread_attr_setschedparam failed, status=%d\n", status);
+    } else {
+        printf("main: Set comms thread priority to %d\n", sparam.sched_priority);
+    }
+
+    status = pthread_create(&usb_comms_thread, &attr, usb_comms, NULL);
+    if (status != 0) {
+        printf("main: pthread_create failed, status=%d\n", status);
+    }
 
     // wait for comms thread to start
     std::unique_lock<std::mutex> lk(m);
@@ -213,6 +253,16 @@ extern "C" int smoothie_main(int argc, char *argv[])
 
     // Join the comms thread with the main thread
     //usb_comms_thread.join();
+    pthread_join(usb_comms_thread, &result);
+
+    #else
+    //usb_comms(0);
+    task_create("usb_comms_thread", SCHED_PRIORITY_DEFAULT,
+                5000,
+                (main_t)usb_comms,
+                (FAR char * const *)NULL);
+
+    #endif
 
     printf("Exiting main\n");
 
