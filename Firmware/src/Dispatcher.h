@@ -3,6 +3,7 @@
 #include <map>
 #include <functional>
 #include <string>
+#include <set>
 #include <stdint.h>
 
 #define THEDISPATCHER Dispatcher::getInstance()
@@ -28,7 +29,7 @@ public:
     using CommandHandler_t = std::function<bool(std::string&, OutputStream&)>;
     using CommandHandlers_t = std::multimap<std::string, CommandHandler_t>;
     CommandHandlers_t::iterator add_handler(std::string cmd, CommandHandler_t fnc);
-
+    std::set<std::string> get_commands() const;
     void remove_handler(HANDLER_NAME gcode, Handlers_t::iterator);
     bool dispatch(GCode &gc, OutputStream& os) const;
     bool dispatch(OutputStream& os, char cmd, uint16_t code, ...) const;

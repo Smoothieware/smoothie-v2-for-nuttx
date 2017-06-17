@@ -36,29 +36,7 @@ private:
 	{
 	public:
 		FdBuf(int f) : fd(f) {};
-		virtual int sync()
-		{
-			// USB CDC can't write more than 64 bytes at a time so limit it here
-			if(!this->str().empty()) {
-				if(this->str().size() < 64) {
-					write(fd, this->str().c_str(), this->str().size());
-				} else {
-					// FIXME: hack before we fix the cdc driver
-					int n = this->str().size();
-					int off = 0;
-					while(n > 0) {
-						int s = std::min(63, n);
-						write(fd, this->str().substr(off, s).c_str(), s);
-						off += s;
-						n -= s;
-					}
-				}
-				this->str("");
-			}
-
-			return 0;
-		}
-
+		virtual int sync();
 	private:
 		int fd;
 	};

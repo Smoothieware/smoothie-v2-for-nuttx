@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 
+// TODO move to utils
 inline std::string trim(const std::string &s)
 {
     auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c) {return std::isspace(c);});

@@ -13,6 +13,7 @@ public:
     bool initialize();
 
 private:
+    bool help_cmd(std::string& params, OutputStream& os);
     bool ls_cmd(std::string& params, OutputStream& os);
     bool rm_cmd(std::string& params, OutputStream& os);
     bool mem_cmd(std::string& params, OutputStream& os);

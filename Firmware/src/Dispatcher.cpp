@@ -14,6 +14,15 @@ using namespace std;
 #define DEBUG_WARNING printf
 //#define DEBUG_WARNING(...)
 
+std::set<std::string> Dispatcher::get_commands() const
+{
+	std::set<std::string> s;
+	for(auto& it : command_handlers) {
+		s.insert(it.first);
+	}
+	return s;
+}
+
 // NOTE this can be called recursively by commands handlers that need to issue their own commands
 // it can also be called concurrently from different threads, so no changing class context, that is why it is const
 bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const

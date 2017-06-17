@@ -3,11 +3,14 @@
 #include "Dispatcher.h"
 
 #include <functional>
+#include <set>
 
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#define HELP(m) if(params == "-h") { os.printf("%s\n", m); return true; }
 
 CommandShell::CommandShell()
 {
@@ -20,6 +23,7 @@ bool CommandShell::initialize()
     using std::placeholders::_1;
     using std::placeholders::_2;
 
+    THEDISPATCHER.add_handler( "help", std::bind( &CommandShell::help_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "ls", std::bind( &CommandShell::ls_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
@@ -44,8 +48,27 @@ std::string shift_parameter( std::string &parameters )
     return temp;
 }
 
+// lists all the registered commands
+bool CommandShell::help_cmd(std::string& params, OutputStream& os)
+{
+    auto cmds= THEDISPATCHER.get_commands();
+    for(auto& i : cmds) {
+        os.printf("%s\n", i.c_str());
+        // Display the help string for each command
+        //if(i != "help") {
+        //    std::string cmd(i);
+        //    cmd.append(" -h");
+        //    THEDISPATCHER.dispatch(cmd.c_str(), os);
+        //}
+    }
+    os.puts("\nuse cmd -h to get help on that command\n");
+
+    return true;
+}
+
 bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
 {
+    HELP("list files: -s show size");
     std::string path, opts;
     while(!params.empty()) {
         std::string s = shift_parameter( params );
@@ -91,6 +114,7 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::rm_cmd(std::string& params, OutputStream& os)
 {
+    HELP("delete file");
     std::string fn = shift_parameter( params );
     int s = remove(fn.c_str());
     if (s != 0) os.printf("Could not delete %s\n", fn.c_str());
@@ -99,6 +123,7 @@ bool CommandShell::rm_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::mem_cmd(std::string& params, OutputStream& os)
 {
+    HELP("show memory allocation");
     struct mallinfo mem = mallinfo();
     os.printf("             total       used       free    largest\n");
     os.printf("Mem:   %11d%11d%11d%11d\n", mem.arena, mem.uordblks, mem.fordblks, mem.mxordblk);
@@ -109,6 +134,8 @@ bool CommandShell::mem_cmd(std::string& params, OutputStream& os)
 #include <sys/boardctl.h>
 bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 {
+    HELP("mount sdcard on /sd");
+
     if(mounted) {
         os.printf("Already mounted\n");
         return true;
@@ -138,6 +165,7 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
 {
+    HELP("display file: limit will show first n lines");
     // Get parameters ( filename and line limit )
     std::string filename          = shift_parameter( params );
     std::string limit_parameter   = shift_parameter( params );
