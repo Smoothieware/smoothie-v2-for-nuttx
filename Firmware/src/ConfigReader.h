@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <istream>
+#include <regex>
 
 class ConfigReader
 {
@@ -28,4 +29,10 @@ public:
 private:
     std::string current_section;
 
+    // regular expression to extract section
+    std::regex section_test{"\\[(.*?)\\]"};
+    // regex to extract the key = value pair and the comment
+    std::regex value_test{"([_.[:alnum:]]+)\\s*=\\s*([^#]+)(#.*)?"};
+    // regex to extract the key = value pair and the comment
+    std::regex sub_value_test{"(\\w+)\\.(\\w+)\\s*=\\s*([^#]+)(#.*)?"};
 };

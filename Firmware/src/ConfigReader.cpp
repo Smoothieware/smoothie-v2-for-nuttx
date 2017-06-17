@@ -1,6 +1,5 @@
 #include "ConfigReader.h"
 
-#include <regex>
 #include <cctype>
 #include <algorithm>
 #include <string>
@@ -12,10 +11,6 @@ inline std::string trim(const std::string &s)
     return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
 }
 
-// regular expression to extract section
-static std::regex section_test("\\[(.*?)\\]");
-// regex to extract the key = value pair and the comment
-std::regex value_test("([_.[:alnum:]]+)\\s*=\\s*([^#]+)(#.*)?");
 // just extract the key/values from the specified section
 bool ConfigReader::get_section(std::istream& is, const char *section, section_map_t& config)
 {
@@ -57,8 +52,6 @@ bool ConfigReader::get_section(std::istream& is, const char *section, section_ma
     return !config.empty();
 }
 
-// regex to extract the key = value pair and the comment
-static std::regex sub_value_test("(\\w+)\\.(\\w+)\\s*=\\s*([^#]+)(#.*)?");
 // just extract the key/values from the specified section and split them into sub sections
 bool ConfigReader::get_sub_sections(std::istream& is, const char *section, sub_section_map_t& config)
 {

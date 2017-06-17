@@ -170,6 +170,13 @@ static int usb_comms(int , char)
                 dispatch_line(fd, line, cnt - 1);
                 cnt = 0;
 
+            } else if(line[cnt] == '\r') {
+                // ignore CR
+                continue;
+
+            } else if(line[cnt] == 8 || line[cnt] == 127) { // BS or DEL
+                if(cnt > 0) --cnt;
+
             } else {
                 ++cnt;
             }
@@ -181,11 +188,11 @@ static int usb_comms(int , char)
 
     printf("Comms thread exiting\n");
 
-    #ifdef USE_PTHREAD
+#ifdef USE_PTHREAD
     return (void *)1;
-    #else
+#else
     return 1;
-    #endif
+#endif
 }
 
 extern "C" int smoothie_main(int argc, char *argv[])
@@ -208,7 +215,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
     // }
 
-    #ifdef USE_PTHREAD
+#ifdef USE_PTHREAD
     pthread_t usb_comms_thread;
     void *result;
     pthread_attr_t attr;
@@ -255,14 +262,14 @@ extern "C" int smoothie_main(int argc, char *argv[])
     //usb_comms_thread.join();
     pthread_join(usb_comms_thread, &result);
 
-    #else
+#else
     //usb_comms(0);
     task_create("usb_comms_thread", SCHED_PRIORITY_DEFAULT,
                 5000,
                 (main_t)usb_comms,
                 (FAR char * const *)NULL);
 
-    #endif
+#endif
 
     printf("Exiting main\n");
 
