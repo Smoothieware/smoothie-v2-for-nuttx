@@ -160,8 +160,7 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
     int newlines = 0;
     // Print each line of the file
     while (fgets (buffer, sizeof(buffer)-1, lp) != nullptr) {
-        os.printf(buffer);
-        usleep(1000000);
+        os.puts(buffer);
         if ( limit > 0 && ++newlines >= limit ) {
             break;
         }

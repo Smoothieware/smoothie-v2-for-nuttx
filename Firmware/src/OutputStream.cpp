@@ -31,6 +31,14 @@ int OutputStream::flush_prepend()
 	return n;
 }
 
+int OutputStream::puts(const char *str)
+{
+	if(os == nullptr) return 0;
+	size_t n= strlen(str);
+	os->write(str, n);
+	return n;
+}
+
 int OutputStream::printf(const char *format, ...)
 {
 	if(os == nullptr) return 0;

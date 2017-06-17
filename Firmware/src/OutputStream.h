@@ -23,6 +23,7 @@ public:
 
 	void clear() { append_nl = false; prepend_ok = false; prepending.clear(); if(fdbuf != nullptr) fdbuf->str(""); }
 	int printf(const char *format, ...);
+	int puts(const char *str);
 	void setAppendNL() { append_nl = true; }
 	void setPrependOK(bool flg = true) { prepend_ok = flg; }
 	bool isAppendNL() const { return append_nl; }
@@ -34,19 +35,32 @@ private:
 	class FdBuf : public std::stringbuf
 	{
 	public:
-	    FdBuf(int f) : fd(f) {};
-	    virtual int sync()
-	    {
-	        size_t len = this->str().size();
-	        if(len > 0) {
-	            //printf("fdBuf: %s", this->str().c_str());
-	            write(fd, this->str().c_str(), len);
-	            this->str("");
-	        }
-	        return 0;
-	    }
+		FdBuf(int f) : fd(f) {};
+		virtual int sync()
+		{
+			// USB CDC can't write more than 64 bytes at a time so limit it here
+			if(!this->str().empty()) {
+				if(this->str().size() < 64) {
+					write(fd, this->str().c_str(), this->str().size());
+				} else {
+					// FIXME: hack before we fix the cdc driver
+					int n = this->str().size();
+					int off = 0;
+					while(n > 0) {
+						int s = std::min(63, n);
+						write(fd, this->str().substr(off, s).c_str(), s);
+						off += s;
+						n -= s;
+					}
+				}
+				this->str("");
+			}
+
+			return 0;
+		}
+
 	private:
-	    int fd;
+		int fd;
 	};
 
 	std::ostream *os;
