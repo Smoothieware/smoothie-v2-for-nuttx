@@ -24,6 +24,7 @@ bool CommandShell::initialize()
     THEDISPATCHER.add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
 
     return true;
 }
@@ -66,14 +67,18 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
             os.printf("%s", p->d_name);
-            // struct stat buf;
-            // if (stat(p->d_name, &buf) >= 0) {
-            //     if (S_ISDIR(buf.st_mode)) {
-            //         os.printf("/");
-            //     }
-            // } else if(opts.find("-s", 0, 2) != std::string::npos) {
-            //     //os.printf(" %d", p->d_fsize);
-            // }
+            struct stat buf;
+            std::string sp = path + "/" + p->d_name;
+            if (stat(sp.c_str(), &buf) >= 0) {
+                if (S_ISDIR(buf.st_mode)) {
+                    os.printf("/");
+
+                } else if(opts.find("-s", 0, 2) != std::string::npos) {
+                    os.printf(" %d", buf.st_size);
+                }
+            } else {
+                os.printf(" - Could not stat: %s", sp.c_str());
+            }
             os.printf("\n");
         }
         closedir(d);
@@ -128,5 +133,40 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 
     mounted = true;
     os.printf("Mounted %s on %s\n", g_source, g_target);
+    return true;
+}
+
+bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
+{
+    // Get parameters ( filename and line limit )
+    std::string filename          = shift_parameter( params );
+    std::string limit_parameter   = shift_parameter( params );
+    int limit = -1;
+
+    if ( limit_parameter != "" ) {
+        char *e = NULL;
+        limit = strtol(limit_parameter.c_str(), &e, 10);
+        if (e <= limit_parameter.c_str())
+            limit = -1;
+    }
+
+    // Open file
+    FILE *lp = fopen(filename.c_str(), "r");
+    if (lp == NULL) {
+        os.printf("File not found: %s\n", filename.c_str());
+        return true;
+    }
+    char buffer[132];
+    int newlines = 0;
+    // Print each line of the file
+    while (fgets (buffer, sizeof(buffer)-1, lp) != nullptr) {
+        os.printf(buffer);
+        usleep(1000000);
+        if ( limit > 0 && ++newlines >= limit ) {
+            break;
+        }
+    };
+    fclose(lp);
+
     return true;
 }

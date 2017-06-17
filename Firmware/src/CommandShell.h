@@ -17,6 +17,7 @@ private:
     bool rm_cmd(std::string& params, OutputStream& os);
     bool mem_cmd(std::string& params, OutputStream& os);
     bool mount_cmd(std::string& params, OutputStream& os);
+    bool cat_cmd(std::string& params, OutputStream& os);
 
     bool mounted;
 };
