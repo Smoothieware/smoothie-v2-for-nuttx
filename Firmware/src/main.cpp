@@ -60,22 +60,99 @@ static int setup_CDC()
     return fd;
 }
 
+#include "OutputStream.h"
+using comms_msg_t = struct {const char* pline; OutputStream *pos; };
+
+#include <pthread.h>
+#include <mqueue.h>
+mqd_t get_message_queue(bool read)
+{
+    struct mq_attr attr;
+
+    /* Fill in attributes for message queue */
+
+    attr.mq_maxmsg  = 4;
+    attr.mq_msgsize = sizeof(comms_msg_t);
+    attr.mq_flags   = 0;
+
+    /* Set the flags for the open of the queue.
+     * Make it a blocking open on the queue, meaning it will block if
+     * this process tries to send to the queue and the queue is full.
+     *
+     *   O_CREAT - the queue will get created if it does not already exist.
+     *   O_WRONLY - we are only planning to write to the queue.
+     *
+     * Open the queue, and create it if it hasn't already been created.
+     */
+    int flgs = read ? O_RDONLY : O_WRONLY;
+    mqd_t mqfd = mq_open("comms_q", flgs | O_CREAT, 0666, &attr);
+    if (mqfd == (mqd_t) - 1) {
+        printf("get_message_queue: ERROR mq_open failed\n");
+    }
+
+    return mqfd;
+}
+
+// can be called by several threads to submit messages to the dispatcher
+// This call will block until there is room in the queue
+// eg USB serial, UART serial, Network, SDCard player thread
+bool send_message_queue(mqd_t mqfd, const char *pline, OutputStream *pos)
+{
+    comms_msg_t msg_buffer{pline, pos};
+
+    int status = mq_send(mqfd, (const char *)&msg_buffer, sizeof(comms_msg_t), 42);
+    if (status < 0) {
+        printf("send_message_queue: ERROR mq_send failure=%d\n", status);
+        return false;
+    }
+
+    return true;
+}
+
+// Only called by the dispatcher thread to receive incoming lines to process
+bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
+{
+    comms_msg_t msg_buffer;
+
+    int nbytes = mq_receive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0);
+    if (nbytes < 0) {
+        /* mq_receive failed.  If the error is because of EINTR then
+         * it is not a failure.
+         */
+
+        if (errno != EINTR) {
+            printf("receive_message_queue: ERROR mq_receive failure, errno=%d\n", errno);
+            return false;
+        } else {
+            printf("receive_message_queue: mq_receive interrupted!\n");
+            return false;
+        }
+
+    } else if (nbytes != sizeof(comms_msg_t)) {
+        printf("receive_message_queue: mq_receive return bad size %d\n", nbytes);
+        return false;
+    }
+
+    *ppline= msg_buffer.pline;
+    *ppos= msg_buffer.pos;
+
+    return true;
+}
+
+
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
-#include "OutputStream.h"
 #include "CommandShell.h"
 
 static GCodeProcessor gp;
-static bool dispatch_line(int fd, char *line, int cnt)
+static bool dispatch_line(OutputStream& os, const char *line)
 {
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
-        // create an output stream that writes to the already open fd
-        OutputStream os(fd);
         if(!THEDISPATCHER.dispatch(line, os)) {
             if(line[0] == '$') {
-                os.printf("error:Invalid statement\n");
+                os.puts("error:Invalid statement\n");
             } else {
                 os.printf("error:Unsupported command - %s\n", line);
             }
@@ -90,24 +167,20 @@ static bool dispatch_line(int fd, char *line, int cnt)
     // Parse gcode
     if(!gp.parse(line, gcodes)) {
         // line failed checksum, send resend request
-        char buf[32];
-        size_t n = snprintf(buf, 32, "rs N%d\n", gp.get_line_number() + 1);
-        write(fd, buf, n);
+        os.printf("rs N%d\n", gp.get_line_number() + 1);
         return true;
 
     } else if(gcodes.empty()) {
         // if gcodes is empty then was a M110, just send ok
-        write(fd, "ok\n", 3);
+        os.puts("ok\n");
         return true;
     }
 
-    // create an output stream that writes to the already open fd
-    OutputStream os(fd);
     // dispatch gcode to MotionControl and Planner
     for(auto& i : gcodes) {
         if(!THEDISPATCHER.dispatch(i, os)) {
             // no handler for this gcode, return ok - nohandler
-            os.printf("ok - nohandler\n");
+            os.puts("ok - nohandler");
         }
     }
 
@@ -160,14 +233,17 @@ static int usb_comms(int , char)
         return 0;
     }
 
+    // create an output stream that writes to the already open fd
+    OutputStream os(fd);
+
     // now read lines and dispatch them
     size_t cnt = 0;
     for(;;) {
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
             if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
-                line[cnt] = '\0'; // remove the \n  and nul terminate
-                dispatch_line(fd, line, cnt - 1);
+                line[cnt] = '\0'; // remove the \n and nul terminate
+                dispatch_line(os, line);
                 cnt = 0;
 
             } else if(line[cnt] == '\r') {

@@ -73,6 +73,7 @@ int OutputStream::FdBuf::sync()
 	if(!this->str().empty()) {
 		int len= this->str().size();
 		if(len < 64) {
+			// FIXME write may return less than len need to address that case
 			write(fd, this->str().c_str(), len);
 
 		} else {

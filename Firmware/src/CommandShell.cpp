@@ -51,15 +51,14 @@ std::string shift_parameter( std::string &parameters )
 // lists all the registered commands
 bool CommandShell::help_cmd(std::string& params, OutputStream& os)
 {
+    HELP("Show available commands");
     auto cmds= THEDISPATCHER.get_commands();
     for(auto& i : cmds) {
         os.printf("%s\n", i.c_str());
         // Display the help string for each command
-        //if(i != "help") {
         //    std::string cmd(i);
         //    cmd.append(" -h");
         //    THEDISPATCHER.dispatch(cmd.c_str(), os);
-        //}
     }
     os.puts("\nuse cmd -h to get help on that command\n");
 
@@ -165,7 +164,7 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
 {
-    HELP("display file: limit will show first n lines");
+    HELP("display file: nnn option will show first nnn lines");
     // Get parameters ( filename and line limit )
     std::string filename          = shift_parameter( params );
     std::string limit_parameter   = shift_parameter( params );
@@ -194,6 +193,31 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
         }
     };
     fclose(lp);
+
+    return true;
+}
+
+#include "md5.h"
+bool CommandShell::md5sum_cmd(std::string& params, OutputStream& os)
+{
+    HELP("calculate the md5sum of given filename");
+
+    // Open file
+    FILE *lp = fopen(params.c_str(), "r");
+    if (lp != NULL) {
+        MD5 md5;
+        uint8_t buf[64];
+        do {
+            size_t n= fread(buf, 1, sizeof buf, lp);
+            if(n > 0) md5.update(buf, n);
+        } while(!feof(lp));
+
+        os.printf("%s %s\n", md5.finalize().hexdigest().c_str(), params.c_str());
+        fclose(lp);
+
+    }else{
+        os.printf("File not found: %s\n", params.c_str());
+    }
 
     return true;
 }
