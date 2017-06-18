@@ -29,6 +29,7 @@ bool CommandShell::initialize()
     THEDISPATCHER.add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
 
     return true;
 }

@@ -226,13 +226,24 @@ static void usb_comms()
 
     // now read lines and dispatch them
     size_t cnt = 0;
+    bool discard= false;
     for(;;) {
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
-            if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
+            if(discard) {
+                // we discard long lines until we get the newline
+                if(line[cnt] == '\n') discard= false;
+
+            } else if(cnt >= sizeof(line) - 1) {
+                // discard long lines
+                discard= true;
+                cnt= 0;
+                os.puts("error:Discarding long line\n");
+
+            } else if(line[cnt] == '\n') {
                 line[cnt] = '\0'; // remove the \n and nul terminate
                 // TODO line needs to be in a circular queue of lines as big or bigger than the mesage queue size
-                // so is does not get re used before the command shtead has dealt with it
+                // so it does not get re used before the command thread has dealt with it
                 // We do not want to malloc/free all the time
                 char *l= strdup(line);
                 send_message_queue(mqfd, l, &os);
@@ -271,13 +282,25 @@ static void uart_comms()
     char line[132];
     size_t cnt = 0;
     size_t n;
+    bool discard= false;
     for(;;) {
         n = read(0, &line[cnt], 1);
+
         if(n == 1) {
-            if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
+            if(discard) {
+                // we discard long lines until we get the newline
+                if(line[cnt] == '\n') discard= false;
+
+            } else if(cnt >= sizeof(line) - 1) {
+                // discard long lines
+                discard= true;
+                cnt= 0;
+                os.puts("error:Discarding long line\n");
+
+            } else if(line[cnt] == '\n') {
                 line[cnt] = '\0'; // remove the \n and nul terminate
-                // TODO line needs to be in a circular queue of lines as big or bigger than the mesage queue size
-                // so is does not get re used before the command shtead has dealt with it
+                // TODO line needs to be in a circular queue of lines as big or bigger than the message queue size
+                // so it does not get re used before the command thread has dealt with it
                 // We do not want to malloc/free all the time
                 char *l= strdup(line);
                 send_message_queue(mqfd, l, &os);
@@ -338,6 +361,8 @@ static void *commandthrd(void *)
 extern "C" int smoothie_main(int argc, char *argv[])
 {
     // do C++ initialization for static constructors first
+    // WARNING this is using miimum stack sioze of the main thread so minimize the use of statics and make sure they do not use a lot of stack
+    // FIXME this is really NOT where this should be done
     up_cxxinitialize();
 
     printf("Smoothie V2.0alpha starting up\n");
@@ -347,7 +372,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     shell.initialize();
 
     // launch the command thread that executes all incoming commands
-    // We have to do this th elong way as we wan to set the stack size
+    // We have to do this the long way as we want to set the stack size and priority
     pthread_t command_thread;
     void *result;
     pthread_attr_t attr;
