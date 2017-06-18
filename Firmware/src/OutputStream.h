@@ -22,6 +22,7 @@ public:
 	virtual ~OutputStream();
 
 	void clear() { append_nl = false; prepend_ok = false; prepending.clear(); if(fdbuf != nullptr) fdbuf->str(""); }
+	int write(const char *buffer, size_t size);
 	int printf(const char *format, ...);
 	int puts(const char *str);
 	void setAppendNL() { append_nl = true; }

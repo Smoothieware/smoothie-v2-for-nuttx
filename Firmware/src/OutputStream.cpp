@@ -31,12 +31,22 @@ int OutputStream::flush_prepend()
 	return n;
 }
 
+int OutputStream::write(const char *buffer, size_t size)
+{
+	if(os == nullptr) return 0;
+	if(prepend_ok) {
+		prepending.append(buffer, size);
+	} else {
+		os->write((const char*)buffer, size);
+	}
+	return size;
+}
+
 int OutputStream::puts(const char *str)
 {
 	if(os == nullptr) return 0;
 	size_t n = strlen(str);
-	os->write(str, n);
-	return n;
+	return this->write(str, n);
 }
 
 int OutputStream::printf(const char *format, ...)
@@ -58,13 +68,7 @@ int OutputStream::printf(const char *format, ...)
 		size = sizeof(buffer) - 1;
 	}
 
-	if(prepend_ok) {
-		prepending.append(buffer, size);
-	} else {
-		os->write((const char*)buffer, size);
-	}
-
-	return size;
+	return this->write(buffer, size);
 }
 
 int OutputStream::FdBuf::sync()
@@ -74,7 +78,7 @@ int OutputStream::FdBuf::sync()
 		int len= this->str().size();
 		if(len < 64) {
 			// FIXME write may return less than len need to address that case
-			write(fd, this->str().c_str(), len);
+			::write(fd, this->str().c_str(), len);
 
 		} else {
 			// FIXME: hack before we fix the cdc driver
@@ -82,7 +86,7 @@ int OutputStream::FdBuf::sync()
 			int off = 0;
 			while(n > 0) {
 				int s = std::min(63, n);
-				s = write(fd, this->str().substr(off, s).c_str(), s);
+				s = ::write(fd, this->str().substr(off, s).c_str(), s);
 				off += s;
 				n -= s;
 			}
