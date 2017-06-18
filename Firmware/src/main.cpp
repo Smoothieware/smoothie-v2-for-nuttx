@@ -180,36 +180,21 @@ static bool dispatch_line(OutputStream& os, const char *line)
     for(auto& i : gcodes) {
         if(!THEDISPATCHER.dispatch(i, os)) {
             // no handler for this gcode, return ok - nohandler
-            os.puts("ok - nohandler");
+            os.puts("ok - nohandler\n");
         }
     }
 
     return true;
 }
 
-#define USE_PTHREAD
-static std::mutex m;
-static std::condition_variable cv;
-#ifdef USE_PTHREAD
-static void *usb_comms(void *)
-#else
-static int usb_comms(int , char)
-#endif
+static void usb_comms()
 {
-    printf("Comms thread running\n");
+    printf("USB Comms thread running\n");
 
     int fd = setup_CDC();
     if(fd == -1) {
         printf("CDC setup failed\n");
-        return 0;
-    }
-
-    {
-        // Manual unlocking is done before notifying, to avoid waking up
-        // the waiting thread only to block again (see notify_one for details)
-        std::unique_lock<std::mutex> lk(m);
-        lk.unlock();
-        cv.notify_one();
+        return;
     }
 
     // on first connect we send a welcome message
@@ -224,14 +209,17 @@ static int usb_comms(int , char)
             printf("ttyACM0: Error writing welcome: %d\n", errno);
             close(fd);
             fd = -1;
-            return 0;
+            return;
         }
 
     } else {
         printf("ttyACM0: Error reading: %d\n", errno);
         fd = -1;
-        return 0;
+        return;
     }
+
+    // get the message queue
+    mqd_t mqfd= get_message_queue(false);
 
     // create an output stream that writes to the already open fd
     OutputStream os(fd);
@@ -243,7 +231,11 @@ static int usb_comms(int , char)
         if(n == 1) {
             if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
                 line[cnt] = '\0'; // remove the \n and nul terminate
-                dispatch_line(os, line);
+                // TODO line needs to be in a circular queue of lines as big or bigger than the mesage queue size
+                // so is does not get re used before the command shtead has dealt with it
+                // We do not want to malloc/free all the time
+                char *l= strdup(line);
+                send_message_queue(mqfd, l, &os);
                 cnt = 0;
 
             } else if(line[cnt] == '\r') {
@@ -263,12 +255,84 @@ static int usb_comms(int , char)
     }
 
     printf("Comms thread exiting\n");
+}
 
-#ifdef USE_PTHREAD
-    return (void *)1;
-#else
-    return 1;
-#endif
+static void uart_comms()
+{
+    printf("UART Comms thread running\n");
+
+    // get the message queue
+    mqd_t mqfd= get_message_queue(false);
+
+    // create an output stream that writes to cout/stdout
+    OutputStream os(std::cout);
+
+    // now read lines and dispatch them
+    char line[132];
+    size_t cnt = 0;
+    size_t n;
+    for(;;) {
+        n = read(0, &line[cnt], 1);
+        if(n == 1) {
+            if(line[cnt] == '\n' || cnt >= sizeof(line) - 1) {
+                line[cnt] = '\0'; // remove the \n and nul terminate
+                // TODO line needs to be in a circular queue of lines as big or bigger than the mesage queue size
+                // so is does not get re used before the command shtead has dealt with it
+                // We do not want to malloc/free all the time
+                char *l= strdup(line);
+                send_message_queue(mqfd, l, &os);
+                cnt = 0;
+
+            } else if(line[cnt] == '\r') {
+                // ignore CR
+                continue;
+
+            } else if(line[cnt] == 8 || line[cnt] == 127) { // BS or DEL
+                if(cnt > 0) --cnt;
+
+            } else {
+                ++cnt;
+            }
+
+        } else {
+            printf("UART: read error: %d\n", errno);
+            break;
+        }
+    }
+
+    printf("UART Comms thread exiting\n");
+}
+
+static std::mutex m;
+static std::condition_variable cv;
+static void *commandthrd(void *)
+{
+    printf("Command thread running\n");
+    // {
+    //     // Manual unlocking is done before notifying, to avoid waking up
+    //     // the waiting thread only to block again (see notify_one for details)
+    //     std::unique_lock<std::mutex> lk(m);
+    //     lk.unlock();
+    //     cv.notify_one();
+    // }
+
+    // get the message queue
+    mqd_t mqfd= get_message_queue(true);
+
+    for(;;) {
+        const char *line;
+        OutputStream *os;
+
+        if(receive_message_queue(mqfd, &line, &os)) {
+            printf("DEBUG: got line: %s\n", line);
+            dispatch_line(*os, line);
+            free((void *)line); // was strdup'd, FIXME we don't want to have do this
+
+        }else{
+            printf("receive_message_queue failed\n");
+        }
+    }
+
 }
 
 extern "C" int smoothie_main(int argc, char *argv[])
@@ -282,28 +346,17 @@ extern "C" int smoothie_main(int argc, char *argv[])
     CommandShell shell;
     shell.initialize();
 
-    // Launch the comms thread
-    //std::thread usb_comms_thread(usb_comms);
-
-    // sched_param sch_params;
-    // sch_params.sched_priority = 10;
-    // if(pthread_setschedparam(usb_comms_thread.native_handle(), SCHED_RR, &sch_params)) {
-    //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
-    // }
-
-#ifdef USE_PTHREAD
-    pthread_t usb_comms_thread;
+    // launch the command thread that executes all incoming commands
+    // We have to do this th elong way as we wan to set the stack size
+    pthread_t command_thread;
     void *result;
     pthread_attr_t attr;
     struct sched_param sparam;
-    int prio_min;
-    int prio_max;
-    int prio_mid;
     int status;
 
-    prio_min = sched_get_priority_min(SCHED_FIFO);
-    prio_max = sched_get_priority_max(SCHED_FIFO);
-    prio_mid = (prio_min + prio_max) / 2;
+    // int prio_min = sched_get_priority_min(SCHED_RR);
+    // int prio_max = sched_get_priority_max(SCHED_RR);
+    // int prio_mid = (prio_min + prio_max) / 2;
 
     status = pthread_attr_init(&attr);
     if (status != 0) {
@@ -315,37 +368,50 @@ extern "C" int smoothie_main(int argc, char *argv[])
         printf("main: pthread_attr_setstacksize failed, status=%d\n", status);
     }
 
-    sparam.sched_priority = (prio_min + prio_mid) / 2;
+    status = pthread_attr_setschedpolicy(&attr, SCHED_RR);
+    if (status != OK) {
+        printf("main: pthread_attr_setschedpolicy failed, status=%d\n", status);
+    } else {
+        printf("main: Set command thread policy to SCHED_RR\n");
+    }
+
+    sparam.sched_priority = 150; // (prio_min + prio_mid) / 2;
     status = pthread_attr_setschedparam(&attr, &sparam);
     if (status != OK) {
         printf("main: pthread_attr_setschedparam failed, status=%d\n", status);
     } else {
-        printf("main: Set comms thread priority to %d\n", sparam.sched_priority);
+        printf("main: Set command thread priority to %d\n", sparam.sched_priority);
     }
 
-    status = pthread_create(&usb_comms_thread, &attr, usb_comms, NULL);
+    status = pthread_create(&command_thread, &attr, commandthrd, NULL);
     if (status != 0) {
         printf("main: pthread_create failed, status=%d\n", status);
     }
 
-    // wait for comms thread to start
-    std::unique_lock<std::mutex> lk(m);
-    cv.wait(lk);
+    // wait for command thread to start
+    // std::unique_lock<std::mutex> lk(m);
+    // cv.wait(lk);
+    // printf("Command thread started\n");
 
-    printf("USB Comms thread started\n");
+    // Start comms threads
+    // fixed stack size of 4k each
+    std::thread usb_comms_thread(usb_comms);
+    std::thread uart_comms_thread(uart_comms);
+
+    sched_param sch_params;
+    // sch_params.sched_priority = 10;
+    // if(pthread_setschedparam(usb_comms_thread.native_handle(), SCHED_RR, &sch_params)) {
+    //     printf("Failed to set Thread scheduling : %s\n", std::strerror(errno));
+    // }
+
+    int policy;
+    status = pthread_getschedparam(usb_comms_thread.native_handle(), &policy, &sch_params);
+    printf("pthread get params: status= %d, policy= %d, priority= %d\n", status, policy, sch_params.sched_priority);
 
     // Join the comms thread with the main thread
-    //usb_comms_thread.join();
-    pthread_join(usb_comms_thread, &result);
-
-#else
-    //usb_comms(0);
-    task_create("usb_comms_thread", SCHED_PRIORITY_DEFAULT,
-                5000,
-                (main_t)usb_comms,
-                (FAR char * const *)NULL);
-
-#endif
+    usb_comms_thread.join();
+    uart_comms_thread.join();
+    pthread_join(command_thread, &result);
 
     printf("Exiting main\n");
 

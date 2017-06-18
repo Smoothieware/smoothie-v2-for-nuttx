@@ -152,13 +152,13 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
     const char g_source[]         = "/dev/mmcsd0";
 
     ret = mount(g_source, g_target, g_filesystemtype, 0, nullptr);
-    if(0 != ret) {
-        os.printf("Failed to mount sdcard\n");
-        return true;
-    }
+    if(0 == ret) {
+        mounted = true;
+        os.printf("Mounted %s on %s\n", g_source, g_target);
 
-    mounted = true;
-    os.printf("Mounted %s on %s\n", g_source, g_target);
+    }else{
+        os.printf("Failed to mount sdcard\n");
+    }
     return true;
 }
 
@@ -179,20 +179,21 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
 
     // Open file
     FILE *lp = fopen(filename.c_str(), "r");
-    if (lp == NULL) {
+    if (lp != NULL) {
+        char buffer[132];
+        int newlines = 0;
+        // Print each line of the file
+        while (fgets (buffer, sizeof(buffer)-1, lp) != nullptr) {
+            os.puts(buffer);
+            if ( limit > 0 && ++newlines >= limit ) {
+                break;
+            }
+        };
+        fclose(lp);
+
+    }else{
         os.printf("File not found: %s\n", filename.c_str());
-        return true;
     }
-    char buffer[132];
-    int newlines = 0;
-    // Print each line of the file
-    while (fgets (buffer, sizeof(buffer)-1, lp) != nullptr) {
-        os.puts(buffer);
-        if ( limit > 0 && ++newlines >= limit ) {
-            break;
-        }
-    };
-    fclose(lp);
 
     return true;
 }
