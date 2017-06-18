@@ -324,7 +324,7 @@ static void *commandthrd(void *)
         OutputStream *os;
 
         if(receive_message_queue(mqfd, &line, &os)) {
-            printf("DEBUG: got line: %s\n", line);
+            //printf("DEBUG: got line: %s\n", line);
             dispatch_line(*os, line);
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
 
