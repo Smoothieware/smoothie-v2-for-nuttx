@@ -379,7 +379,6 @@ extern "C" int smoothie_main(int argc, char *argv[])
 
     // create the SlowTicker
     SlowTicker& slow_ticker= SlowTicker.getInstance();
-    slow_ticker.set_frequency(20); // start at 20hz
     if(!slow_ticker.start()) {
         printf("Error: failed to start SlowTicker\n");
     }

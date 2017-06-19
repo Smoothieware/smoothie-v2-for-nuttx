@@ -13,7 +13,6 @@ static void timer_callback(void)
 REGISTER_TEST(SlowTicker, test_20_hz)
 {
     SlowTicker& slt= SlowTicker::getInstance();
-    slt.set_frequency(1); // set to 1hz
     TEST_ASSERT_TRUE(slt.start());
 
     int n= slt.attach(20, timer_callback);

@@ -29,13 +29,10 @@ REGISTER_TEST(TimerTest, test_20_hz)
     int ret;
     int fd;
 
-    ret = boardctl(BOARDIOC_INIT, 0);
-    TEST_ASSERT_EQUAL_INT(OK, ret);
+    // ret = boardctl(BOARDIOC_INIT, 0);
+    // TEST_ASSERT_EQUAL_INT(OK, ret);
 
     /* Open the timer device */
-
-    printf("Open %s\n", TIMER_DEVNAME);
-
     fd = open(TIMER_DEVNAME, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "ERROR: Failed to open %s: %d\n",
@@ -44,9 +41,6 @@ REGISTER_TEST(TimerTest, test_20_hz)
     }
 
     /* Set the timer interval */
-    printf("Set timer interval to %lu\n",
-           (unsigned long)TIMER_INTERVAL);
-
     ret = ioctl(fd, TCIOC_SETTIMEOUT, TIMER_INTERVAL);
     if (ret < 0) {
         fprintf(stderr, "ERROR: Failed to set the timer interval: %d\n", errno);
@@ -57,8 +51,6 @@ REGISTER_TEST(TimerTest, test_20_hz)
     /* Attach the timer handler
      *
      */
-
-    printf("Attach timer handler\n");
 
     handler.newhandler = timer_handler;
     handler.oldhandler = NULL;
@@ -71,9 +63,6 @@ REGISTER_TEST(TimerTest, test_20_hz)
     }
 
     /* Start the timer */
-
-    printf("Start the timer\n");
-
     ret = ioctl(fd, TCIOC_START, 0);
     if (ret < 0) {
         fprintf(stderr, "ERROR: Failed to start the timer: %d\n", errno);
@@ -81,16 +70,10 @@ REGISTER_TEST(TimerTest, test_20_hz)
         TEST_FAIL();
     }
 
-    for (int i = 0; i < 10; ++i) {
-        usleep(1000000);
-        printf("time %d seconds, timer %d calls\n", i, timer_cnt);
-    }
-
+    // wait 1 second
+    usleep(1000000);
 
     /* Stop the timer */
-
-    printf("Stop the timer\n");
-
     ret = ioctl(fd, TCIOC_STOP, 0);
     if (ret < 0) {
         fprintf(stderr, "ERROR: Failed to stop the timer: %d\n", errno);
@@ -100,6 +83,7 @@ REGISTER_TEST(TimerTest, test_20_hz)
 
 
     /* Close the timer driver */
-    printf("Finished\n");
     close(fd);
+
+    TEST_ASSERT_INT_WITHIN(1, 20, timer_cnt);
 }

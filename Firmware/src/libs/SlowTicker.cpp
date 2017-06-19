@@ -33,8 +33,8 @@ bool SlowTicker::start()
         }
 
         if(interval == 0) {
-            printf("ERROR: Slow ticker frequency not set before start\n");
-            return false;
+            interval = BASE_FREQUENCY / 1; // default to 1HZ
+            max_frequency= 1;
         }
 
         /* Open the timer device */
@@ -91,7 +91,7 @@ bool SlowTicker::stop()
 int SlowTicker::attach(uint32_t frequency, std::function<void(void)> cb)
 {
     uint32_t period = BASE_FREQUENCY / frequency;
-    uint32_t countdown = interval;
+    int countdown = period;
 
     if( frequency > max_frequency ) {
         // reset frequency to a higher value
