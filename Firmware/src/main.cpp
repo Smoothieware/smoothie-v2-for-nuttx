@@ -367,9 +367,22 @@ extern "C" int smoothie_main(int argc, char *argv[])
 
     printf("Smoothie V2.0alpha starting up\n");
 
+    // this creates the timer devices and the sdcard device
+    int ret = boardctl(BOARDIOC_INIT, 0);
+    if(OK != ret) {
+        printf("Error: intializing BOARDIOC_INIT\n");
+    }
+
     // create the commandshell
     CommandShell shell;
     shell.initialize();
+
+    // create the SlowTicker
+    SlowTicker& slow_ticker= SlowTicker.getInstance();
+    slow_ticker.set_frequency(20); // start at 20hz
+    if(!slow_ticker.start()) {
+        printf("Error: failed to start SlowTicker\n");
+    }
 
     // launch the command thread that executes all incoming commands
     // We have to do this the long way as we want to set the stack size and priority

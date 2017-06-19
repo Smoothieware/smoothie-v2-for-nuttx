@@ -19,8 +19,8 @@ static const char g_source[]         = "/dev/mmcsd0";
 REGISTER_TEST(SDCardTest, mount)
 {
     int ret;
-    ret = boardctl(BOARDIOC_INIT, 0);
-    TEST_ASSERT_EQUAL_INT(OK, ret);
+    // ret = boardctl(BOARDIOC_INIT, 0);
+    // TEST_ASSERT_EQUAL_INT(OK, ret);
 
     ret = mount(g_source, g_target, g_filesystemtype, 0, nullptr);
     TEST_ASSERT_EQUAL_INT(0, ret);

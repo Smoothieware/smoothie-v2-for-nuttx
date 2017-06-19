@@ -1,6 +1,7 @@
 #include <nuttx/config.h>
 #include <nuttx/init.h>
 #include <nuttx/arch.h>
+#include <sys/boardctl.h>
 
 #include <stdio.h>
 
@@ -75,6 +76,10 @@ static int run_tests(int argc, char *argv[])
 
 extern "C" int smoothie_main(int argc, char *argv[])
 {
+    int ret = boardctl(BOARDIOC_INIT, 0);
+    if(OK != ret) {
+        printf("ERROR: BOARDIOC_INIT falied\n");
+    }
 
     task_create("tests", SCHED_PRIORITY_DEFAULT,
                 10000,
