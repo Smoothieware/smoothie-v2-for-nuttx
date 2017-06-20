@@ -360,20 +360,13 @@ static void *commandthrd(void *)
 #include "CommandShell.h"
 #include "SlowTicker.h"
 
-extern "C" int smoothie_main(int argc, char *argv[])
+static int smoothie_startup(int, char **)
 {
     // do C++ initialization for static constructors first
-    // WARNING this is using miimum stack sioze of the main thread so minimize the use of statics and make sure they do not use a lot of stack
     // FIXME this is really NOT where this should be done
     up_cxxinitialize();
 
     printf("Smoothie V2.0alpha starting up\n");
-
-    // this creates the timer devices and the sdcard device
-    int ret = boardctl(BOARDIOC_INIT, 0);
-    if(OK != ret) {
-        printf("Error: intializing BOARDIOC_INIT\n");
-    }
 
     // create the commandshell
     CommandShell shell;
@@ -457,4 +450,17 @@ extern "C" int smoothie_main(int argc, char *argv[])
     return 1;
 }
 
+extern "C" int smoothie_main(int argc, char *argv[])
+{
+    int ret = boardctl(BOARDIOC_INIT, 0);
+    if(OK != ret) {
+        printf("ERROR: BOARDIOC_INIT falied\n");
+    }
 
+    task_create("smoothie_task", SCHED_PRIORITY_DEFAULT,
+                5000,
+                (main_t)smoothie_startup,
+                (FAR char * const *)NULL);
+
+    return 1;
+}

@@ -142,11 +142,11 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
     }
 
     int ret;
-    ret = boardctl(BOARDIOC_INIT, 0);
-    if(OK != ret) {
-        os.printf("Failed to INIT SDIO\n");
-        return true;
-    }
+    // ret = boardctl(BOARDIOC_INIT, 0);
+    // if(OK != ret) {
+    //     os.printf("Failed to INIT SDIO\n");
+    //     return true;
+    // }
 
     const char g_target[]         = "/sd";
     const char g_filesystemtype[] = "vfat";
