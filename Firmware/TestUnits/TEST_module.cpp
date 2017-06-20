@@ -74,6 +74,9 @@ REGISTER_TEST(Module, multi_module)
     Module *m2= Module::lookup("group1", "i2");
     TEST_ASSERT_NOT_NULL(m2);
 
+    // if we do not have longjmp it will continue so we short circuit here to stop a crash further on
+    //if(m1 == nullptr || m2 == nullptr) return;
+
     TEST_ASSERT_NULL(Module::lookup("group1", "i3"));
 
     TEST_ASSERT_TRUE(Module::lookup_group("group1").size() == 2);

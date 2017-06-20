@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+class ConfigReader;
+
 class Module
 {
 public:
@@ -12,7 +14,7 @@ public:
     virtual ~Module();
 
     // called to allow the module to read its configuration data
-    virtual bool configure(){ return true; };
+    virtual bool configure(ConfigReader& cr){ return true; };
 
     // the system is entering or leaving halt/alarm mode flg == true if entering
     virtual void on_halt(bool flg) {};

@@ -144,7 +144,7 @@ sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./n
 
 INCLUDE = (include_dirs).collect { |d| "-I#{d}" }.join(" ") + " " + (sys_include_dirs).collect { |d| "-isystem #{d}" }.join(" ")
 
-defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS -DUNITY_EXCLUDE_SETJMP_H)
+defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS)
 
 DEFINES= defines.join(' ')
 
@@ -156,7 +156,7 @@ CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-builtin -fno-exceptions -fno-rtti -std=gn
 # Linker script to be used.
 LSCRIPT = "./nuttx-export/build/spificonfig.ld"
 # TODO need to figure this out from tool path
-LIBGCC = "#{LIBSDIR}/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a"
+LIBGCC = "#{LIBSDIR}/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a "
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
    "--start-group", "-lnuttx", "-lapps", LIBGCC, "--end-group"]
 

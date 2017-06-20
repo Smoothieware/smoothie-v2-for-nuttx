@@ -2,7 +2,10 @@
 #include "Switch.h"
 
 #include "GCode.h"
-#include "StreamOutput.h"
+#include "OutputStream.h"
+#include "ConfigReader.h"
+#include "SlowTicker.h"
+
 
 //#include "PwmOut.h"
 
@@ -30,78 +33,71 @@
 Switch::Switch(const char *name) : Module("switch", name)
 { }
 
-bool Switch::load_switches()
+// this is called by the intial startup
+bool Switch::configure(ConfigReader& cr)
 {
-    // vector<uint16_t> modules;
-    // THEKERNEL->config->get_module_list( &modules, switch_key );
-
-    // for( unsigned int i = 0; i < modules.size(); i++ ) {
-    //     // If module is enabled
-    //     if( THEKERNEL->config->value(switch_key, modules[i], enable_key )->as_bool() == true ) {
-    //         Switch *controller = new Switch(modules[i]);
-    //         THEKERNEL->add_module(controller);
-    //     }
-    // }
+    return load_switches(cr);
 }
 
-// set the pin to the fail safe value on halt
-void Switch::on_halt(bool flg)
+bool Switch::load_switches(ConfigReader& cr)
 {
-    if(flg) {
-        if(this->ignore_on_halt) return;
+    ConfigReader::sub_section_map_t ssmap;
+    if(!cr.get_sub_sections("switch", ssmap)) {
+        printf("configure-switch: no switch section found\n");
+        return false;
+    }
 
-        // set pin to failsafe value
-        switch(this->output_type) {
-            case DIGITAL: this->digital_pin->set(this->failsafe); break;
-            // case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
-            // case HWPWM: this->pwm_pin->write(0); break;
-            case NONE: break;
-        }
-        this->switch_state = this->failsafe;
+    for(auto& i : ssmap) {
+        // foreach switch
+        std::string name = i.first;
+        auto& m = i.second;
+        Switch *sw = new Switch(name.c_str());
+        sw->configure(cr, m);
     }
 }
 
-bool Switch::configure()
+bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 {
-    this->input_pin.from_string( THEKERNEL->config->value(switch_key, this->name_key, input_pin_key )->by_default("nc")->as_string())->as_input();
-    this->subcode = THEKERNEL->config->value(switch_key, this->name_key, command_subcode_key )->by_default(0)->as_number();
-    std::string input_on_command = THEKERNEL->config->value(switch_key, this->name_key, input_on_command_key )->by_default("")->as_string();
-    std::string input_off_command = THEKERNEL->config->value(switch_key, this->name_key, input_off_command_key )->by_default("")->as_string();
-    this->output_on_command = THEKERNEL->config->value(switch_key, this->name_key, output_on_command_key )->by_default("")->as_string();
-    this->output_off_command = THEKERNEL->config->value(switch_key, this->name_key, output_off_command_key )->by_default("")->as_string();
-    this->switch_state = THEKERNEL->config->value(switch_key, this->name_key, startup_state_key )->by_default(false)->as_bool();
-    string type = THEKERNEL->config->value(switch_key, this->name_key, output_type_key )->by_default("pwm")->as_string();
-    this->failsafe = THEKERNEL->config->value(switch_key, this->name_key, failsafe_key )->by_default(0)->as_number();
-    this->ignore_on_halt = THEKERNEL->config->value(switch_key, this->name_key, ignore_onhalt_key )->by_default(false)->as_bool();
+    this->input_pin.from_string( cr.get_string(m, input_pin_key, "nc") )->as_input();
+    this->subcode = cr.get_int(m, command_subcode_key, 0);
+    std::string input_on_command = cr.get_string(m, input_on_command_key, "");
+    std::string input_off_command = cr.get_string(m, input_off_command_key, "");
+    this->output_on_command = cr.get_string(m, output_on_command_key, "");
+    this->output_off_command = cr.get_string(m, output_off_command_key, "");
 
-    std::string ipb = THEKERNEL->config->value(switch_key, this->name_key, input_pin_behavior_key )->by_default("momentary")->as_string();
-    this->input_pin_behavior = (ipb == "momentary") ? momentary_key : toggle_key;
+    this->switch_state = cr.get_bool(m, startup_state_key, false);
+    std::string type = cr.get_string(m, output_type_key, "pwm");
+    this->failsafe = cr.get_int(m, failsafe_key, 0);
+    this->ignore_on_halt = cr.get_bool(m, ignore_onhalt_key, false);
+
+    std::string ipb = cr.get_string(m, input_pin_behavior_key, "momentary");
+    this->input_pin_behavior = (ipb == "momentary") ? momentary_behavior : toggle_behavior;
 
     if(type == "pwm") {
         this->output_type = SIGMADELTA;
-        this->sigmadelta_pin = new Pwm();
-        this->sigmadelta_pin->from_string(THEKERNEL->config->value(switch_key, this->name_key, output_pin_key )->by_default("nc")->as_string())->as_output();
-        if(this->sigmadelta_pin->connected()) {
-            if(failsafe == 1) {
-                set_high_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
-            } else {
-                set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
-            }
-        } else {
-            this->output_type = NONE;
-            delete this->sigmadelta_pin;
-            this->sigmadelta_pin = nullptr;
-        }
+        // this->sigmadelta_pin = new Pwm();
+        // this->sigmadelta_pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
+        // if(this->sigmadelta_pin->connected()) {
+        //     if(failsafe == 1) {
+        //         set_high_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
+        //     } else {
+        //         set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
+        //     }
+        // } else {
+        //     this->output_type = NONE;
+        //     delete this->sigmadelta_pin;
+        //     this->sigmadelta_pin = nullptr;
+        // }
 
     } else if(type == "digital") {
         this->output_type = DIGITAL;
         this->digital_pin = new Pin();
-        this->digital_pin->from_string(THEKERNEL->config->value(switch_key, this->name_key, output_pin_key )->by_default("nc")->as_string())->as_output();
+        this->digital_pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
         if(this->digital_pin->connected()) {
             if(failsafe == 1) {
-                set_high_on_debug(digital_pin->port_number, digital_pin->pin);
+                //set_high_on_debug(digital_pin->port_number, digital_pin->pin);
             } else {
-                set_low_on_debug(digital_pin->port_number, digital_pin->pin);
+                //set_low_on_debug(digital_pin->port_number, digital_pin->pin);
             }
         } else {
             this->output_type = NONE;
@@ -111,45 +107,45 @@ bool Switch::configure()
 
     } else if(type == "hwpwm") {
         this->output_type = HWPWM;
-        Pin *pin = new Pin();
-        pin->from_string(THEKERNEL->config->value(switch_key, this->name_key, output_pin_key )->by_default("nc")->as_string())->as_output();
-        this->pwm_pin = pin->hardware_pwm();
-        if(failsafe == 1) {
-            set_high_on_debug(pin->port_number, pin->pin);
-        } else {
-            set_low_on_debug(pin->port_number, pin->pin);
-        }
-        delete pin;
-        if(this->pwm_pin == nullptr) {
-            THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
-            this->output_type = NONE;
-        }
+        // Pin *pin = new Pin();
+        // pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
+        // this->pwm_pin = pin->hardware_pwm();
+        // if(failsafe == 1) {
+        //     set_high_on_debug(pin->port_number, pin->pin);
+        // } else {
+        //     set_low_on_debug(pin->port_number, pin->pin);
+        // }
+        // delete pin;
+        // if(this->pwm_pin == nullptr) {
+        //     THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+        //     this->output_type = NONE;
+        // }
 
     } else {
         this->output_type = NONE;
     }
 
     if(this->output_type == SIGMADELTA) {
-        this->sigmadelta_pin->max_pwm(THEKERNEL->config->value(switch_key, this->name_key, max_pwm_key )->by_default(255)->as_number());
-        this->switch_value = THEKERNEL->config->value(switch_key, this->name_key, startup_value_key )->by_default(this->sigmadelta_pin->max_pwm())->as_number();
-        if(this->switch_state) {
-            this->sigmadelta_pin->pwm(this->switch_value); // will be truncated to max_pwm
-        } else {
-            this->sigmadelta_pin->set(false);
-        }
+        // this->sigmadelta_pin->max_pwm(cr.get_int(m,  max_pwm_key, 255));
+        // this->switch_value = cr.get_int(m, startup_value_key, this->sigmadelta_pin->max_pwm());
+        // if(this->switch_state) {
+        //     this->sigmadelta_pin->pwm(this->switch_value); // will be truncated to max_pwm
+        // } else {
+        //     this->sigmadelta_pin->set(false);
+        // }
 
     } else if(this->output_type == HWPWM) {
         // default is 50Hz
-        float p = THEKERNEL->config->value(switch_key, this->name_key, pwm_period_ms_key )->by_default(20)->as_number() * 1000.0F; // ms but fractions are allowed
-        this->pwm_pin->period_us(p);
+        // float p = cr.get_float(m, pwm_period_ms_key, 20) * 1000.0F; // ms but fractions are allowed
+        // this->pwm_pin->period_us(p);
 
-        // default is 0% duty cycle
-        this->switch_value = THEKERNEL->config->value(switch_key, this->name_key, startup_value_key )->by_default(0)->as_number();
-        if(this->switch_state) {
-            this->pwm_pin->write(this->switch_value / 100.0F);
-        } else {
-            this->pwm_pin->write(0);
-        }
+        // // default is 0% duty cycle
+        // this->switch_value = cr.get_int(m, startup_value_key, 0);
+        // if(this->switch_state) {
+        //     this->pwm_pin->write(this->switch_value / 100.0F);
+        // } else {
+        //     this->pwm_pin->write(0);
+        // }
 
     } else if(this->output_type == DIGITAL) {
         this->digital_pin->set(this->switch_state);
@@ -184,17 +180,34 @@ bool Switch::configure()
         // set to initial state
         this->input_pin_state = this->input_pin.get();
         // input pin polling
-        THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
+        SlowTicker.getInstance().attach(100, std::bind(&Switch::pinpoll_tick, this));
     }
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA
-        THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
+        //SlowTicker.getInstance().attach(1000, std::bind(&Pwm::on_tick, this->sigmadelta_pin));
     }
 
-    // for commands we need to replace _ for space
+    // for commands we may need to replace _ for space for old configs
     std::replace(output_on_command.begin(), output_on_command.end(), '_', ' '); // replace _ with space
     std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space
+}
+
+// set the pin to the fail safe value on halt
+void Switch::on_halt(bool flg)
+{
+    if(flg) {
+        if(this->ignore_on_halt) return;
+
+        // set pin to failsafe value
+        switch(this->output_type) {
+            case DIGITAL: this->digital_pin->set(this->failsafe); break;
+            // case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
+            // case HWPWM: this->pwm_pin->write(0); break;
+            case NONE: break;
+        }
+        this->switch_state = this->failsafe;
+    }
 }
 
 bool Switch::match_input_on_gcode(const GCode& gcode) const
@@ -351,7 +364,7 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
         // If pin high
         if( this->input_pin_state ) {
             // if switch is a toggle switch
-            if( this->input_pin_behavior == toggle_key ) {
+            if( this->input_pin_behavior == toggle_behavior ) {
                 this->flip();
             } else {
                 // else default is momentary
@@ -361,7 +374,7 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
 
         } else {
             // else if button released
-            if( this->input_pin_behavior == momentary_key ) {
+            if( this->input_pin_behavior == momentary_behavior ) {
                 // if switch is momentary
                 this->switch_state = this->input_pin_state;
                 this->switch_changed = true;

@@ -7,7 +7,8 @@
 
 #pragma once
 
-#if 1
+#include "Module.h"
+#include "ConfigReader.h"
 #include "Pin.h"
 //#include "Pwm.h"
 
@@ -23,15 +24,16 @@ class StreamOutput;
 class Switch : public Module {
     public:
         Switch(const char *name);
-        static bool load_switches();
 
-        bool configure();
+        bool configure(ConfigReader& cr);
         void on_halt(bool);
         bool request(const char *key, void *value) ;
 
         enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
 
     private:
+        bool load_switches(ConfigReader& cr);
+        bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
         void pinpoll_tick(void);
         void flip();
         void send_gcode(std::string& msg);
@@ -48,6 +50,7 @@ class Switch : public Module {
         };
         std::string    output_on_command;
         std::string    output_off_command;
+        enum {momentary_behavior, toggle_behavior};
         uint16_t  input_pin_behavior;
         uint16_t  input_on_command_code;
         uint16_t  input_off_command_code;

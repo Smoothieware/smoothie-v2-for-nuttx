@@ -14,7 +14,7 @@ public:
 
     void reset() { is.clear(); is.seekg (0, is.beg); }
     using section_map_t = std::map<std::string, std::string>;
-    using sub_section_map_t =  std::map<std::string, std::map<std::string, std::string>>;
+    using sub_section_map_t =  std::map<std::string, section_map_t>;
     using sections_t = std::set<std::string>;
     bool get_sections(sections_t& sections);
     bool get_section(const char *section, section_map_t& config);
