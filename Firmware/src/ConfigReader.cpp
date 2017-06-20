@@ -13,7 +13,7 @@ inline std::string trim(const std::string &s)
 }
 
 // just extract the key/values from the specified section
-bool ConfigReader::get_section(std::istream& is, const char *section, section_map_t& config)
+bool ConfigReader::get_section(const char *section, section_map_t& config)
 {
     current_section=  section;
     bool in_section= false;
@@ -54,7 +54,7 @@ bool ConfigReader::get_section(std::istream& is, const char *section, section_ma
 }
 
 // just extract the key/values from the specified section and split them into sub sections
-bool ConfigReader::get_sub_sections(std::istream& is, const char *section, sub_section_map_t& config)
+bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& config)
 {
     current_section=  section;
     bool in_section= false;
@@ -95,7 +95,7 @@ bool ConfigReader::get_sub_sections(std::istream& is, const char *section, sub_s
 }
 
 // just extract the sections
-bool ConfigReader::get_sections(std::istream& is, sections_t& config)
+bool ConfigReader::get_sections(sections_t& config)
 {
     current_section=  "";
 
@@ -174,26 +174,25 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-    ConfigReader cr;
+    ConfigReader cr(fs);
     if(argc == 2) {
         ConfigReader::sections_t sections;
-        if(cr.get_sections(fs, sections)) {
+        if(cr.get_sections(sections)) {
             std::cout << sections << "\n";
         }
 
         for(auto& i : sections) {
-            fs.clear();
-            fs.seekg(0, fs.beg);
+            cr.reset();
             std::cout << i << "...\n";
             ConfigReader::section_map_t config;
-            if(cr.get_section(fs, i.c_str(), config)) {
+            if(cr.get_section(i.c_str(), config)) {
                 std::cout << config << "\n";
             }
         }
 
     }else if(argc == 3) {
         ConfigReader::section_map_t config;
-        if(cr.get_section(fs, argv[2], config)) {
+        if(cr.get_section(argv[2], config)) {
             std::cout << config << "\n";
         }
 
@@ -207,12 +206,11 @@ int main(int argc, char const *argv[])
         }
 
         if(is_sub_section) {
-            fs.clear();
-            fs.seekg(0, fs.beg);
+            cr.reset();
             std::cout << "\nSubsections...\n";
             ConfigReader::sub_section_map_t ssmap;
             // dump sub sections too
-            if(cr.get_sub_sections(fs, argv[2], ssmap)) {
+            if(cr.get_sub_sections(argv[2], ssmap)) {
                 std::cout << ssmap << "\n";
             }
 
@@ -239,7 +237,6 @@ int main(int argc, char const *argv[])
 
 int main(int argc, char const *argv[])
 {
-    ConfigReader cr;
 
     std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106\nfan.input_off_command = M107\n\
 fan.output_pin = 2.6\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
@@ -247,8 +244,9 @@ misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\npsu.ena
 [dummy]\nenable = false");
 
     std::stringstream ss(str);
+    ConfigReader cr(ss);
     ConfigReader::sub_section_map_t ssmap;
-    if(!cr.get_sub_sections(ss, "switch", ssmap)) {
+    if(!cr.get_sub_sections("switch", ssmap)) {
         std::cout << "no switch section found\n";
         exit(0);
     }

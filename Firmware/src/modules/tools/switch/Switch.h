@@ -6,7 +6,8 @@
 */
 
 #pragma once
-#if 0
+
+#if 1
 #include "Pin.h"
 //#include "Pwm.h"
 
@@ -15,30 +16,27 @@
 class GCode;
 class StreamOutput;
 
-namespace mbed {
-    class PwmOut;
-}
+// namespace mbed {
+//     class PwmOut;
+// }
 
 class Switch : public Module {
     public:
-        Switch();
-        Switch(uint16_t name);
+        Switch(const char *name);
+        static bool load_switches();
 
-        void on_module_loaded();
-        void on_main_loop(void *argument);
-        void on_config_reload(void* argument);
-        void on_get_public_data(void* argument);
-        void on_set_public_data(void* argument);
-        void on_halt(void *arg);
+        bool configure();
+        void on_halt(bool);
+        bool request(const char *key, void *value) ;
 
-        uint32_t pinpoll_tick(uint32_t dummy);
         enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
 
     private:
+        void pinpoll_tick(void);
         void flip();
-        void send_gcode(std::string msg, StreamOutput* stream);
-        bool match_input_on_gcode(const GCode* gcode) const;
-        bool match_input_off_gcode(const GCode* gcode) const;
+        void send_gcode(std::string& msg);
+        bool match_input_on_gcode(const GCode& gcode) const;
+        bool match_input_off_gcode(const GCode& gcode) const;
 
         Pin       input_pin;
         float     switch_value;
@@ -50,20 +48,16 @@ class Switch : public Module {
         };
         std::string    output_on_command;
         std::string    output_off_command;
-        uint16_t  name_checksum;
         uint16_t  input_pin_behavior;
         uint16_t  input_on_command_code;
         uint16_t  input_off_command_code;
         char      input_on_command_letter;
         char      input_off_command_letter;
-        struct {
-            uint8_t   subcode:4;
-            bool      switch_changed:1;
-            bool      input_pin_state:1;
-            bool      switch_state:1;
-            bool      ignore_on_halt:1;
-            uint8_t   failsafe:1;
-        };
+        uint8_t   subcode;
+        bool      switch_changed;
+        bool      input_pin_state;
+        bool      switch_state;
+        bool      ignore_on_halt;
+        uint8_t   failsafe;
 };
 
-#endif

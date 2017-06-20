@@ -11,6 +11,9 @@ public:
     Module(const char* group);
     virtual ~Module();
 
+    // called to allow the module to read its configuration data
+    virtual bool configure(){ return true; };
+
     // the system is entering or leaving halt/alarm mode flg == true if entering
     virtual void on_halt(bool flg) {};
     // request public data from module instance, tpy eof data requested is in key,

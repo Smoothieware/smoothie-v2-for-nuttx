@@ -4,7 +4,6 @@
 #include "ConfigReader.h"
 #include "TestRegistry.h"
 
-static ConfigReader cr;
 static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106\nfan.input_off_command = M107\n\
 fan.output_pin = 2.6\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
 misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\n\
@@ -12,9 +11,11 @@ misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.iv
 
 static ConfigReader::sections_t sections;
 static std::stringstream ss1(str);
+static ConfigReader cr(ss1);
 REGISTER_TEST(ConfigTest, sections)
 {
-    TEST_ASSERT_TRUE(cr.get_sections(ss1, sections));
+    cr.reset();
+    TEST_ASSERT_TRUE(cr.get_sections(sections));
     TEST_ASSERT_TRUE(sections.find("switch") != sections.end());
     TEST_ASSERT_TRUE(sections.find("dummy") != sections.end());
     TEST_ASSERT_TRUE(sections.find("none") == sections.end());
@@ -22,11 +23,11 @@ REGISTER_TEST(ConfigTest, sections)
 
 
 static ConfigReader::sub_section_map_t ssmap;
-static std::stringstream ss2(str);
 REGISTER_TEST(ConfigTest, load_switches)
 {
+    cr.reset();
     TEST_ASSERT_TRUE(ssmap.empty());
-    TEST_ASSERT_TRUE(cr.get_sub_sections(ss2, "switch", ssmap));
+    TEST_ASSERT_TRUE(cr.get_sub_sections("switch", ssmap));
     TEST_ASSERT_EQUAL_STRING("switch", cr.get_current_section().c_str());
 
     bool fanok= false;

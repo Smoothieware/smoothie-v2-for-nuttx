@@ -9,15 +9,16 @@
 class ConfigReader
 {
 public:
-    ConfigReader(){};
+    ConfigReader(std::istream& ist) : is(ist) {};
     ~ConfigReader(){};
 
+    void reset() { is.clear(); is.seekg (0, is.beg); }
     using section_map_t = std::map<std::string, std::string>;
     using sub_section_map_t =  std::map<std::string, std::map<std::string, std::string>>;
     using sections_t = std::set<std::string>;
-    bool get_sections(std::istream& is, sections_t& sections);
-    bool get_section(std::istream& is, const char *section, section_map_t& config);
-    bool get_sub_sections(std::istream& is, const char *section, sub_section_map_t& config);
+    bool get_sections(sections_t& sections);
+    bool get_section(const char *section, section_map_t& config);
+    bool get_sub_sections(const char *section, sub_section_map_t& config);
 
     const std::string& get_current_section() const { return current_section; }
 
@@ -27,6 +28,8 @@ public:
     bool get_bool(const section_map_t&, const char *key, bool def=false);
 
 private:
+    std::istream& is;
+
     std::string current_section;
 
     // regular expression to extract section
