@@ -143,7 +143,6 @@ bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
-#include "CommandShell.h"
 
 static GCodeProcessor gp;
 static bool dispatch_line(OutputStream& os, const char *line)
@@ -358,6 +357,9 @@ static void *commandthrd(void *)
 
 }
 
+#include "CommandShell.h"
+#include "SlowTicker.h"
+
 extern "C" int smoothie_main(int argc, char *argv[])
 {
     // do C++ initialization for static constructors first
@@ -378,7 +380,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     shell.initialize();
 
     // create the SlowTicker
-    SlowTicker& slow_ticker= SlowTicker.getInstance();
+    SlowTicker& slow_ticker= SlowTicker::getInstance();
     if(!slow_ticker.start()) {
         printf("Error: failed to start SlowTicker\n");
     }

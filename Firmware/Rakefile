@@ -119,7 +119,9 @@ if TESTING
   puts "Building Test Cases"
 
 else
-  SRC = FileList['src/**/*.{c,cpp,s}']
+  src = FileList['src/**/*.{c,cpp,s}']
+  src.exclude(/src\/libs\/longjmp.s/) # we don't want this unless unit testing
+  SRC = src
   puts "Building Firmware"
 end
 
