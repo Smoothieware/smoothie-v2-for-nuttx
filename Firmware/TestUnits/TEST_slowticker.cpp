@@ -41,9 +41,10 @@ static void timer_callback2(void)
 REGISTER_TEST(SlowTicker, test_10_hz)
 {
     sem_init(&g_sem, 0, 0);
+    sem_setprotocol(&g_sem, SEM_PRIO_NONE); // as it is a signalling instead of locking
     timer_cnt= 0;
 
-    // test where the interrupt triggers a semaphore and the thread increments the counter
+    // test where the interrupt triggers a semaphore and the thread is waiting on a semaphore
     SlowTicker& slt= SlowTicker::getInstance();
     TEST_ASSERT_TRUE(slt.start());
 
@@ -52,6 +53,7 @@ REGISTER_TEST(SlowTicker, test_10_hz)
     // allow 5 seconds of events
     systime_t st = clock_systimer();
     for (int i = 0; i < 50; ++i) {
+        // wait for timer to trigger us to wakeup
         while (sem_wait(&g_sem) < 0);
         // do stuff here, ie call the timeouts
     }

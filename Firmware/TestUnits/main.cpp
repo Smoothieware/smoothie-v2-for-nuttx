@@ -82,7 +82,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     }
 
     task_create("tests", SCHED_PRIORITY_DEFAULT,
-                10000,
+                20000,
                 (main_t)run_tests,
                 (FAR char * const *)NULL);
 
