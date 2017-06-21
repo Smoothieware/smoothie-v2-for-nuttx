@@ -22,6 +22,7 @@ private:
     bool md5sum_cmd(std::string& params, OutputStream& os);
     bool switch_cmd(std::string& params, OutputStream& os);
     bool modules_cmd(std::string& params, OutputStream& os);
+    bool gpio_cmd(std::string& params, OutputStream& os);
 
     bool mounted;
 };

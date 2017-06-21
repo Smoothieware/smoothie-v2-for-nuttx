@@ -32,6 +32,7 @@ bool CommandShell::initialize()
     THEDISPATCHER.add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "gpio", std::bind( &CommandShell::gpio_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
 
     return true;
@@ -137,10 +138,16 @@ bool CommandShell::mem_cmd(std::string& params, OutputStream& os)
 #include <sys/boardctl.h>
 bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 {
-    HELP("mount sdcard on /sd");
+    HELP("mount sdcard on /sd (or unmount if already mounted)");
+
+    const char g_target[]         = "/sd";
+    const char g_filesystemtype[] = "vfat";
+    const char g_source[]         = "/dev/mmcsd0";
 
     if(mounted) {
-        os.printf("Already mounted\n");
+        os.printf("Already mounted, unmounting\n");
+        umount(g_target);
+        mounted= false;
         return true;
     }
 
@@ -150,10 +157,6 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
     //     os.printf("Failed to INIT SDIO\n");
     //     return true;
     // }
-
-    const char g_target[]         = "/sd";
-    const char g_filesystemtype[] = "vfat";
-    const char g_source[]         = "/dev/mmcsd0";
 
     ret = mount(g_source, g_target, g_filesystemtype, 0, nullptr);
     if(0 == ret) {
@@ -291,6 +294,38 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
     }
 
     return true;
+}
+
+// set or get gpio
+bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
+{
+    HELP("set and get gpio pins: use GPIO5[14] | gpio5_14 | P4_10 | p4.10 out/in [on/off]");
+
+    std::string gpio = shift_parameter( params );
+    std::string dir = shift_parameter( params );
+
+    if(gpio.empty()) return false;
+
+    if(dir.empty() || dir == "in") {
+        // read pin
+        Pin pin(gpio.c_str());
+        pin.as_input();
+        os.printf("%s: %d\n", gpio.c_str(), pin.get());
+        return true;
+    }
+
+    if(dir == "out") {
+        std::string v = shift_parameter( params );
+        if(v.empty()) return false;
+        Pin pin(gpio.c_str());
+        pin.as_output();
+        bool b= (v == "on");
+        pin.set(b);
+        os.printf("%s: set to %d\n", gpio.c_str(), pin.get());
+        return true;
+    }
+
+    return false;
 }
 
 bool CommandShell::modules_cmd(std::string& params, OutputStream& os)

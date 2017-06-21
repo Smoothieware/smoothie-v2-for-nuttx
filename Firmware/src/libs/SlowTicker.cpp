@@ -131,7 +131,7 @@ void SlowTicker::set_frequency( int frequency )
     }
 }
 
-// The actual interrupt being called by the timer, this is where work is done
+// This is an ISR
 void SlowTicker::tick()
 {
     // Call all callbacks that need to be called
