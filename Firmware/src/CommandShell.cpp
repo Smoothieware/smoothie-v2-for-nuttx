@@ -295,6 +295,12 @@ bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
     HELP("List all registered modules\n");
 
     std::vector<std::string> l= Module::print_modules();
+
+    if(l.empty()) {
+        os.printf("No modules found\n");
+        return true;
+    }
+
     for(auto& i : l) {
         os.printf("%s\n", i.c_str());
     }

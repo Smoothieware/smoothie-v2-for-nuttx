@@ -113,16 +113,30 @@ bool send_message_queue(mqd_t mqfd, const char *pline, OutputStream *pos)
 bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
 {
     comms_msg_t msg_buffer;
+    struct timespec ts;
+    int status = clock_gettime(CLOCK_REALTIME, &ts);
+    if (status != 0) {
+        printf("receive_message_queue: ERROR clock_gettime failed\n");
+    }
+    //                1000000000  // 1 second in ns
+    ts.tv_nsec     +=  500000000; // 200ms timeout
+    if(ts.tv_nsec  >= 1000000000) {
+        ts.tv_nsec -= 1000000000;
+        ts.tv_sec  += 1;
+    }
 
-    int nbytes = mq_receive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0);
+    //int nbytes = mq_receive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0);    int nbytes = nbytes = mq_timedreceive(g_recv_mqfd, msg_buffer, TEST_MSGLEN, 0, &ts);
+    int nbytes = mq_timedreceive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0, &ts);
     if (nbytes < 0) {
-        /* mq_receive failed.  If the error is because of EINTR then
-         * it is not a failure.
-         */
+        // mq_receive failed.  If the error is because of EINTR or ETIMEDOUT then it is not a failure. but we return anyway
+        if (errno == ETIMEDOUT) {
+            // timeout is ok
+            return false;
 
-        if (errno != EINTR) {
+        } else if (errno != EINTR) {
             printf("receive_message_queue: ERROR mq_receive failure, errno=%d\n", errno);
             return false;
+
         } else {
             printf("receive_message_queue: mq_receive interrupted!\n");
             return false;
@@ -357,10 +371,10 @@ static void *commandthrd(void *)
             //printf("DEBUG: got line: %s\n", line);
             dispatch_line(*os, line);
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
-
-        } else {
-            printf("receive_message_queue failed\n");
+        }else{
+            // timed out or other error
         }
+
     }
 
 }
@@ -409,8 +423,12 @@ static int smoothie_startup(int, char **)
         fs.open("/sd/config.ini", std::fstream::in);
         if(!fs.is_open()) {
             std::cout << "Error opening file: " << "/sd/config.ini" << "\n";
+            // unmount sdcard
+            umount("/sd");
             break;
         }
+
+        printf("Starting configuration of modules...\n");
 
         ConfigReader cr(fs);
 
@@ -428,6 +446,7 @@ static int smoothie_startup(int, char **)
         // unmount sdcard
         umount("/sd");
 
+        printf("...Ending configuration of modules\n");
     } while(0);
 
     // launch the command thread that executes all incoming commands
@@ -497,7 +516,7 @@ static int smoothie_startup(int, char **)
     uart_comms_thread.join();
     pthread_join(command_thread, &result);
 
-    printf("Exiting main\n");
+    printf("Exiting startup thread\n");
 
     return 1;
 }
@@ -512,7 +531,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     // We need to do this as the cxxinitialize takes more stack than the default task has,
     // this causes corruption and random crashes
     task_create("smoothie_task", SCHED_PRIORITY_DEFAULT,
-                5000, // stack size may need to increase
+                10000, // stack size may need to increase
                 (main_t)smoothie_startup,
                 (FAR char * const *)NULL);
 
