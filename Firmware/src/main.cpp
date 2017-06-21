@@ -1,3 +1,5 @@
+#include "main.h"
+
 #include <nuttx/config.h>
 #include <sys/boardctl.h>
 #include <nuttx/usb/cdcacm.h>
@@ -15,6 +17,9 @@
 #include <condition_variable>
 #include <unistd.h>
 #include <iostream>
+
+// static std::mutex m;
+// static std::condition_variable cv;
 
 static int setup_CDC()
 {
@@ -109,8 +114,8 @@ bool send_message_queue(mqd_t mqfd, const char *pline, OutputStream *pos)
     return true;
 }
 
-// Only called by the dispatcher thread to receive incoming lines to process
-bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
+// Only called by the command thread to receive incoming lines to process
+static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
 {
     comms_msg_t msg_buffer;
     struct timespec ts;
@@ -158,8 +163,10 @@ bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
 
+// TODO maybe move to Dispatcher
 static GCodeProcessor gp;
-static bool dispatch_line(OutputStream& os, const char *line)
+// can be called by modules when in command thread context
+bool dispatch_line(OutputStream& os, const char *line)
 {
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
@@ -339,8 +346,7 @@ static void uart_comms()
     printf("UART Comms thread exiting\n");
 }
 
-static std::mutex m;
-static std::condition_variable cv;
+#include "Module.h"
 /*
  * All commands must be executed inthe contrxt of this thread. It is equivalent to the main_loop in v1.
  * Commands are sent to this thread via the message queue from things that can block (like I/O)
@@ -375,8 +381,9 @@ static void *commandthrd(void *)
             // timed out or other error
         }
 
+        // call in_command_ctx for all modules that want it
+        Module::broadcast_in_commmand_ctx();
     }
-
 }
 
 #include "CommandShell.h"

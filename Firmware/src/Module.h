@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <atomic>
 
 class ConfigReader;
 
@@ -22,6 +23,9 @@ public:
     // and the address of an appropriate returned data type is provided by the caller
     virtual bool request(const char *key, void *value) { return false; }
 
+    // sent in command thread context about every 200ms, or after every gcode processed
+    virtual void in_command_ctx() {};
+
     // module registry function, to look up an instance of a module or a group of modules
     // returns nullptr if not found, otherwise returns a pointer to the module
     static Module* lookup(const char *group, const char *instance= nullptr);
@@ -36,6 +40,7 @@ public:
     // sends the on_halt event to all modules, flg is true if halt, false if cleared
     static void broadcast_halt(bool flg);
     static std::vector<std::string> print_modules();
+    static void broadcast_in_commmand_ctx();
 
     bool was_added() const { return added; }
 
@@ -46,12 +51,18 @@ protected:
     // TODO do we really want to store these here? currently needed for destructor
     std::string group_name, instance_name;
 
+    // set if module wants the command_ctx callback
+    std::atomic_bool want_command_ctx{false};
+
 private:
     using registry_t = std::map<const std::string, modrec_t>;
     static registry_t registry;
     bool add(const char* group, const char* instance= nullptr);
 
     // specifies whether this is registered as a single module or a group of modules
-    bool single;
-    bool added;
+    bool single{false};
+
+    // set if sucessfully registered
+    bool added{false};
+
 };

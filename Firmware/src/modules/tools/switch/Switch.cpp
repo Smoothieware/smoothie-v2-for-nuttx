@@ -7,6 +7,7 @@
 #include "SigmaDeltaPwm.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
+#include "main.h"
 
 #include <algorithm>
 #include <math.h>
@@ -304,6 +305,7 @@ bool Switch::match_input_off_gcode(const GCode& gcode) const
     return (b && gcode.get_subcode() == this->subcode);
 }
 
+// this is always called in the command thread context
 bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
 {
     // Add the gcode to the queue ourselves if we need it
@@ -359,6 +361,7 @@ bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
         // drain queue
         //THEKERNEL->conveyor->wait_for_idle();
         this->switch_state = false;
+
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin
             this->sigmadelta_pin->set(false);
@@ -371,6 +374,8 @@ bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
             this->digital_pin->set(false);
         }
     }
+
+    // TODO could just call handle_switch_changed() instead of duplicating above
 
     return true;
 }
@@ -405,11 +410,23 @@ bool Switch::request(const char *key, void *value)
     return true;
 }
 
+// This is called periodically to allow commands to be issued in the command thread context
+// but only when want_command_ctx is set to true
+void Switch::in_command_ctx()
+{
+    handle_switch_changed();
+    want_command_ctx= false;
+}
+
 // Switch changed by some external means so do the action required
+// needs to be only called when in command thread context
 void Switch::handle_switch_changed()
 {
     if(this->switch_state) {
-        //if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+        if(!this->output_on_command.empty()){
+            OutputStream os; // null output stream
+            dispatch_line(os, this->output_on_command.c_str());
+        }
 
         if(this->output_type == SIGMADELTA) {
             this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
@@ -422,8 +439,10 @@ void Switch::handle_switch_changed()
         }
 
     } else {
-
-        //if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
+        if(!this->output_off_command.empty()){
+            OutputStream os; // null output stream
+            dispatch_line(os, this->output_off_command.c_str());
+        }
 
         if(this->output_type == SIGMADELTA) {
             this->sigmadelta_pin->set(false);
@@ -440,6 +459,8 @@ void Switch::handle_switch_changed()
 // Check the state of the button and act accordingly
 // This is an ISR
 // we need to protect switch_state from concurrent access so it is an atomic_bool
+// this just sets the state and lets handle_switch_changed() changethe actual pins
+// TODO however if there is no output_on_command and output_off_command set it could set the pins here instead
 void Switch::pinpoll_tick()
 {
     if(!input_pin.connected()) return;
@@ -473,7 +494,8 @@ void Switch::pinpoll_tick()
     }
 
     if(switch_changed) {
-        //TODO we need to call handle_switch_changed but in the command thread context
-
+        // we need to call handle_switch_changed but in the command thread context
+        // in case there is a command to be issued
+        want_command_ctx= true;
     }
 }
