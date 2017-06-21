@@ -120,7 +120,7 @@ if TESTING
 
 else
   src = FileList['src/**/*.{c,cpp,s}']
-  src.exclude(/src\/libs\/longjmp.s/) # we don't want this unless unit testing
+  #src.exclude(/src\/libs\/longjmp.s/) # we don't want this unless unit testing
   SRC = src
   puts "Building Firmware"
 end
