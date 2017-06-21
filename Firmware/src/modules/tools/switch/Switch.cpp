@@ -6,6 +6,7 @@
 #include "SlowTicker.h"
 #include "SigmaDeltaPwm.h"
 #include "GCodeProcessor.h"
+#include "Dispatcher.h"
 
 #include <algorithm>
 #include <math.h>
@@ -49,8 +50,10 @@ bool Switch::load_switches(ConfigReader& cr)
         // foreach switch
         std::string name = i.first;
         auto& m = i.second;
-        Switch *sw = new Switch(name.c_str());
-        if(sw->configure(cr, m)) ++cnt;
+        if(cr.get_bool(m, "enable", false)) {
+            Switch *sw = new Switch(name.c_str());
+            if(sw->configure(cr, m)) ++cnt;
+        }
     }
 
     return cnt > 0;
@@ -72,7 +75,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     std::string ipb = cr.get_string(m, input_pin_behavior_key, "momentary");
     this->input_pin_behavior = (ipb == "momentary") ? momentary_behavior : toggle_behavior;
 
-    std::string output_pin= cr.get_string(m, output_pin_key, "nc");
+    std::string output_pin = cr.get_string(m, output_pin_key, "nc");
 
     // output pin type
     std::string type = cr.get_string(m, output_type_key, "");
@@ -125,7 +128,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         // }
 
     } else {
-        this->digital_pin= nullptr;
+        this->digital_pin = nullptr;
         this->output_type = NONE;
         if(output_pin != "nc") {
             printf("WARNING: switch config: output pin has no known type: %s\n", type);
@@ -165,21 +168,31 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     if(input_on_command.size() >= 2) {
         input_on_command_letter = input_on_command.front();
         const char *p = input_on_command.c_str();
+        p++;
         std::tuple<uint16_t, uint16_t, float> c = GCodeProcessor::parse_code(p);
         input_on_command_code = std::get<0>(c);
         if(std::get<1>(c) != 0) {
             this->subcode = std::get<1>(c); // override any subcode setting
         }
+        // add handler for this code
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        THEDISPATCHER.add_handler(input_on_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_on_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
+
     }
 
     if(input_off_command.size() >= 2) {
         input_off_command_letter = input_off_command.front();
         const char *p = input_off_command.c_str();
+        p++;
         std::tuple<uint16_t, uint16_t, float> c = GCodeProcessor::parse_code(p);
         input_off_command_code = std::get<0>(c);
         if(std::get<1>(c) != 0) {
             this->subcode = std::get<1>(c); // override any subcode setting
         }
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        THEDISPATCHER.add_handler(input_off_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_off_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
     }
 
     if(input_pin.connected()) {
@@ -230,13 +243,13 @@ std::string Switch::get_info() const
     }
     if(input_on_command_letter) {
         s.append("INPUT_ON_COMMAND:");
-        s.append(input_on_command_letter, 1);
+        s.push_back(input_on_command_letter);
         s.append(std::to_string(input_on_command_code));
         s.append(",");
     }
     if(input_off_command_letter) {
         s.append("INPUT_OFF_COMMAND:");
-        s.append(input_off_command_letter, 1);
+        s.push_back(input_off_command_letter);
         s.append(std::to_string(input_off_command_code));
         s.append(",");
     }
@@ -291,7 +304,7 @@ bool Switch::match_input_off_gcode(const GCode& gcode) const
     return (b && gcode.get_subcode() == this->subcode);
 }
 
-bool Switch::handle_gcode(GCode& gcode)
+bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
 {
     // Add the gcode to the queue ourselves if we need it
     if (!(match_input_on_gcode(gcode) || match_input_off_gcode(gcode))) {

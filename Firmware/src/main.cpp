@@ -420,7 +420,7 @@ static int smoothie_startup(int, char **)
         }
 
         std::fstream fs;
-        fs.open("/sd/config.ini", std::fstream::in);
+        fs.open("/sd/test-config.ini", std::fstream::in);
         if(!fs.is_open()) {
             std::cout << "Error opening file: " << "/sd/config.ini" << "\n";
             // unmount sdcard

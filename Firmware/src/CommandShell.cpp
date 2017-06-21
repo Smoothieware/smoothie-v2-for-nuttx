@@ -242,7 +242,8 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
         if(mv.size() > 0) {
             for(auto m : mv) {
                 Switch *s= static_cast<Switch*>(m);
-                os.printf("%s-%s\n", m->get_instance_name(), s->get_info().c_str());
+                os.printf("%s:\n", m->get_instance_name());
+                os.printf(" %s\n", s->get_info().c_str());
             }
         }else{
             os.printf("No switches found\n");

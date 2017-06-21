@@ -140,7 +140,7 @@ void SlowTicker::tick()
         countdown -= this->interval;
         if (countdown < 0) {
             countdown += std::get<1>(i);
-            auto fnc= std::get<2>(i); // get the callback
+            auto& fnc= std::get<2>(i); // get the callback
             if(fnc) {
                 fnc();
             }

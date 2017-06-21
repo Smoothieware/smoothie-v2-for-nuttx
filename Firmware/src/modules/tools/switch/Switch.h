@@ -16,7 +16,7 @@
 #include <atomic>
 
 class GCode;
-class StreamOutput;
+class OutputStream;
 class SigmaDeltaPwm;
 
 // namespace mbed {
@@ -39,7 +39,7 @@ class Switch : public Module {
         bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
         void pinpoll_tick(void);
 
-        bool handle_gcode(GCode& gcode);
+        bool handle_gcode(GCode& gcode, OutputStream& os);
         void handle_switch_changed();
         bool match_input_on_gcode(const GCode& gcode) const;
         bool match_input_off_gcode(const GCode& gcode) const;
