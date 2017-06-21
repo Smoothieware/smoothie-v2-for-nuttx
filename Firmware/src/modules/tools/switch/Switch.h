@@ -10,12 +10,14 @@
 #include "Module.h"
 #include "ConfigReader.h"
 #include "Pin.h"
-//#include "Pwm.h"
+
 
 #include <string>
+#include <atomic>
 
 class GCode;
 class StreamOutput;
+class SigmaDeltaPwm;
 
 // namespace mbed {
 //     class PwmOut;
@@ -35,8 +37,9 @@ class Switch : public Module {
         bool load_switches(ConfigReader& cr);
         bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
         void pinpoll_tick(void);
-        void flip();
-        void send_gcode(std::string& msg);
+
+        bool handle_gcode(GCode& gcode);
+        void handle_switch_changed();
         bool match_input_on_gcode(const GCode& gcode) const;
         bool match_input_off_gcode(const GCode& gcode) const;
 
@@ -44,8 +47,8 @@ class Switch : public Module {
         float     switch_value;
         OUTPUT_TYPE output_type;
         union {
-            Pin          *digital_pin;
-            //Pwm          *sigmadelta_pin;
+            Pin *digital_pin;
+            SigmaDeltaPwm *sigmadelta_pin;
             //mbed::PwmOut *pwm_pin;
         };
         std::string    output_on_command;
@@ -57,10 +60,12 @@ class Switch : public Module {
         char      input_on_command_letter;
         char      input_off_command_letter;
         uint8_t   subcode;
-        bool      switch_changed;
-        bool      input_pin_state;
-        bool      switch_state;
         bool      ignore_on_halt;
         uint8_t   failsafe;
+
+        // only accessed in ISR
+        bool      input_pin_state;
+
+        std::atomic_bool switch_state;
 };
 

@@ -133,8 +133,8 @@ bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream **ppos)
         return false;
     }
 
-    *ppline= msg_buffer.pline;
-    *ppos= msg_buffer.pos;
+    *ppline = msg_buffer.pline;
+    *ppos = msg_buffer.pos;
 
     return true;
 }
@@ -218,25 +218,25 @@ static void usb_comms()
     }
 
     // get the message queue
-    mqd_t mqfd= get_message_queue(false);
+    mqd_t mqfd = get_message_queue(false);
 
     // create an output stream that writes to the already open fd
     OutputStream os(fd);
 
     // now read lines and dispatch them
     size_t cnt = 0;
-    bool discard= false;
+    bool discard = false;
     for(;;) {
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
             if(discard) {
                 // we discard long lines until we get the newline
-                if(line[cnt] == '\n') discard= false;
+                if(line[cnt] == '\n') discard = false;
 
             } else if(cnt >= sizeof(line) - 1) {
                 // discard long lines
-                discard= true;
-                cnt= 0;
+                discard = true;
+                cnt = 0;
                 os.puts("error:Discarding long line\n");
 
             } else if(line[cnt] == '\n') {
@@ -244,7 +244,7 @@ static void usb_comms()
                 // TODO line needs to be in a circular queue of lines as big or bigger than the mesage queue size
                 // so it does not get re used before the command thread has dealt with it
                 // We do not want to malloc/free all the time
-                char *l= strdup(line);
+                char *l = strdup(line);
                 send_message_queue(mqfd, l, &os);
                 cnt = 0;
 
@@ -272,7 +272,7 @@ static void uart_comms()
     printf("UART Comms thread running\n");
 
     // get the message queue
-    mqd_t mqfd= get_message_queue(false);
+    mqd_t mqfd = get_message_queue(false);
 
     // create an output stream that writes to cout/stdout
     OutputStream os(std::cout);
@@ -281,19 +281,19 @@ static void uart_comms()
     char line[132];
     size_t cnt = 0;
     size_t n;
-    bool discard= false;
+    bool discard = false;
     for(;;) {
         n = read(0, &line[cnt], 1);
 
         if(n == 1) {
             if(discard) {
                 // we discard long lines until we get the newline
-                if(line[cnt] == '\n') discard= false;
+                if(line[cnt] == '\n') discard = false;
 
             } else if(cnt >= sizeof(line) - 1) {
                 // discard long lines
-                discard= true;
-                cnt= 0;
+                discard = true;
+                cnt = 0;
                 os.puts("error:Discarding long line\n");
 
             } else if(line[cnt] == '\n') {
@@ -301,7 +301,7 @@ static void uart_comms()
                 // TODO line needs to be in a circular queue of lines as big or bigger than the message queue size
                 // so it does not get re used before the command thread has dealt with it
                 // We do not want to malloc/free all the time
-                char *l= strdup(line);
+                char *l = strdup(line);
                 send_message_queue(mqfd, l, &os);
                 cnt = 0;
 
@@ -327,6 +327,14 @@ static void uart_comms()
 
 static std::mutex m;
 static std::condition_variable cv;
+/*
+ * All commands must be executed inthe contrxt of this thread. It is equivalent to the main_loop in v1.
+ * Commands are sent to this thread via the message queue from things that can block (like I/O)
+ * How to queue things from interupts like from Switch?
+ * 1. We could have a timeout on the I/O queue of about 100-200ms and check an internal queue for commands
+ * 2. we could call a on_main_loop to all registed modules.
+ * Not fond of 2 and 1 requires somw form of locking so interrupts can access the queue too.
+ */
 static void *commandthrd(void *)
 {
     printf("Command thread running\n");
@@ -339,7 +347,7 @@ static void *commandthrd(void *)
     // }
 
     // get the message queue
-    mqd_t mqfd= get_message_queue(true);
+    mqd_t mqfd = get_message_queue(true);
 
     for(;;) {
         const char *line;
@@ -350,7 +358,7 @@ static void *commandthrd(void *)
             dispatch_line(*os, line);
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
 
-        }else{
+        } else {
             printf("receive_message_queue failed\n");
         }
     }
@@ -359,6 +367,12 @@ static void *commandthrd(void *)
 
 #include "CommandShell.h"
 #include "SlowTicker.h"
+#include "ConfigReader.h"
+#include "Switch.h"
+
+#include <sys/mount.h>
+
+#include <fstream>
 
 static int smoothie_startup(int, char **)
 {
@@ -369,14 +383,52 @@ static int smoothie_startup(int, char **)
     printf("Smoothie V2.0alpha starting up\n");
 
     // create the commandshell
+    // TODO stack may not be the best place for this, maybe on heap?
+    // CommandShell *shell= new CommandShell;
+    // shell->initialize();
+    //
     CommandShell shell;
     shell.initialize();
 
     // create the SlowTicker
-    SlowTicker& slow_ticker= SlowTicker::getInstance();
+    // TODO where is this allocated?
+    SlowTicker& slow_ticker = SlowTicker::getInstance();
     if(!slow_ticker.start()) {
         printf("Error: failed to start SlowTicker\n");
     }
+
+    // open the config file
+    do {
+        int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
+        if(0 != ret) {
+            std::cout << "Error mounting: " << "/dev/mmcsd0: " << ret << "\n";
+            break;
+        }
+
+        std::fstream fs;
+        fs.open("/sd/config.ini", std::fstream::in);
+        if(!fs.is_open()) {
+            std::cout << "Error opening file: " << "/sd/config.ini" << "\n";
+            break;
+        }
+
+        ConfigReader cr(fs);
+
+        {
+            // this creates any configured switches then we can remove it
+            Switch switches("loader");
+            if(!switches.configure(cr)) {
+                printf("INFO: no switches loaded\n");
+            }
+        }
+
+        // close the file stream
+        fs.close();
+
+        // unmount sdcard
+        umount("/sd");
+
+    } while(0);
 
     // launch the command thread that executes all incoming commands
     // We have to do this the long way as we want to set the stack size and priority
@@ -457,8 +509,10 @@ extern "C" int smoothie_main(int argc, char *argv[])
         printf("ERROR: BOARDIOC_INIT falied\n");
     }
 
+    // We need to do this as the cxxinitialize takes more stack than the default task has,
+    // this causes corruption and random crashes
     task_create("smoothie_task", SCHED_PRIORITY_DEFAULT,
-                5000,
+                5000, // stack size may need to increase
                 (main_t)smoothie_startup,
                 (FAR char * const *)NULL);
 

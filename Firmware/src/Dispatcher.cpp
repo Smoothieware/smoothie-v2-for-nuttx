@@ -23,8 +23,7 @@ std::set<std::string> Dispatcher::get_commands() const
 	return s;
 }
 
-// NOTE this can be called recursively by commands handlers that need to issue their own commands
-// it can also be called concurrently from different threads, so no changing class context, that is why it is const
+// Must be called from the command thread context
 bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 {
 	if(gc.has_m() && gc.get_code() == 503) {
@@ -77,6 +76,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 // convenience to dispatch a one off command
 // Usage: dispatch(os, 'M', 123, [subcode,] 'X', 456, 'Y', 789, ..., 0); // must terminate with 0
 // dispatch(os, 'M', 123, 0);
+// Must be called from the command thread context
 bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 {
 	GCode gc;
@@ -101,7 +101,7 @@ bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 }
 
 // Separate command from arguments
-// return command and stripit from line
+// return command and strip it from line
 // TODO goes into helpers
 static std::string get_command_arguments(std::string& line )
 {
@@ -116,7 +116,7 @@ static std::string get_command_arguments(std::string& line )
     return t.substr(0, pos);
 }
 
-// dispatch command to a commadn handler if one is registered
+// dispatch command to a command handler if one is registered
 bool Dispatcher::dispatch(const char *line, OutputStream& os) const
 {
 	std::string params(line);

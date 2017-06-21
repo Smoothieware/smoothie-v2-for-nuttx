@@ -35,11 +35,15 @@ public:
 
     // sends the on_halt event to all modules, flg is true if halt, false if cleared
     static void broadcast_halt(bool flg);
+    static std::vector<std::string> print_modules();
 
     bool was_added() const { return added; }
 
+    const char *get_group_name() const { return group_name.c_str(); }
+    const char *get_instance_name() const { return instance_name.c_str(); }
+
 protected:
-    // TODO do we realky want to store these here? currently needed for destructor
+    // TODO do we really want to store these here? currently needed for destructor
     std::string group_name, instance_name;
 
 private:

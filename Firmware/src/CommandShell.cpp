@@ -1,6 +1,7 @@
 #include "CommandShell.h"
 #include "OutputStream.h"
 #include "Dispatcher.h"
+#include "Module.h"
 
 #include <functional>
 #include <set>
@@ -30,6 +31,8 @@ bool CommandShell::initialize()
     THEDISPATCHER.add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
     THEDISPATCHER.add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
+    THEDISPATCHER.add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
 
     return true;
 }
@@ -219,6 +222,81 @@ bool CommandShell::md5sum_cmd(std::string& params, OutputStream& os)
 
     }else{
         os.printf("File not found: %s\n", params.c_str());
+    }
+
+    return true;
+}
+
+// set or get switch state for a named switch
+bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
+{
+    HELP("list switches or get/set named switch. if 2nd parameter is on/off it sets state if it is numeric it sets value");
+
+    std::string name = shift_parameter( params );
+    std::string value = shift_parameter( params );
+
+    if(name.empty()) {
+        // just list all the switches
+        std::vector<Module*> mv = Module::lookup_group("switch");
+        if(mv.size() > 0) {
+            for(auto i : mv) {
+                os.printf("%s\n", i->get_instance_name());
+            }
+        }else{
+            os.printf("No switches found\n");
+        }
+
+        return true;
+    }
+
+    Module *m= Module::lookup("switch", name.c_str());
+    if(m == nullptr) {
+        os.printf("no such switch: %s\n", name.c_str());
+        return true;
+    }
+
+    bool ok = false;
+    if(value.empty()) {
+        // get switch state
+        bool state;
+        ok= m->request("state", &state);
+        if (!ok) {
+            os.printf("unknown command %s.\n", "state");
+            return true;
+        }
+        os.printf("switch %s is %d\n", name.c_str(), state);
+
+    }else{
+        const char *cmd;
+        // set switch state
+        if(value == "on" || value == "off") {
+            bool b = value == "on";
+            cmd= "set-state";
+            ok =  m->request(cmd, &b);
+
+        } else {
+            float v = strtof(value.c_str(), NULL);
+            cmd= "set-value";
+            ok = m->request(cmd, &v);
+        }
+
+        if (ok) {
+            os.printf("switch %s set to: %s\n", name.c_str(), value.c_str());
+        } else {
+            os.printf("unknown command %s.\n", cmd);
+        }
+    }
+
+    return true;
+}
+
+bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
+{
+    HELP("List all registered modules\n");
+
+    std::vector<std::string> l= Module::print_modules();
+    for(auto& i : l) {
+        os.printf("%s\n", i.c_str());
     }
 
     return true;

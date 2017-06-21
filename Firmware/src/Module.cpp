@@ -123,3 +123,24 @@ std::vector<Module*> Module::lookup_group(const char *group)
 
     return results;
 }
+
+std::vector<std::string> Module::print_modules()
+{
+    std::vector<std::string> l;
+    for(auto& i : registry) {
+        // foreach entry in the registry
+        std::string r(i.first); // group name
+        auto& x = i.second;
+        if(x.map != nullptr) {
+            // it is a map of modules in a group
+            r.append(": ");
+            for(auto& j : *x.map) {
+                r.append(j.first).append(",");
+            }
+            r.pop_back();
+        }
+        l.push_back(r);
+    }
+
+    return l;
+}
