@@ -32,6 +32,7 @@ class Switch : public Module {
         bool request(const char *key, void *value) ;
 
         enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
+        std::string get_info() const;
 
     private:
         bool load_switches(ConfigReader& cr);

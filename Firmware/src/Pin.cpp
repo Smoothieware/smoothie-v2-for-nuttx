@@ -85,7 +85,7 @@ static bool lookup_pin(uint16_t port, uint16_t pin, uint16_t& gpioport, uint16_t
 }
 
 // Make a new pin object from a string
-// Pins are defined for the LPC43xx as GPIO names GPIOp[n] or gpiop_n where p is the GPIO port and n is the pin (NOT pin names eg P1_6 these are not used)
+// Pins are defined for the LPC43xx as GPIO names GPIOp[n] or gpiop_n where p is the GPIO port and n is the pin or as pin names eg P1_6 or P1.6
 Pin* Pin::from_string(std::string value)
 {
     valid= false;
@@ -171,6 +171,15 @@ Pin* Pin::from_string(std::string value)
 
     this->valid = true;
     return this;
+}
+
+std::string Pin::to_string() const
+{
+    std::string s("gpio");
+    s.append(std::to_string(gpiocfg>>GPIO_PORT_SHIFT));
+    s.append("_");
+    s.append(std::to_string(gpiocfg&GPIO_PIN_MASK));
+    return s;
 }
 
 Pin* Pin::as_output()

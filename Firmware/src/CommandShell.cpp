@@ -227,6 +227,7 @@ bool CommandShell::md5sum_cmd(std::string& params, OutputStream& os)
     return true;
 }
 
+#include "Switch.h"
 // set or get switch state for a named switch
 bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
 {
@@ -239,8 +240,9 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
         // just list all the switches
         std::vector<Module*> mv = Module::lookup_group("switch");
         if(mv.size() > 0) {
-            for(auto i : mv) {
-                os.printf("%s\n", i->get_instance_name());
+            for(auto m : mv) {
+                Switch *s= static_cast<Switch*>(m);
+                os.printf("%s-%s\n", m->get_instance_name(), s->get_info().c_str());
             }
         }else{
             os.printf("No switches found\n");

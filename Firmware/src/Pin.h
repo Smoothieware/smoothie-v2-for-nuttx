@@ -16,8 +16,9 @@ public:
     Pin(const char *s);
 
     Pin* from_string(std::string value);
+    std::string to_string() const;
 
-    inline bool connected()
+    bool connected() const
     {
         return this->valid;
     }

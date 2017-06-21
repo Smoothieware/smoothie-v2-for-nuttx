@@ -14,8 +14,6 @@
 #define startup_value_key       "startup_value"
 #define input_pin_key           "input_pin"
 #define input_pin_behavior_key  "input_pin_behavior"
-#define toggle_key              "toggle"
-#define momentary_key           "momentary"
 #define command_subcode_key     "subcode"
 #define input_on_command_key    "input_on_command"
 #define input_off_command_key   "input_off_command"
@@ -34,7 +32,7 @@ Switch::Switch(const char *name) : Module("switch", name)
 // this is called by the intial startup
 bool Switch::configure(ConfigReader& cr)
 {
-    bool ok= load_switches(cr);
+    bool ok = load_switches(cr);
     return ok;
 }
 
@@ -46,7 +44,7 @@ bool Switch::load_switches(ConfigReader& cr)
         return false;
     }
 
-    int cnt= 0;
+    int cnt = 0;
     for(auto& i : ssmap) {
         // foreach switch
         std::string name = i.first;
@@ -68,17 +66,20 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     this->output_off_command = cr.get_string(m, output_off_command_key, "");
 
     this->switch_state = cr.get_bool(m, startup_state_key, false);
-    std::string type = cr.get_string(m, output_type_key, "sigmadeltapwm");
     this->failsafe = cr.get_int(m, failsafe_key, 0);
     this->ignore_on_halt = cr.get_bool(m, ignore_onhalt_key, false);
 
     std::string ipb = cr.get_string(m, input_pin_behavior_key, "momentary");
     this->input_pin_behavior = (ipb == "momentary") ? momentary_behavior : toggle_behavior;
 
+    std::string output_pin= cr.get_string(m, output_pin_key, "nc");
+
+    // output pin type
+    std::string type = cr.get_string(m, output_type_key, "");
     if(type == "sigmadeltapwm") {
         this->output_type = SIGMADELTA;
         this->sigmadelta_pin = new SigmaDeltaPwm();
-        this->sigmadelta_pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
+        this->sigmadelta_pin->from_string(output_pin)->as_output();
         if(this->sigmadelta_pin->connected()) {
             if(failsafe == 1) {
                 //set_high_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
@@ -94,7 +95,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     } else if(type == "digital") {
         this->output_type = DIGITAL;
         this->digital_pin = new Pin();
-        this->digital_pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
+        this->digital_pin->from_string(output_pin)->as_output();
         if(this->digital_pin->connected()) {
             if(failsafe == 1) {
                 //set_high_on_debug(digital_pin->port_number, digital_pin->pin);
@@ -110,7 +111,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     } else if(type == "hwpwm") {
         this->output_type = HWPWM;
         // Pin *pin = new Pin();
-        // pin->from_string(cr.get_string(m, output_pin_key, "nc"))->as_output();
+        // pin->from_string(output_pin)->as_output();
         // this->pwm_pin = pin->hardware_pwm();
         // if(failsafe == 1) {
         //     set_high_on_debug(pin->port_number, pin->pin);
@@ -124,7 +125,11 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         // }
 
     } else {
+        this->digital_pin= nullptr;
         this->output_type = NONE;
+        if(output_pin != "nc") {
+            printf("WARNING: switch config: output pin has no known type: %s\n", type);
+        }
     }
 
     if(this->output_type == SIGMADELTA) {
@@ -159,21 +164,21 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 
     if(input_on_command.size() >= 2) {
         input_on_command_letter = input_on_command.front();
-        const char *p= input_on_command.c_str();
-        std::tuple<uint16_t, uint16_t, float> c= GCodeProcessor::parse_code(p);
+        const char *p = input_on_command.c_str();
+        std::tuple<uint16_t, uint16_t, float> c = GCodeProcessor::parse_code(p);
         input_on_command_code = std::get<0>(c);
         if(std::get<1>(c) != 0) {
-            this->subcode= std::get<1>(c); // override any subcode setting
+            this->subcode = std::get<1>(c); // override any subcode setting
         }
     }
 
     if(input_off_command.size() >= 2) {
         input_off_command_letter = input_off_command.front();
-        const char *p= input_off_command.c_str();
-        std::tuple<uint16_t, uint16_t, float> c= GCodeProcessor::parse_code(p);
+        const char *p = input_off_command.c_str();
+        std::tuple<uint16_t, uint16_t, float> c = GCodeProcessor::parse_code(p);
         input_off_command_code = std::get<0>(c);
         if(std::get<1>(c) != 0) {
-            this->subcode= std::get<1>(c); // override any subcode setting
+            this->subcode = std::get<1>(c); // override any subcode setting
         }
     }
 
@@ -195,6 +200,63 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space
 
     return true;
+}
+
+std::string Switch::get_info() const
+{
+    std::string s;
+
+    if(digital_pin != nullptr) {
+        s.append("OUTPUT:");
+        s.append(digital_pin->to_string());
+        s.append(",");
+
+        switch(this->output_type) {
+            case DIGITAL: s.append("digital,"); break;
+            case SIGMADELTA: s.append("sigmadeltapwm,"); break;
+            case HWPWM: s.append("hwpwm,"); break;
+            case NONE: s.append("none,"); break;
+        }
+    }
+    if(input_pin.connected()) {
+        s.append("INPUT:");
+        s.append(input_pin.to_string());
+        s.append(",");
+
+        switch(this->input_pin_behavior) {
+            case momentary_behavior: s.append("momentary,"); break;
+            case toggle_behavior: s.append("toggle,"); break;
+        }
+    }
+    if(input_on_command_letter) {
+        s.append("INPUT_ON_COMMAND:");
+        s.append(input_on_command_letter, 1);
+        s.append(std::to_string(input_on_command_code));
+        s.append(",");
+    }
+    if(input_off_command_letter) {
+        s.append("INPUT_OFF_COMMAND:");
+        s.append(input_off_command_letter, 1);
+        s.append(std::to_string(input_off_command_code));
+        s.append(",");
+    }
+    if(subcode != 0) {
+        s.append("SUBCODE:");
+        s.append(std::to_string(subcode));
+        s.append(",");
+    }
+    if(!output_on_command.empty()) {
+        s.append("OUTPUT_ON_COMMAND:");
+        s.append(output_on_command);
+        s.append(",");
+    }
+    if(!output_off_command.empty()) {
+        s.append("OUTPUT_OFF_COMMAND:");
+        s.append(output_off_command);
+        s.append(",");
+    }
+
+    return s;
 }
 
 // set the pin to the fail safe value on halt
@@ -369,7 +431,7 @@ void Switch::pinpoll_tick()
 {
     if(!input_pin.connected()) return;
 
-    bool switch_changed= false;
+    bool switch_changed = false;
 
     // See if pin changed
     bool current_state = this->input_pin.get();
