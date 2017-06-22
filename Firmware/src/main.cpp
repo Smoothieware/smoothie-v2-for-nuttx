@@ -124,7 +124,7 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
         printf("receive_message_queue: ERROR clock_gettime failed\n");
     }
     //                1000000000  // 1 second in ns
-    ts.tv_nsec     +=  500000000; // 200ms timeout
+    ts.tv_nsec     +=  200000000; // 200ms timeout
     if(ts.tv_nsec  >= 1000000000) {
         ts.tv_nsec -= 1000000000;
         ts.tv_sec  += 1;
@@ -418,6 +418,8 @@ static int smoothie_startup(int, char **)
         printf("Error: failed to start SlowTicker\n");
     }
 
+    //Planner *planner= new Planner();
+
     // open the config file
     do {
         int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
@@ -438,6 +440,9 @@ static int smoothie_startup(int, char **)
         printf("Starting configuration of modules...\n");
 
         ConfigReader cr(fs);
+
+        // configure the planner
+        //planner.configure(cd);
 
         {
             // this creates any configured switches then we can remove it

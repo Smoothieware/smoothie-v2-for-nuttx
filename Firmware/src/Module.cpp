@@ -5,11 +5,13 @@ std::map<const std::string, Module::modrec_t> Module::registry;
 
 Module::Module(const char* grp, const char* inst) : group_name(grp), instance_name(inst)
 {
+    single= false;
     added = add(grp, inst);
 }
 
 Module::Module(const char* grp) : group_name(grp)
 {
+    single= true;
     added = add(grp);
 }
 
@@ -21,6 +23,7 @@ Module::~Module()
         if(single) {
             registry.erase(g);
         } else {
+            // TODO remove group if empty as well
             auto i = g->second.map->find(instance_name);
             if(i != g->second.map->end()) {
                 g->second.map->erase(i);
