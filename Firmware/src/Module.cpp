@@ -23,10 +23,13 @@ Module::~Module()
         if(single) {
             registry.erase(g);
         } else {
-            // TODO remove group if empty as well
             auto i = g->second.map->find(instance_name);
             if(i != g->second.map->end()) {
                 g->second.map->erase(i);
+            }
+            // remove group if instances are empty as well
+            if(g->second.map->empty()) {
+                registry.erase(g);
             }
         }
     }
