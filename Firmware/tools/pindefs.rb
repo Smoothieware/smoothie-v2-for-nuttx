@@ -332,13 +332,14 @@ if s.start_with?("gpio")
     end
 
     v= $port_pin_lut[x][y]
+    if v == 0
+        puts "not a valid gpio"
+        exit 1
+    end
+
     port= ((v&PINCONF_PINS_MASK)>>PINCONF_PINS_SHIFT)
     pin= ((v&PINCONF_PIN_MASK)>>PINCONF_PIN_SHIFT)
 
-    if port == 0 && pin == 0
-        puts "no matching pin"
-        exit 1
-    end
 
     puts "p#{port.to_s(16)}_#{pin}"
 
