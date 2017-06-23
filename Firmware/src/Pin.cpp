@@ -114,7 +114,7 @@ Pin* Pin::from_string(std::string value)
         pin = strtol(value.substr(pos+1).c_str(), nullptr, 10);
 
     }else if(toUpper(value.substr(0, 1)) == "P") {
-        uint16_t x= strtol(value.substr(1).c_str(), nullptr, 10);
+        uint16_t x= strtol(value.substr(1).c_str(), nullptr, 16);
         pos= value.find_first_of("._", 1);
         if(pos == std::string::npos) return nullptr;
         uint16_t y= strtol(value.substr(pos+1).c_str(), nullptr, 10);
