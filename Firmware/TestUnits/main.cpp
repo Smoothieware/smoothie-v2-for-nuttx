@@ -12,6 +12,14 @@
 #include "../Unity/src/unity.h"
 #include "TestRegistry.h"
 
+#include "OutputStream.h"
+
+// place holder
+bool dispatch_line(OutputStream& os, const char *line)
+{
+    return true;
+}
+
 static std::function<void(void)> setup_fnc;
 void setUp(void)
 {

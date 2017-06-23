@@ -12,7 +12,7 @@ public:
     ConfigReader(std::istream& ist) : is(ist) {};
     ~ConfigReader(){};
 
-    void reset() { is.clear(); is.seekg (0, is.beg); }
+    void reset() { is.clear(); is.seekg (0); }
     using section_map_t = std::map<std::string, std::string>;
     using sub_section_map_t =  std::map<std::string, section_map_t>;
     using sections_t = std::set<std::string>;
