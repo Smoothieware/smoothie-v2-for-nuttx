@@ -19,6 +19,17 @@ Pin::Pin(const char *s)
     from_string(s);
 }
 
+Pin::Pin(const char *s, TYPE_T t)
+{
+    this->inverting = false;
+    this->valid = false;
+    if(from_string(s) != nullptr) {
+        switch(t) {
+            case AS_INPUT: as_input(); break;
+            case AS_OUTPUT: as_output(); break;
+        }
+    }
+}
 
 static std::string toUpper(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
@@ -175,23 +186,46 @@ Pin* Pin::from_string(std::string value)
 
 std::string Pin::to_string() const
 {
-    std::string s("gpio");
-    s.append(std::to_string(gpiocfg>>GPIO_PORT_SHIFT));
-    s.append("_");
-    s.append(std::to_string(gpiocfg&GPIO_PIN_MASK));
-    return s;
+    if(valid) {
+        uint16_t port= gpiocfg>>GPIO_PORT_SHIFT;
+        uint16_t pin= gpiocfg&GPIO_PIN_MASK;
+
+        std::string s("gpio");
+        s.append(std::to_string(port)).append("_").append(std::to_string(pin));
+
+        uint32_t v= port_pin_lut[port][pin];
+        port= ((v&PINCONF_PINS_MASK)>>PINCONF_PINS_SHIFT);
+        pin= ((v&PINCONF_PIN_MASK)>>PINCONF_PIN_SHIFT);
+        const char *digits = "0123456789abcdef";
+        s.append("(p");
+        s.push_back(digits[port]);
+        s.push_back('_');
+        s.append(std::to_string(pin)).append(")");
+        return s;
+
+    }else{
+        return "invalid";
+    }
 }
 
 Pin* Pin::as_output()
 {
-    lpc43_gpio_config(gpiocfg|GPIO_MODE_OUTPUT);
-    return this;
+    if(valid) {
+        lpc43_gpio_config(gpiocfg|GPIO_MODE_OUTPUT);
+        return this;
+    }
+
+    return nullptr;
 }
 
 Pin* Pin::as_input()
 {
-    lpc43_gpio_config(gpiocfg|GPIO_MODE_INPUT);
-    return this;
+    if(valid) {
+        lpc43_gpio_config(gpiocfg|GPIO_MODE_INPUT);
+        return this;
+    }
+
+    return nullptr;
 }
 
 #if 0
