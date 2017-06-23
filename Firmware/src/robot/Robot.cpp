@@ -264,7 +264,7 @@ bool Robot::configure(ConfigReader& cr)
 
 void Robot::on_halt(bool flg)
 {
-    is_halted= flg;
+    halted= flg;
 }
 
 uint8_t Robot::register_motor(StepperMotor *motor)
@@ -1244,7 +1244,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // while(THEKERNEL->get_feed_hold()) {
     //     usleep(100000);
     //     // if we also got a HALT then break out of this
-    //     if(is_halted) return false;
+    //     if(halted) return false;
     // }
 
     // Append the block to the planner
@@ -1263,7 +1263,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 // Used to plan a single move used by things like endstops when homing, zprobe, extruder firmware retracts etc.
 bool Robot::delta_move(const float *delta, float rate_mm_s, uint8_t naxis)
 {
-    if(is_halted) return false;
+    if(halted) return false;
 
     // catch negative or zero feed rates
     if(rate_mm_s <= 0.0F) {
@@ -1358,7 +1358,7 @@ bool Robot::append_line(GCode& gcode, const float target[], float rate_mm_s, flo
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
-            if(is_halted) return false; // don't queue any more segments
+            if(halted) return false; // don't queue any more segments
             for (int j = 0; j < n_motors; j++)
                 segment_end[j] += segment_delta[j];
 
@@ -1474,7 +1474,7 @@ bool Robot::append_arc(GCode&  gcode, const float target[], const float offset[]
 
     bool moved = false;
     for (i = 1; i < segments; i++) { // Increment (segments-1)
-        if(is_halted) return false; // don't queue any more segments
+        if(halted) return false; // don't queue any more segments
 
         if (count < this->arc_correction ) {
             // Apply vector rotation matrix

@@ -8,42 +8,41 @@
 #pragma once
 
 #include "Module.h"
-#include "PlannerQueue.h"
 
+class PlannerQueue;
 class Block;
+class OutputStream;
 
 class Conveyor : public Module
 {
 public:
-    Conveyor(PlannerQueue&);
+    static Conveyor *getInstance() { return instance; }
+
+    Conveyor();
+    bool configure(ConfigReader& cr);
     void start(uint8_t n_actuators);
 
-    void on_module_loaded(void);
-    void on_idle(void *);
-    void on_halt(void *);
+    void on_halt(bool flg);
 
     void wait_for_idle(bool wait_for_motors=true);
-    bool is_queue_empty() { return queue.empty(); };
-    bool is_queue_full() { return queue.full(); };
     bool is_idle() const;
     bool is_halted() const { return halted; }
 
     // returns next available block writes it to block and returns true
     bool get_next_block(Block **block);
     void block_finished();
-
-    void dump_queue(void);
     void flush_queue(void);
     float get_current_feedrate() const { return current_feedrate; }
 
-    static Conveyor *getInstance() { return instance; }
+    // debug function
+    void dump_queue();
 
 private:
     static Conveyor *instance;
     void check_queue(bool force= false);
 
-    // keep a refference to the queue in Planner
-    PlannerQueue& queue;
+    // keep a pointer to the queue that is in the Planner
+    PlannerQueue *pqueue;
 
     uint32_t queue_delay_time_ms{100};
     float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec

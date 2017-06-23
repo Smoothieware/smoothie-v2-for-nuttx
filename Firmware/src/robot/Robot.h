@@ -63,6 +63,7 @@ class Robot : public Module {
         uint8_t get_number_registered_motors() const {return n_motors; }
 
         bool is_grbl_mode() const { return false; } // TODO
+        bool is_halted() const { return halted; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -152,5 +153,5 @@ class Robot : public Module {
 
         uint8_t n_motors;                                    //count of the motors/axis registered
 
-        bool is_halted{false};
+        bool halted{false};
 };

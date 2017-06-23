@@ -9,6 +9,7 @@
 #include "StepTicker.h"
 #include "Robot.h"
 #include "StepperMotor.h"
+#include "PlannerQueue.h"
 
 #include <functional>
 #include <vector>
@@ -21,7 +22,7 @@
  */
 Conveyor *Conveyor::instance;
 
-Conveyor::Conveyor(PlannerQeue& q) : Module("conveyor"), queue(q)
+Conveyor::Conveyor() : Module("conveyor")
 {
     instance= this;
     running = false;
@@ -30,21 +31,23 @@ Conveyor::Conveyor(PlannerQeue& q) : Module("conveyor"), queue(q)
     halted= false;
 }
 
-void Conveyor::configure(ConfigReader& cr)
+bool Conveyor::configure(ConfigReader& cr)
 {
     // Attach to the end_of_move stepper event
     ConfigReader::section_map_t m;
     if(cr.get_section("conveyor", m)) {
         queue_delay_time_ms = cr.get_int(m, queue_delay_time_ms_key, 100);
     }
+    return true;
 }
 
-// we allocate the queue here after config is completed so we do not run out of memory during config
+// called when everything has been configured
 void Conveyor::start(uint8_t n)
 {
-    //THEKERNEL->step_ticker->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
+    //StepTicker.getInstance()->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
     Block::init(n); // set the number of motors which determines how big the tick info vector is
     running = true;
+    pqueue= Planner::getInstance()->queue;
 }
 
 void Conveyor::on_halt(bool flg)
@@ -56,33 +59,21 @@ void Conveyor::on_halt(bool flg)
     }
 }
 
-void Conveyor::on_idle(void*)
-{
-    if (running) {
-        check_queue();
-    }
-
-    // we can garbage collect the block queue here
-    if (queue.tail_i != queue.isr_tail_i) {
-        if (queue.is_empty()) {
-            __debugbreak();
-        } else {
-            // Cleanly delete block
-            Block* block = queue.tail_ref();
-            //block->debug();
-            block->clear();
-            queue.consume_tail();
-        }
-    }
-}
+// TODO this maybe needs to be a thread
+// void Conveyor::on_idle(void*)
+// {
+//     if (running) {
+//         check_queue();
+//     }
+// }
 
 // see if we are idle
 // this checks the block queue is empty, and that the step queue is empty and
 // checks that all motors are no longer moving
 bool Conveyor::is_idle() const
 {
-    if(queue.is_empty()) {
-        for(auto &a : THEROBOT->actuators) {
+    if(pqueue->empty()) {
+        for(auto &a : Robot::getInstance()->actuators) {
             if(a->is_moving()) return false;
         }
         return true;
@@ -92,12 +83,13 @@ bool Conveyor::is_idle() const
 }
 
 // Wait for the queue to be empty and for all the jobs to finish in step ticker
+// This must be called in the command thread context and will stall the command thread
 void Conveyor::wait_for_idle(bool wait_for_motors)
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
     // forcing them to be jobs
     running = false; // stops on_idle calling check_queue
-    while (!queue.empty()) {
+    while (!pqueue->empty()) {
         check_queue(true); // forces queue to be made available to stepticker
         // THEKERNEL->call_event(ON_IDLE, this);
     }
@@ -113,71 +105,54 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     // returning now means that everything has totally finished
 }
 
-/*
- * push the pre-prepared head block onto the queue
- */
-// void Conveyor::queue_head_block()
-// {
-//     // upstream caller will block on this until there is room in the queue
-//     while (queue.is_full() && !THEKERNEL->is_halted()) {
-//         //check_queue();
-//         THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
-//     }
-
-//     if(THEKERNEL->is_halted()) {
-//         // we do not want to stick more stuff on the queue if we are in halt state
-//         // clear and release the block on the head
-//         queue.head_ref()->clear();
-//         return; // if we got a halt then we are done here
-//     }
-
-//     queue.produce_head();
-
+// TODO
 //     // not sure if this is the correct place but we need to turn on the motors if they were not already on
 //     THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
-// }
+//
 
+// TODO
+// should be called when idle, but we haev no on_idle so where is this called from? do we have thread?
 void Conveyor::check_queue(bool force)
 {
-    static uint32_t last_time_check = us_ticker_read();
-
-    if(queue.is_empty()) {
+    static systime_t last_time_check = clock_systimer();
+    if(pqueue->empty()) {
         allow_fetch = false;
-        last_time_check = us_ticker_read(); // reset timeout
+        last_time_check = clock_systimer(); // reset timeout
         return;
     }
 
     // if we have been waiting for more than the required waiting time and the queue is not empty, or the queue is full, then allow stepticker to get the tail
     // we do this to allow an idle system to pre load the queue a bit so the first few blocks run smoothly.
-    if(force || queue.is_full() || (us_ticker_read() - last_time_check) >= (queue_delay_time_ms * 1000)) {
-        last_time_check = us_ticker_read(); // reset timeout
+    if(force || pqueue->full() || (TICK2USEC(clock_systimer() - last_time_check) >= (queue_delay_time_ms * 1000)) ) {
+        last_time_check = clock_systimer(); // reset timeout
         if(!flush) allow_fetch = true;
         return;
     }
 }
 
 // called from step ticker ISR
+// we only ever access or change the read/tail index of the queue so this is thread safe
 bool Conveyor::get_next_block(Block **block)
 {
-    // mark entire queue for GC if flush flag is asserted
+    // empty the entire queue
     if (flush){
-        while (queue.isr_tail_i != queue.head_i) {
-            queue.isr_tail_i = queue.next(queue.isr_tail_i);
+        while (!pqueue->empty()) {
+            pqueue->release_tail();
         }
     }
 
     // default the feerate to zero if there is no block available
     this->current_feedrate= 0;
 
-    if(THEKERNEL->is_halted() || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
+    if(halted || pqueue->empty()) return false; // we do not have anything to give
 
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
 
-    Block *b= queue.item_ref(queue.isr_tail_i);
+    Block *b= pqueue->get_tail();
     // we cannot use this now if it is being updated
     if(!b->locked) {
-        if(!b->is_ready) __debugbreak(); // should never happen
+        assert(b->is_ready); // should never happen
 
         b->is_ticking= true;
         b->recalculate_flag= false;
@@ -192,8 +167,8 @@ bool Conveyor::get_next_block(Block **block)
 // called from step ticker ISR when block is finished, do not do anything slow here
 void Conveyor::block_finished()
 {
-    // we increment the isr_tail_i so we can get the next block
-    queue.isr_tail_i= queue.next(queue.isr_tail_i);
+    // release the tail
+    pqueue->release_tail();
 }
 
 /*
@@ -217,13 +192,17 @@ void Conveyor::flush_queue()
 }
 
 // Debug function
+// Probably not thread safe
+// only call within command thread context or not while planner is running
 void Conveyor::dump_queue()
 {
-    for (unsigned int index = queue.tail_i, i = 0; true; index = queue.next(index), i++ ) {
-        THEKERNEL->streams->printf("block %03d > ", i);
-        queue.item_ref(index)->debug();
-
-        if (index == queue.head_i)
-            break;
+    // start the iteration at the head
+    pqueue->start_iteration();
+    Block *b = pqueue->get_head();
+    int i= 0;
+    while (!pqueue->is_at_tail()) {
+        printf("block %03d > ", ++i);
+        b->debug();
+        b= pqueue->tailward_get(); // walk towards the tail
     }
 }

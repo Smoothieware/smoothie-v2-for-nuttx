@@ -14,6 +14,7 @@
 class Block;
 class PlannerQueue;
 class ConfigReader;
+class Conveyor;
 
 #define N_PRIMARY_AXIS 3
 class Robot;
@@ -50,4 +51,5 @@ private:
 
     // FIXME should really just make getters and setters or handle the set/get gcode here
     friend Robot;
+    friend Conveyor;
 };
