@@ -7,20 +7,10 @@
 
 
 #include "Block.h"
-//#include "Planner.h"
-//#include "GCode.h"
-//#include "StepTicker.h"
-
-#include <cmath>
-
-#define STEP_TICKER_FREQUENCY 100000.0F
-#define STEPTICKER_FPSCALE (1LL<<62)
-#define STEPTICKER_FROMFP(x) ((float)(x)/STEPTICKER_FPSCALE)
-
-#define E_AXIS 3
+#include "AxisDefns.h"
+#include "StepTicker.h"
 
 uint8_t Block::n_actuators = 0;
-double Block::fp_scale = 0;
 
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
@@ -36,7 +26,6 @@ Block::Block()
 void Block::init(uint8_t n)
 {
     n_actuators = n;
-    fp_scale = (double)STEPTICKER_FPSCALE / pow((double)STEP_TICKER_FREQUENCY, 2.0); // we scale up by fixed point offset first to avoid tiny values
 }
 
 void Block::clear()

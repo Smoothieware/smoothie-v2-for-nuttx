@@ -14,6 +14,8 @@ void GCode::clear()
 	is_t= false;
 	is_modal= false;
 	is_immediate= false;
+	is_error= false;
+	error_message= nullptr;
 	argbitmap= 0;
 	args.clear();
 	code= subcode= 0;

@@ -20,6 +20,6 @@ public:
 
 private:
 	// modal settings
-	GCode group0, group1;
+	GCode group1;
 	int line_no;
 };

@@ -19,6 +19,16 @@ Pin::Pin(const char *s)
     from_string(s);
 }
 
+Pin::Pin(const char *s, TYPE_T t)
+{
+    this->inverting = false;
+    this->valid = false;
+    from_string(s);
+    switch(t) {
+        case AS_INPUT: as_input(); break;
+        case AS_OUTPUT: as_output(); break;
+    }
+}
 
 static std::string toUpper(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);

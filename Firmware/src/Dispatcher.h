@@ -50,5 +50,7 @@ private:
     Handlers_t mcode_handlers;
     CommandHandlers_t command_handlers;
     mutable bool loaded_configuration{false};
+
+    bool is_grbl_mode{false};
 };
 

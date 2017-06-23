@@ -15,6 +15,10 @@ public:
     Pin();
     Pin(const char *s);
 
+    enum TYPE_T {AS_INPUT, AS_OUTPUT};
+    Pin(const char *s, Pin::TYPE_T);
+
+
     Pin* from_string(std::string value);
     std::string to_string() const;
 
@@ -26,7 +30,7 @@ public:
     Pin* as_output();
     Pin* as_input();
 
-    inline bool get()
+    inline bool get() const
     {
         if (!this->valid) return false;
         return this->inverting ^ lpc43_gpio_read(gpiocfg);

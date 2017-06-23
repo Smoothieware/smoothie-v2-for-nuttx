@@ -3,6 +3,7 @@
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "OutputStream.h"
+#include "Module.h"
 
 #include <ctype.h>
 #include <cmath>
@@ -31,34 +32,57 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 		gc.set_command('M', 500, 3);
 	}
 
-	auto& handler= gc.has_g() ? gcode_handlers : mcode_handlers;
-	const auto& f= handler.equal_range(gc.get_code());
-	bool ret= false;
+	auto& handler = gc.has_g() ? gcode_handlers : mcode_handlers;
+	const auto& f = handler.equal_range(gc.get_code());
+	bool ret = false;
 
-	for (auto it=f.first; it!=f.second; ++it) {
+	for (auto it = f.first; it != f.second; ++it) {
 		if(it->second(gc, os)) {
-			ret= true;
-		}else{
-			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G':'M', gc.get_code());
+			ret = true;
+		} else {
+			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G' : 'M', gc.get_code());
 		}
 	}
 
 	// special case is M500 - M503
 	if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
-		ret= handle_configuration_commands(gc, os);
+		ret = handle_configuration_commands(gc, os);
 	}
 
 	if(ret) {
-		bool send_ok= true;
-		if(os.isPrependOK()) {
-			// output the result after the ok
-			os.setPrependOK(false);
-			os.printf("ok ");
-			os.flush_prepend(); // this flushes the internally stored prepend string to the output
-			send_ok= false;
+		bool send_ok = true;
+
+		if (gc.has_error()) {
+			// report error
+			if(is_grbl_mode) {
+				os.printf("error: ");
+			} else {
+				os.printf("Error: ");
+			}
+
+			const char *errmsg = gc.get_error_message();
+			if(errmsg != nullptr) {
+				os.printf("%s\n", errmsg);
+			} else {
+				os.printf("unknown\n");
+			}
+
+			// we cannot continue safely after an error so we enter HALT state
+			os.printf("Entering Alarm/Halt state\n");
+			Module::broadcast_halt(true);
+			return true;
 		}
 
-		if(os.isAppendNL()) {
+
+		if(os.is_prepend_ok()) {
+			// output the result after the ok
+			os.set_prepend_ok(false);
+			os.printf("ok ");
+			os.flush_prepend(); // this flushes the internally stored prepend string to the output
+			send_ok = false;
+		}
+
+		if(os.is_append_nl()) {
 			// append newline
 			os.printf("\n");
 		}
@@ -80,24 +104,24 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 {
 	GCode gc;
-    va_list args;
-    va_start(args, code);
-    char c= va_arg(args, int); // get first arg
-    if(c > 0 && c < 'A') { // infer subcommand
+	va_list args;
+	va_start(args, code);
+	char c = va_arg(args, int); // get first arg
+	if(c > 0 && c < 'A') { // infer subcommand
 		gc.set_command(cmd, code, (uint16_t)c);
-		c= va_arg(args, int); // get next arg
-	}else{
+		c = va_arg(args, int); // get next arg
+	} else {
 		gc.set_command(cmd, code);
 	}
 
-    while(c != 0) {
-    	float v= (float)va_arg(args, double);
-    	gc.add_arg(c, v);
-    	c= va_arg(args, int); // get next arg
-    }
+	while(c != 0) {
+		float v = (float)va_arg(args, double);
+		gc.add_arg(c, v);
+		c = va_arg(args, int); // get next arg
+	}
 
-    va_end(args);
-    return dispatch(gc, os);
+	va_end(args);
+	return dispatch(gc, os);
 }
 
 // Separate command from arguments
@@ -105,29 +129,29 @@ bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 // TODO goes into helpers
 static std::string get_command_arguments(std::string& line )
 {
-    std::string t= line;
-    size_t pos = line.find_first_of(" ");
-    if( pos == string::npos ) {
-    	line= "";
-        return t;
-    }
+	std::string t = line;
+	size_t pos = line.find_first_of(" ");
+	if( pos == string::npos ) {
+		line = "";
+		return t;
+	}
 
-    line= line.substr( pos + 1);
-    return t.substr(0, pos);
+	line = line.substr( pos + 1);
+	return t.substr(0, pos);
 }
 
 // dispatch command to a command handler if one is registered
 bool Dispatcher::dispatch(const char *line, OutputStream& os) const
 {
 	std::string params(line);
-	std::string cmd= get_command_arguments(params);
-	const auto& f= command_handlers.equal_range(cmd);
-	bool ret= false;
+	std::string cmd = get_command_arguments(params);
+	const auto& f = command_handlers.equal_range(cmd);
+	bool ret = false;
 
-	for (auto it=f.first; it!=f.second; ++it) {
+	for (auto it = f.first; it != f.second; ++it) {
 		if(it->second(params, os)) {
-			ret= true;
-		}else{
+			ret = true;
+		} else {
 			DEBUG_WARNING("command handler did not handle %s\n", line);
 		}
 	}
@@ -139,8 +163,8 @@ Dispatcher::Handlers_t::iterator Dispatcher::add_handler(HANDLER_NAME gcode, uin
 {
 	Handlers_t::iterator ret;
 	switch(gcode) {
-		case GCODE_HANDLER: ret= gcode_handlers.insert( Handlers_t::value_type(code, fnc) ); break;
-		case MCODE_HANDLER: ret= mcode_handlers.insert( Handlers_t::value_type(code, fnc) ); break;
+		case GCODE_HANDLER: ret = gcode_handlers.insert( Handlers_t::value_type(code, fnc) ); break;
+		case MCODE_HANDLER: ret = mcode_handlers.insert( Handlers_t::value_type(code, fnc) ); break;
 	}
 	return ret;
 }
@@ -247,9 +271,9 @@ bool Dispatcher::load_configuration(OutputStream& output_stream) const
 	// 		std::vector<string> lines;
 	// 		GCodeProcessor& gp= THEKERNEL.getGCodeProcessor();
 	// 	    while(std::getline(ss, line, '\n')){
- //  				if(line.find('\0') != string::npos) break; // hit the end
- //  				lines.push_back(line);
- //  				// Parse the Gcode
+//  				if(line.find('\0') != string::npos) break; // hit the end
+//  				lines.push_back(line);
+//  				// Parse the Gcode
 	// 			GCodeProcessor::GCodes_t gcodes;
 	// 			gp.parse(line.c_str(), gcodes);
 	// 			// dispatch it
