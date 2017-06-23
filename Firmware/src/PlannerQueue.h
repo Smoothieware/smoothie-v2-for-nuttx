@@ -9,6 +9,8 @@
 #include "Block.h"
 
 #include <stddef.h>
+#include <atomic>
+
 class PlannerQueue
 {
 public:
@@ -119,8 +121,6 @@ private:
     // used for iterating by planner forward and backward
     size_t iter;
 
-    // volatile is only used to keep compiler from placing values in registers.
-    // volatile does NOT make the index thread safe.
-    volatile size_t m_rIndex;
-    volatile size_t m_wIndex;
+    std::atomic_size_t m_rIndex;
+    std::atomic_size_t m_wIndex;
 };
