@@ -308,12 +308,12 @@ bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
 
     if(dir.empty() || dir == "in") {
         // read pin
-        Pin pin(gpio.c_str());
+        Pin pin(gpio.c_str(), Pin::AS_INPUT);
         if(!pin.connected()) {
             os.printf("Not a valid GPIO\n");
             return true;
         }
-        pin.as_input();
+
         os.printf("%s: %d\n", pin.to_string().c_str(), pin.get());
         return true;
     }
@@ -321,12 +321,11 @@ bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
     if(dir == "out") {
         std::string v = shift_parameter( params );
         if(v.empty()) return false;
-        Pin pin(gpio.c_str());
+        Pin pin(gpio.c_str(), Pin::AS_OUTPUT);
         if(!pin.connected()) {
             os.printf("Not a valid GPIO\n");
             return true;
         }
-        pin.as_output();
         bool b= (v == "on");
         pin.set(b);
         os.printf("%s: set to %d\n", pin.to_string().c_str(), pin.get());
