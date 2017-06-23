@@ -16,6 +16,8 @@
 #define minimum_planner_speed_key "minimum_planner_speed"
 #define planner_queue_size_key    "planner_queue_size"
 
+Planner *Planner::instance;
+
 // The Planner does the acceleration math for the queue of Blocks ( movements ).
 // It makes sure the speed stays within the configured constraints ( acceleration, junction_deviation, etc )
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal

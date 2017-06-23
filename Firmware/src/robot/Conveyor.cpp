@@ -19,6 +19,7 @@
  * The conveyor manages the planner queue, and starting the executing chain of blocks
  * TODO is this even required anymore?
  */
+Conveyor *Conveyor::instance;
 
 Conveyor::Conveyor(PlannerQeue& q) : Module("conveyor"), queue(q)
 {

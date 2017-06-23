@@ -84,21 +84,6 @@ load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 #puts "#{BUILDTYPE} build"
 
 if TESTING
-  # OLD easyunit tests
-  # src = FileList['easyunit/*.cpp', 'src/**/*.{c,cpp,s}']
-  # src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
-  # if ENV['test'].nil?
-  #   # all tests
-  #   src += FileList['TestUnits/*.cpp']
-  # else
-  #   # just named tests
-  #   tests= ENV['test'].split(',')
-  #   tests.each do |t|
-  #     src += FileList["TestUnits/TEST_#{t}.cpp"]
-  #   end
-  #   src += FileList['TestUnits/main.cpp']
-  # end
-
   # Unity tests
   src = FileList['Unity/src/*.c', 'src/**/*.{c,cpp,s}']
   src.exclude(/src\/main.cpp/) # we don't want the Firmware main.cpp
@@ -140,7 +125,7 @@ SRC.each do |s|
   FileUtils.mkdir_p(d) unless Dir.exists?(d)
 end
 
-include_dirs = ["./nuttx-export", "./nuttx-export/include"] + [Dir.glob(['./src/**/','./staging/**/'])].flatten
+include_dirs = ["./nuttx-export", "./nuttx-export/include"] + [Dir.glob(['./src/**/'])].flatten # ,'./staging/**/'
 sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./nuttx-export/include/libcxx", "./nuttx-export/arch/chip"]
 
 # [Dir.glob([PROG + '/**/Inc/**', './mri/**/'])].flatten
