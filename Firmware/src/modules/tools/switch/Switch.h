@@ -66,8 +66,7 @@ class Switch : public Module {
         uint8_t   failsafe;
 
         // only accessed in ISR
-        bool      input_pin_state;
-
-        std::atomic_bool switch_state;
+        bool input_pin_state;
+        bool switch_state;
 };
 

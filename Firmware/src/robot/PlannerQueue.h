@@ -9,7 +9,6 @@
 #include "Block.h"
 
 #include <stddef.h>
-#include <atomic>
 
 class PlannerQueue
 {
@@ -121,6 +120,6 @@ private:
     // used for iterating by planner forward and backward
     size_t iter;
 
-    std::atomic_size_t m_rIndex;
-    std::atomic_size_t m_wIndex;
+    size_t m_rIndex;
+    size_t m_wIndex;
 };

@@ -476,7 +476,7 @@ void Switch::pinpoll_tick()
         if( this->input_pin_state ) {
             // if switch is a toggle switch
             if( this->input_pin_behavior == toggle_behavior ) {
-                this->switch_state.exchange(!this->switch_state);
+                this->switch_state= !this->switch_state;
 
             } else {
                 // else default is momentary

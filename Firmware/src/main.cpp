@@ -168,6 +168,9 @@ static GCodeProcessor gp;
 // can be called by modules when in command thread context
 bool dispatch_line(OutputStream& os, const char *line)
 {
+    // TODO map some special M codes to commands as they violate the gcode spec and pass a string parameter
+    // M23, M32, M117 => m23, m32, m117 and handle as a command
+
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
         if(!THEDISPATCHER.dispatch(line, os)) {
