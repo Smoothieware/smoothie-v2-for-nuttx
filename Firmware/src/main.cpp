@@ -173,7 +173,7 @@ bool dispatch_line(OutputStream& os, const char *line)
 
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
-        if(!THEDISPATCHER.dispatch(line, os)) {
+        if(!THEDISPATCHER->dispatch(line, os)) {
             if(line[0] == '$') {
                 os.puts("error:Invalid statement\n");
             } else {
@@ -201,7 +201,7 @@ bool dispatch_line(OutputStream& os, const char *line)
 
     // dispatch gcode to MotionControl and Planner
     for(auto& i : gcodes) {
-        if(!THEDISPATCHER.dispatch(i, os)) {
+        if(!THEDISPATCHER->dispatch(i, os)) {
             // no handler for this gcode, return ok - nohandler
             os.puts("ok - nohandler\n");
         }
@@ -452,7 +452,7 @@ static int smoothie_startup(int, char **)
         // configure robot
         Robot *robot= new Robot();
         if(!robot->configure(cr)) {
-            printf("ERROR: COnfiguring robot failed\n");
+            printf("ERROR: Configuring robot failed\n");
         }
 
         // this creates any configured switches then we can remove it
@@ -469,6 +469,9 @@ static int smoothie_startup(int, char **)
         // unmount sdcard
         umount("/sd");
 
+        // start conveyor and tell it how many actuators we have
+        conveyor->start(robot->get_number_registered_motors());
+
         printf("...Ending configuration of modules\n");
 
     } while(0);
@@ -481,7 +484,6 @@ static int smoothie_startup(int, char **)
     if(!step_ticker->start()) {
         printf("Error: failed to start StepTicker\n");
     }
-
 
 
     // launch the command thread that executes all incoming commands

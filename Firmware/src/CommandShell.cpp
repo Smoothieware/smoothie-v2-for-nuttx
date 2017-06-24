@@ -25,16 +25,16 @@ bool CommandShell::initialize()
     using std::placeholders::_1;
     using std::placeholders::_2;
 
-    THEDISPATCHER.add_handler( "help", std::bind( &CommandShell::help_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "ls", std::bind( &CommandShell::ls_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "gpio", std::bind( &CommandShell::gpio_cmd, this, _1, _2) );
-    THEDISPATCHER.add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "help", std::bind( &CommandShell::help_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "ls", std::bind( &CommandShell::ls_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "gpio", std::bind( &CommandShell::gpio_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
 
     return true;
 }
@@ -43,13 +43,13 @@ bool CommandShell::initialize()
 bool CommandShell::help_cmd(std::string& params, OutputStream& os)
 {
     HELP("Show available commands");
-    auto cmds= THEDISPATCHER.get_commands();
+    auto cmds= THEDISPATCHER->get_commands();
     for(auto& i : cmds) {
         os.printf("%s\n", i.c_str());
         // Display the help string for each command
         //    std::string cmd(i);
         //    cmd.append(" -h");
-        //    THEDISPATCHER.dispatch(cmd.c_str(), os);
+        //    THEDISPATCHER->dispatch(cmd.c_str(), os);
     }
     os.puts("\nuse cmd -h to get help on that command\n");
 

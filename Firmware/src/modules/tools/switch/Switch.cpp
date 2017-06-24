@@ -178,7 +178,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         // add handler for this code
         using std::placeholders::_1;
         using std::placeholders::_2;
-        THEDISPATCHER.add_handler(input_on_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_on_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
+        THEDISPATCHER->add_handler(input_on_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_on_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
 
     }
 
@@ -193,7 +193,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         }
         using std::placeholders::_1;
         using std::placeholders::_2;
-        THEDISPATCHER.add_handler(input_off_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_off_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
+        THEDISPATCHER->add_handler(input_off_command_letter == 'G' ? Dispatcher::GCODE_HANDLER : Dispatcher::MCODE_HANDLER, input_off_command_code, std::bind(&Switch::handle_gcode, this, _1, _2));
     }
 
     if(input_pin.connected()) {

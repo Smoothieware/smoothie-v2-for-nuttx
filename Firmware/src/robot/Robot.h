@@ -106,9 +106,12 @@ class Robot : public Module {
         };
 
         bool handle_gcodes(GCode& gcode, OutputStream& os);
+        bool handle_mcodes(GCode& gcode, OutputStream& os);
+        bool handle_motion_command(GCode& gcode, OutputStream& os);
         bool handle_dwell(GCode& gcode, OutputStream& os);
         bool handle_G10(GCode&, OutputStream&);
         bool handle_G92(GCode&, OutputStream&);
+        bool handle_M665(GCode&, OutputStream&);
 
         bool append_milestone(const float target[], float rate_mm_s);
         bool append_line(GCode& gcode, const float target[], float rate_mm_s, float delta_e);

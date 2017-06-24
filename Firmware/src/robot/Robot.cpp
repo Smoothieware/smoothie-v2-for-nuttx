@@ -8,6 +8,7 @@
 #include "Robot.h"
 #include "Planner.h"
 #include "Conveyor.h"
+#include "Dispatcher.h"
 #include "Pin.h"
 #include "StepperMotor.h"
 #include "GCode.h"
@@ -230,6 +231,71 @@ bool Robot::configure(ConfigReader& cr)
 
         //this->clearToolOffset();
     }
+
+    // register gcodes and mcodes
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+
+    // G Code handlers
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 0, std::bind(&Robot::handle_motion_command, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 1, std::bind(&Robot::handle_motion_command, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 2, std::bind(&Robot::handle_motion_command, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 3, std::bind(&Robot::handle_motion_command, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 4, std::bind(&Robot::handle_dwell, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 10, std::bind(&Robot::handle_G10, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 17, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 18, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 19, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 20, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 21, std::bind(&Robot::handle_gcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 54, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 55, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 56, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 57, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 58, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 59, std::bind(&Robot::handle_gcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 90, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 91, std::bind(&Robot::handle_gcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 92, std::bind(&Robot::handle_G92, this, _1, _2));
+
+
+    // M code handlers
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 2, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 17, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 18, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 30, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 82, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 83, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 84, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 92, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 114, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 120, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 121, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 203, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 204, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 205, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 220, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 400, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&Robot::handle_mcodes, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 665, std::bind(&Robot::handle_M665, this, _1, _2));
 
     return true;
 }
@@ -514,318 +580,17 @@ bool Robot::handle_G92(GCode& gcode, OutputStream& os)
     return true;
 }
 
-// A GCode has been received
-// See if the current Gcode line has some orders for us
-bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
+bool Robot::handle_motion_command(GCode& gcode, OutputStream& os)
 {
-
+    bool handled = true;
     enum MOTION_MODE_T motion_mode = NONE;
-
     if( gcode.has_g()) {
         switch( gcode.get_code() ) {
             case 0: motion_mode = SEEK;    break;
             case 1: motion_mode = LINEAR;  break;
             case 2: motion_mode = CW_ARC;  break;
             case 3: motion_mode = CCW_ARC; break;
-            // case 4: handle_dwell(gcode, os); break;
-
-            // case 10: handle_G10(gcode); break;
-
-            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);   break;
-            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS);   break;
-            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
-            case 20: this->inch_mode = true;   break;
-            case 21: this->inch_mode = false;   break;
-
-            case 54: case 55: case 56: case 57: case 58: case 59:
-                // select WCS 0-8: G54..G59, G59.1, G59.2, G59.3
-                current_wcs = gcode.get_code() - 54;
-                if(gcode.get_code() == 59 && gcode.get_subcode() > 0) {
-                    current_wcs += gcode.get_subcode();
-                    if(current_wcs >= MAX_WCS) current_wcs = MAX_WCS - 1;
-                }
-                break;
-
-            case 90: this->absolute_mode = true; this->e_absolute_mode = true; break;
-            case 91: this->absolute_mode = false; this->e_absolute_mode = false; break;
-        }
-
-    } else if( gcode.has_m()) {
-        switch( gcode.get_code() ) {
-            // case 0: // M0 feed hold, (M0.1 is release feed hold, except we are in feed hold)
-            //     if(is_grbl_mode()) THEKERNEL->set_feed_hold(gcode.get_subcode() == 0);
-            //     break;
-
-            case 30: // M30 end of program in grbl mode (otherwise it is delete sdcard file)
-                if(!is_grbl_mode()) break;
-            // fall through to M2
-            case 2: // M2 end of program
-                current_wcs = 0;
-                absolute_mode = true;
-                break;
-            case 17:
-                // TODO
-                //THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
-                break;
-
-            case 18: // this allows individual motors to be turned off, no parameters falls through to turn all off
-                if(gcode.get_num_args() > 0) {
-                    // bitmap of motors to turn off, where bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C
-                    uint32_t bm = 0;
-                    for (int i = 0; i < n_motors; ++i) {
-                        char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - 3));
-                        if(gcode.has_arg(axis)) bm |= (0x02 << i); // set appropriate bit
-                    }
-                    // handle E parameter as currently selected extruder ABC
-                    if(gcode.has_arg('E')) {
-                        // find first selected extruder
-                        int i = get_active_extruder();
-                        if(i > 0) {
-                            bm |= (0x02 << i); // set appropriate bit
-                        }
-                    }
-
-                    Conveyor::getInstance()->wait_for_idle();
-                    //THEKERNEL->call_event(ON_ENABLE, (void *)bm); // TODO
-                    break;
-                }
-            // fall through
-            case 84:
-                Conveyor::getInstance()->wait_for_idle();
-                //THEKERNEL->call_event(ON_ENABLE, nullptr); // TODO turn all enable pins off
-                break;
-
-            case 82: e_absolute_mode = true; break;
-            case 83: e_absolute_mode = false; break;
-
-            case 92: // M92 - set steps per mm
-                for (int i = 0; i < n_motors; ++i) {
-                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                    if(gcode.has_arg(axis)) {
-                        actuators[i]->change_steps_per_mm(this->to_millimeters(gcode.get_arg(axis)));
-                    }
-                    os.printf("%c:%f ", axis, actuators[i]->get_steps_per_mm());
-                }
-                os.set_append_nl();
-                check_max_actuator_speeds();
-                return true;
-
-            case 114: {
-                std::string buf;
-                print_position(gcode.get_subcode(), buf, true); // ignore extruders as they will print E themselves
-                os.set_prepend_ok();
-                os.puts(buf.c_str());
-                return true;;
-            }
-
-            case 120: // push state
-                push_state();
-                break;
-
-            case 121: // pop state
-                pop_state();
-                break;
-
-            case 203: // M203 Set maximum feedrates in mm/sec, M203.1 set maximum actuator feedrates
-                if(gcode.get_num_args() == 0) {
-                    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                        os.printf(" %c: %g ", 'X' + i, gcode.get_subcode() == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
-                    }
-                    if(gcode.get_subcode() == 1) {
-                        for (size_t i = A_AXIS; i < n_motors; i++) {
-                            if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                            os.printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
-                        }
-                    }
-
-                    os.set_append_nl();
-
-                } else {
-                    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                        if (gcode.has_arg('X' + i)) {
-                            float v = gcode.get_arg('X' + i);
-                            if(gcode.get_subcode() == 0) this->max_speeds[i] = v;
-                            else if(gcode.get_subcode() == 1) actuators[i]->set_max_rate(v);
-                        }
-                    }
-
-                    if(gcode.get_subcode() == 1) {
-                        // ABC axis only handle actuator max speeds
-                        for (size_t i = A_AXIS; i < n_motors; i++) {
-                            if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                            int c = 'A' + i - A_AXIS;
-                            if(gcode.has_arg(c)) {
-                                float v = gcode.get_arg(c);
-                                actuators[i]->set_max_rate(v);
-                            }
-                        }
-                    }
-
-                    if(gcode.get_subcode() == 1) check_max_actuator_speeds();
-                }
-                break;
-
-            case 204: // M204 Snnn - set default acceleration to nnn, Xnnn Ynnn Znnn sets axis specific acceleration
-                if (gcode.has_arg('S')) {
-                    float acc = gcode.get_arg('S'); // mm/s^2
-                    // enforce minimum
-                    if (acc < 1.0F) acc = 1.0F;
-                    this->default_acceleration = acc;
-                }
-                for (int i = 0; i < n_motors; ++i) {
-                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                    if(gcode.has_arg(axis)) {
-                        float acc = gcode.get_arg(axis); // mm/s^2
-                        // enforce positive
-                        if (acc <= 0.0F) acc = NAN;
-                        actuators[i]->set_acceleration(acc);
-                    }
-                }
-                break;
-
-            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
-                if (gcode.has_arg('X')) {
-                    float jd = gcode.get_arg('X');
-                    // enforce minimum
-                    if (jd < 0.0F)
-                        jd = 0.0F;
-                    Planner::getInstance()->xy_junction_deviation = jd;
-                }
-                if (gcode.has_arg('Z')) {
-                    float jd = gcode.get_arg('Z');
-                    // enforce minimum, -1 disables it and uses regular junction deviation
-                    if (jd <= -1.0F)
-                        jd = NAN;
-                    Planner::getInstance()->z_junction_deviation = jd;
-                }
-                if (gcode.has_arg('S')) {
-                    float mps = gcode.get_arg('S');
-                    // enforce minimum
-                    if (mps < 0.0F)
-                        mps = 0.0F;
-                    Planner::getInstance()->minimum_planner_speed = mps;
-                }
-                break;
-
-            case 220: // M220 - speed override percentage
-                if (gcode.has_arg('S')) {
-                    float factor = gcode.get_arg('S');
-                    // enforce minimum 10% speed
-                    if (factor < 10.0F)
-                        factor = 10.0F;
-                    // enforce maximum 10x speed
-                    if (factor > 1000.0F)
-                        factor = 1000.0F;
-
-                    seconds_per_minute = 6000.0F / factor;
-                } else {
-                    os.printf("Speed factor at %6.2f %%\n", 6000.0F / seconds_per_minute);
-                }
-                break;
-
-            case 400: // wait until all moves are done up to this point
-                Conveyor::getInstance()->wait_for_idle();
-                break;
-
-            case 500: // M500 saves some volatile settings to config override file
-            case 503: { // M503 just prints the settings
-                os.printf(";Steps per unit:\nM92 ");
-                for (int i = 0; i < n_motors; ++i) {
-                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                    os.printf("%c%1.5f ", axis, actuators[i]->get_steps_per_mm());
-                }
-                os.printf("\n");
-
-                // only print if not NAN
-                os.printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
-                for (int i = 0; i < n_motors; ++i) {
-                    if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
-                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                    if(!isnan(actuators[i]->get_acceleration())) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
-                }
-                os.printf("\n");
-
-                os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, isnan(Planner::getInstance()->z_junction_deviation) ? -1 : Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
-
-                os.printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-
-                os.printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
-                for (int i = 0; i < n_motors; ++i) {
-                    if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
-                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                    os.printf("%c%1.5f ", axis, actuators[i]->get_max_rate());
-                }
-                os.printf("\n");
-
-                // get or save any arm solution specific optional values
-                BaseSolution::arm_options_t options;
-                if(arm_solution->get_optional(options) && !options.empty()) {
-                    os.printf(";Optional arm solution specific settings:\nM665");
-                    for(auto &i : options) {
-                        os.printf(" %c%1.4f", i.first, i.second);
-                    }
-                    os.printf("\n");
-                }
-
-                // save wcs_offsets and current_wcs
-                // TODO this may need to be done whenever they change to be compliant
-                os.printf(";WCS settings\n");
-                os.printf("%s\n", stringutils::wcs2gcode(current_wcs).c_str());
-                int n = 1;
-                for(auto &i : wcs_offsets) {
-                    if(i != wcs_t(0, 0, 0)) {
-                        float x, y, z;
-                        std::tie(x, y, z) = i;
-                        os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, stringutils::wcs2gcode(n - 1).c_str());
-                    }
-                    ++n;
-                }
-                if(save_g92) {
-                    // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
-                    // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
-                    if(g92_offset != wcs_t(0, 0, 0)) {
-                        float x, y, z;
-                        std::tie(x, y, z) = g92_offset;
-                        os.printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
-                    }
-                }
-            }
-            break;
-
-            case 665: { // M665 set optional arm solution variables based on arm solution.
-                // the parameter args could be any letter each arm solution only accepts certain ones
-                BaseSolution::arm_options_t options = gcode.get_args();
-                options.erase('S'); // don't include the S
-                options.erase('U'); // don't include the U
-                if(options.size() > 0) {
-                    // set the specified options
-                    arm_solution->set_optional(options);
-                }
-                options.clear();
-                if(arm_solution->get_optional(options)) {
-                    // foreach optional value
-                    for(auto &i : options) {
-                        // print all current values of supported options
-                        os.printf("%c: %8.4f ", i.first, i.second);
-                        os.set_append_nl();
-                    }
-                }
-
-                if(gcode.has_arg('S')) { // set delta segments per second, not saved by M500
-                    this->delta_segments_per_second = gcode.get_arg('S');
-                    os.printf("Delta segments set to %8.4f segs/sec\n", this->delta_segments_per_second);
-
-                } else if(gcode.has_arg('U')) { // or set mm_per_line_segment, not saved by M500
-                    this->mm_per_line_segment = gcode.get_arg('U');
-                    this->delta_segments_per_second = 0;
-                    os.printf("mm per line segment set to %8.4f\n", this->mm_per_line_segment);
-                }
-
-                break;
-            }
+            default: handled = false; break;
         }
     }
 
@@ -835,9 +600,330 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
 
     } else {
         is_g123 = false;
+        return false;
     }
 
     next_command_is_MCS = false; // must be on same line as G0 or G1
+
+    return handled;
+}
+
+// A GCode has been received
+// See if the current Gcode line has some orders for us
+bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
+{
+    bool handled = true;
+    if(!gcode.has_g()) return false;
+
+    switch( gcode.get_code() ) {
+        case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);   break;
+        case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS);   break;
+        case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
+        case 20: this->inch_mode = true;   break;
+        case 21: this->inch_mode = false;   break;
+
+        case 54: case 55: case 56: case 57: case 58: case 59:
+            // select WCS 0-8: G54..G59, G59.1, G59.2, G59.3
+            current_wcs = gcode.get_code() - 54;
+            if(gcode.get_code() == 59 && gcode.get_subcode() > 0) {
+                current_wcs += gcode.get_subcode();
+                if(current_wcs >= MAX_WCS) current_wcs = MAX_WCS - 1;
+            }
+            break;
+
+        case 90: this->absolute_mode = true; this->e_absolute_mode = true; break;
+        case 91: this->absolute_mode = false; this->e_absolute_mode = false; break;
+        default: handled = false; break;
+    }
+    return handled;
+}
+
+bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
+{
+    bool handled = true;
+    if(!gcode.has_m()) return false;
+
+    switch( gcode.get_code() ) {
+        // case 0: // M0 feed hold, (M0.1 is release feed hold, except we are in feed hold)
+        //     if(is_grbl_mode()) THEKERNEL->set_feed_hold(gcode.get_subcode() == 0);
+        //     break;
+
+        case 30: // M30 end of program in grbl mode (otherwise it is delete sdcard file)
+            if(!is_grbl_mode()) break;
+        // fall through to M2
+        case 2: // M2 end of program
+            current_wcs = 0;
+            absolute_mode = true;
+            break;
+        case 17:
+            // TODO
+            //THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
+            break;
+
+        case 18: // this allows individual motors to be turned off, no parameters falls through to turn all off
+            if(gcode.get_num_args() > 0) {
+                // bitmap of motors to turn off, where bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C
+                uint32_t bm = 0;
+                for (int i = 0; i < n_motors; ++i) {
+                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - 3));
+                    if(gcode.has_arg(axis)) bm |= (0x02 << i); // set appropriate bit
+                }
+                // handle E parameter as currently selected extruder ABC
+                if(gcode.has_arg('E')) {
+                    // find first selected extruder
+                    int i = get_active_extruder();
+                    if(i > 0) {
+                        bm |= (0x02 << i); // set appropriate bit
+                    }
+                }
+
+                Conveyor::getInstance()->wait_for_idle();
+                //THEKERNEL->call_event(ON_ENABLE, (void *)bm); // TODO
+                break;
+            }
+        // fall through
+        case 84:
+            Conveyor::getInstance()->wait_for_idle();
+            //THEKERNEL->call_event(ON_ENABLE, nullptr); // TODO turn all enable pins off
+            break;
+
+        case 82: e_absolute_mode = true; break;
+        case 83: e_absolute_mode = false; break;
+
+        case 92: // M92 - set steps per mm
+            for (int i = 0; i < n_motors; ++i) {
+                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                if(gcode.has_arg(axis)) {
+                    actuators[i]->change_steps_per_mm(this->to_millimeters(gcode.get_arg(axis)));
+                }
+                os.printf("%c:%f ", axis, actuators[i]->get_steps_per_mm());
+            }
+            os.set_append_nl();
+            check_max_actuator_speeds();
+            return true;
+
+        case 114: {
+            std::string buf;
+            print_position(gcode.get_subcode(), buf, true); // ignore extruders as they will print E themselves
+            os.set_prepend_ok();
+            os.puts(buf.c_str());
+            return true;;
+        }
+
+        case 120: // push state
+            push_state();
+            break;
+
+        case 121: // pop state
+            pop_state();
+            break;
+
+        case 203: // M203 Set maximum feedrates in mm/sec, M203.1 set maximum actuator feedrates
+            if(gcode.get_num_args() == 0) {
+                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                    os.printf(" %c: %g ", 'X' + i, gcode.get_subcode() == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
+                }
+                if(gcode.get_subcode() == 1) {
+                    for (size_t i = A_AXIS; i < n_motors; i++) {
+                        if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                        os.printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
+                    }
+                }
+
+                os.set_append_nl();
+
+            } else {
+                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                    if (gcode.has_arg('X' + i)) {
+                        float v = gcode.get_arg('X' + i);
+                        if(gcode.get_subcode() == 0) this->max_speeds[i] = v;
+                        else if(gcode.get_subcode() == 1) actuators[i]->set_max_rate(v);
+                    }
+                }
+
+                if(gcode.get_subcode() == 1) {
+                    // ABC axis only handle actuator max speeds
+                    for (size_t i = A_AXIS; i < n_motors; i++) {
+                        if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                        int c = 'A' + i - A_AXIS;
+                        if(gcode.has_arg(c)) {
+                            float v = gcode.get_arg(c);
+                            actuators[i]->set_max_rate(v);
+                        }
+                    }
+                }
+
+                if(gcode.get_subcode() == 1) check_max_actuator_speeds();
+            }
+            break;
+
+        case 204: // M204 Snnn - set default acceleration to nnn, Xnnn Ynnn Znnn sets axis specific acceleration
+            if (gcode.has_arg('S')) {
+                float acc = gcode.get_arg('S'); // mm/s^2
+                // enforce minimum
+                if (acc < 1.0F) acc = 1.0F;
+                this->default_acceleration = acc;
+            }
+            for (int i = 0; i < n_motors; ++i) {
+                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                if(gcode.has_arg(axis)) {
+                    float acc = gcode.get_arg(axis); // mm/s^2
+                    // enforce positive
+                    if (acc <= 0.0F) acc = NAN;
+                    actuators[i]->set_acceleration(acc);
+                }
+            }
+            break;
+
+        case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
+            if (gcode.has_arg('X')) {
+                float jd = gcode.get_arg('X');
+                // enforce minimum
+                if (jd < 0.0F)
+                    jd = 0.0F;
+                Planner::getInstance()->xy_junction_deviation = jd;
+            }
+            if (gcode.has_arg('Z')) {
+                float jd = gcode.get_arg('Z');
+                // enforce minimum, -1 disables it and uses regular junction deviation
+                if (jd <= -1.0F)
+                    jd = NAN;
+                Planner::getInstance()->z_junction_deviation = jd;
+            }
+            if (gcode.has_arg('S')) {
+                float mps = gcode.get_arg('S');
+                // enforce minimum
+                if (mps < 0.0F)
+                    mps = 0.0F;
+                Planner::getInstance()->minimum_planner_speed = mps;
+            }
+            break;
+
+        case 220: // M220 - speed override percentage
+            if (gcode.has_arg('S')) {
+                float factor = gcode.get_arg('S');
+                // enforce minimum 10% speed
+                if (factor < 10.0F)
+                    factor = 10.0F;
+                // enforce maximum 10x speed
+                if (factor > 1000.0F)
+                    factor = 1000.0F;
+
+                seconds_per_minute = 6000.0F / factor;
+            } else {
+                os.printf("Speed factor at %6.2f %%\n", 6000.0F / seconds_per_minute);
+            }
+            break;
+
+        case 400: // wait until all moves are done up to this point
+            Conveyor::getInstance()->wait_for_idle();
+            break;
+
+        case 500: // M500 saves some volatile settings to config override file
+        case 503: { // M503 just prints the settings
+            os.printf(";Steps per unit:\nM92 ");
+            for (int i = 0; i < n_motors; ++i) {
+                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                os.printf("%c%1.5f ", axis, actuators[i]->get_steps_per_mm());
+            }
+            os.printf("\n");
+
+            // only print if not NAN
+            os.printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
+            for (int i = 0; i < n_motors; ++i) {
+                if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                if(!isnan(actuators[i]->get_acceleration())) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
+            }
+            os.printf("\n");
+
+            os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, isnan(Planner::getInstance()->z_junction_deviation) ? -1 : Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
+
+            os.printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+
+            os.printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
+            for (int i = 0; i < n_motors; ++i) {
+                if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                os.printf("%c%1.5f ", axis, actuators[i]->get_max_rate());
+            }
+            os.printf("\n");
+
+            // get or save any arm solution specific optional values
+            BaseSolution::arm_options_t options;
+            if(arm_solution->get_optional(options) && !options.empty()) {
+                os.printf(";Optional arm solution specific settings:\nM665");
+                for(auto &i : options) {
+                    os.printf(" %c%1.4f", i.first, i.second);
+                }
+                os.printf("\n");
+            }
+
+            // save wcs_offsets and current_wcs
+            // TODO this may need to be done whenever they change to be compliant
+            os.printf(";WCS settings\n");
+            os.printf("%s\n", stringutils::wcs2gcode(current_wcs).c_str());
+            int n = 1;
+            for(auto &i : wcs_offsets) {
+                if(i != wcs_t(0, 0, 0)) {
+                    float x, y, z;
+                    std::tie(x, y, z) = i;
+                    os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, stringutils::wcs2gcode(n - 1).c_str());
+                }
+                ++n;
+            }
+            if(save_g92) {
+                // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
+                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
+                if(g92_offset != wcs_t(0, 0, 0)) {
+                    float x, y, z;
+                    std::tie(x, y, z) = g92_offset;
+                    os.printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
+                }
+            }
+        }
+        break;
+
+        default: handled = false; break;
+    }
+
+    return handled;
+}
+
+
+bool Robot::handle_M665(GCode& gcode, OutputStream& os)
+{
+    // M665 set optional arm solution variables based on arm solution.
+    // the parameter args could be any letter each arm solution only accepts certain ones
+    BaseSolution::arm_options_t options = gcode.get_args();
+    options.erase('S'); // don't include the S
+    options.erase('U'); // don't include the U
+    if(options.size() > 0) {
+        // set the specified options
+        arm_solution->set_optional(options);
+    }
+    options.clear();
+    if(arm_solution->get_optional(options)) {
+        // foreach optional value
+        for(auto &i : options) {
+            // print all current values of supported options
+            os.printf("%c: %8.4f ", i.first, i.second);
+            os.set_append_nl();
+        }
+    }
+
+    if(gcode.has_arg('S')) { // set delta segments per second, not saved by M500
+        this->delta_segments_per_second = gcode.get_arg('S');
+        os.printf("Delta segments set to %8.4f segs/sec\n", this->delta_segments_per_second);
+
+    } else if(gcode.has_arg('U')) { // or set mm_per_line_segment, not saved by M500
+        this->mm_per_line_segment = gcode.get_arg('U');
+        this->delta_segments_per_second = 0;
+        os.printf("mm per line segment set to %8.4f\n", this->mm_per_line_segment);
+    }
 
     return true;
 }

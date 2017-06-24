@@ -15,11 +15,8 @@ class Dispatcher
 {
 public:
     // setup the Singleton instance
-    static Dispatcher &getInstance()
-    {
-        static Dispatcher instance;
-        return instance;
-    }
+    static Dispatcher *getInstance() { return instance; }
+    Dispatcher();
 
     using Handler_t = std::function<bool(GCode&, OutputStream&)>;
     using Handlers_t = std::multimap<uint16_t, Handler_t>;
@@ -38,7 +35,7 @@ public:
     void clear_handlers();
 
 private:
-    Dispatcher() {};
+    static Dispatcher *instance;
     Dispatcher(Dispatcher const &) = delete;
     void operator=(Dispatcher const &) = delete;
     bool handle_configuration_commands(GCode& gc, OutputStream& os) const;

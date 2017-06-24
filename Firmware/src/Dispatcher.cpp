@@ -15,6 +15,13 @@ using namespace std;
 #define DEBUG_WARNING printf
 //#define DEBUG_WARNING(...)
 
+Dispatcher *Dispatcher::instance;
+
+Dispatcher::Dispatcher()
+{
+	instance= this;
+}
+
 std::set<std::string> Dispatcher::get_commands() const
 {
 	std::set<std::string> s;
