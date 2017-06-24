@@ -391,11 +391,15 @@ static void *commandthrd(void *)
 
 #include "CommandShell.h"
 #include "SlowTicker.h"
+#include "StepTicker.h"
 #include "ConfigReader.h"
 #include "Switch.h"
+#include "Planner.h"
+#include "Conveyor.h"
+#include "Robot.h"
+
 
 #include <sys/mount.h>
-
 #include <fstream>
 
 static int smoothie_startup(int, char **)
@@ -407,21 +411,14 @@ static int smoothie_startup(int, char **)
     printf("Smoothie V2.0alpha starting up\n");
 
     // create the commandshell
-    // TODO stack may not be the best place for this, maybe on heap?
-    // CommandShell *shell= new CommandShell;
-    // shell->initialize();
-    //
-    CommandShell shell;
-    shell.initialize();
+    CommandShell *shell= new CommandShell();
+    shell->initialize();
 
-    // create the SlowTicker
-    // TODO where is this allocated?
-    SlowTicker& slow_ticker = SlowTicker::getInstance();
-    if(!slow_ticker.start()) {
-        printf("Error: failed to start SlowTicker\n");
-    }
+    // create the SlowTicker here as it us used by some modules
+    SlowTicker *slow_ticker = new SlowTicker();
 
-    //Planner *planner= new Planner();
+    // create the StepTicker
+    StepTicker *step_ticker = new StepTicker();
 
     // open the config file
     do {
@@ -445,10 +442,21 @@ static int smoothie_startup(int, char **)
         ConfigReader cr(fs);
 
         // configure the planner
-        //planner.configure(cd);
+        Planner *planner= new Planner();
+        planner->configure(cr);
 
+        // configure the conveyor
+        Conveyor *conveyor= new Conveyor();
+        conveyor->configure(cr);
+
+        // configure robot
+        Robot *robot= new Robot();
+        if(!robot->configure(cr)) {
+            printf("ERROR: COnfiguring robot failed\n");
+        }
+
+        // this creates any configured switches then we can remove it
         {
-            // this creates any configured switches then we can remove it
             Switch switches("loader");
             if(!switches.configure(cr)) {
                 printf("INFO: no switches loaded\n");
@@ -462,7 +470,19 @@ static int smoothie_startup(int, char **)
         umount("/sd");
 
         printf("...Ending configuration of modules\n");
+
     } while(0);
+
+    // start the timers
+    if(!slow_ticker->start()) {
+        printf("Error: failed to start SlowTicker\n");
+    }
+
+    if(!step_ticker->start()) {
+        printf("Error: failed to start StepTicker\n");
+    }
+
+
 
     // launch the command thread that executes all incoming commands
     // We have to do this the long way as we want to set the stack size and priority

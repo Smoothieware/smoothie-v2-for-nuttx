@@ -95,6 +95,8 @@ Pin* Pin::from_string(std::string value)
     valid= false;
     inverting= false;
 
+    if(value == "nc") return nullptr;
+
     uint16_t port= 0;
     uint16_t pin= 0;
     size_t pos= 0;

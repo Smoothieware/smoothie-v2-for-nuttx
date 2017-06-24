@@ -7,13 +7,9 @@
 class SlowTicker
 {
     public:
-        // setup the Singleton instance
-        static SlowTicker &getInstance()
-        {
-            static SlowTicker instance;
-            return instance;
-        }
-
+        static SlowTicker *getInstance() { return instance; }
+        SlowTicker();
+        ~SlowTicker() {};
 
         void set_frequency( int frequency );
         bool start();
@@ -24,8 +20,7 @@ class SlowTicker
         void tick();
 
     private:
-        SlowTicker() {};
-
+        static SlowTicker *instance;
 
         using callback_t = std::tuple<int, uint32_t, std::function<void(void)>>;
         std::vector<callback_t> callbacks;

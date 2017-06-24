@@ -201,12 +201,13 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         this->input_pin_state = this->input_pin.get();
         // input pin polling
         // TODO we should only have one of these in Switch and call each switch instance
-        SlowTicker::getInstance().attach(100, std::bind(&Switch::pinpoll_tick, this));
+        SlowTicker::getInstance()->attach(100, std::bind(&Switch::pinpoll_tick, this));
     }
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA tick
-        SlowTicker::getInstance().attach(1000, std::bind(&SigmaDeltaPwm::on_tick, this->sigmadelta_pin));
+        // TODO We should probably have one timer for all sigmadelta pins.
+        SlowTicker::getInstance()->attach(1000, std::bind(&SigmaDeltaPwm::on_tick, this->sigmadelta_pin));
     }
 
     // for commands we may need to replace _ for space for old configs
@@ -461,7 +462,7 @@ void Switch::handle_switch_changed()
 // we need to protect switch_state from concurrent access so it is an atomic_bool
 // this just sets the state and lets handle_switch_changed() changethe actual pins
 // TODO however if there is no output_on_command and output_off_command set it could set the pins here instead
-// FIXME there is a race conidition where if the button is pressed and released faster than the comand loop runs then it will not see the button as active
+// FIXME there is a race condition where if the button is pressed and released faster than the comand loop runs then it will not see the button as active
 void Switch::pinpoll_tick()
 {
     if(!input_pin.connected()) return;

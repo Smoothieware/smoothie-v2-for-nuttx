@@ -11,12 +11,19 @@
 // timers are specified in microseconds
 #define BASE_FREQUENCY 1000000L
 
+SlowTicker *SlowTicker::instance;
+
 // This module uses a Timer to periodically call registered callbacks
 // Modules register with a function ( callback ) and a frequency, and we then call that function at the given frequency.
 
+SlowTicker::SlowTicker()
+{
+    instance= this;
+}
+
 static bool timer_handler(uint32_t *next_interval_us)
 {
-    SlowTicker::getInstance().tick();
+    SlowTicker::getInstance()->tick();
     return true;
 }
 

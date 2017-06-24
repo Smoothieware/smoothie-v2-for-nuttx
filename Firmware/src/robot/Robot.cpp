@@ -34,6 +34,7 @@
 
 #define  default_seek_rate_key          "default_seek_rate"
 #define  default_feed_rate_key          "default_feed_rate"
+#define  default_acceleration_key       "default_acceleration"
 #define  mm_per_line_segment_key        "mm_per_line_segment"
 #define  delta_segments_per_second_key  "delta_segments_per_second"
 #define  mm_per_arc_segment_key         "mm_per_arc_segment"
@@ -59,21 +60,7 @@
 #define  kossel_key                     "kossel"
 #define  morgan_key                     "morgan"
 
-// new-style actuator stuff
-#define  actuator_key                   "actuator"
 
-#define  step_pin_key                   "step_pin"
-#define  dir_pin_key                    "dir_pin"
-#define  en_pin_key                     "en_pin"
-
-#define  steps_per_mm_key               "steps_per_mm"
-#define  max_rate_key                   "max_rate"
-#define  acceleration_key               "acceleration"
-#define  z_acceleration_key             "z_acceleration"
-
-#define  alpha_key                      "alpha"
-#define  beta_key                       "beta"
-#define  gamma_key                      "gamma"
 
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
@@ -85,7 +72,7 @@ Robot *Robot::instance;
 
 Robot::Robot() : Module("robot")
 {
-    instance= this;
+    instance = this;
 
     this->inch_mode = false;
     this->absolute_mode = true;
@@ -106,7 +93,7 @@ Robot::Robot() : Module("robot")
     this->n_motors = 0;
 }
 
-#define ACTUATOR_KEYS(X) {     \
+#define ACTUATOR_KEYS(X) {\
     X "_step_pin",        \
     X "_dir_pin",         \
     X "_en_pin",          \
@@ -114,6 +101,22 @@ Robot::Robot() : Module("robot")
     X "_max_rate",        \
     X "_acceleration"     \
 }
+
+// Make keys for the Primary XYZ StepperMotors, and potentially A B C
+const char* const keys[][6] = {
+    ACTUATOR_KEYS("alpha"), // X
+    ACTUATOR_KEYS("beta"),  // Y
+    ACTUATOR_KEYS("gamma"), // Z
+#if MAX_ROBOT_ACTUATORS > 3
+    ACTUATOR_KEYS("delta"),   // A
+#if MAX_ROBOT_ACTUATORS > 4
+    ACTUATOR_KEYS("epsilon"), // B
+#if MAX_ROBOT_ACTUATORS > 5
+    ACTUATOR_KEYS("zeta")     // C
+#endif
+#endif
+#endif
+};
 
 bool Robot::configure(ConfigReader& cr)
 {
@@ -163,6 +166,9 @@ bool Robot::configure(ConfigReader& cr)
         this->max_speeds[Y_AXIS]  = cr.get_float(m, y_axis_max_speed_key, 60000.0F) / 60.0F;
         this->max_speeds[Z_AXIS]  = cr.get_float(m, z_axis_max_speed_key, 300.0F) / 60.0F;
 
+        // default acceleration setting, can be overriden with newer per axis settings
+        this->default_acceleration = cr.get_float(m, default_acceleration_key, 100.0F); // Acceleration is in mm/s²
+
         this->segment_z_moves     = cr.get_bool(m, segment_z_moves_key, true);
         this->save_g92            = cr.get_bool(m, save_g92_key, false);
         std::string g92           = cr.get_string(m, set_g92_key, "");
@@ -176,85 +182,61 @@ bool Robot::configure(ConfigReader& cr)
         }
     }
 
-#if 0
     // default s value for laser
-    //this->s_value             = THEKERNEL->config->value(laser_module_default_power_key)->by_default(0.8F)->as_number();
+    //this->s_value             = cr.get_float(m, laser_module_default_power_key, 0.8F)->as_number();
 
-    // Make our Primary XYZ StepperMotors, and potentially A B C
-    const char* const keys[][6] = {
-        ACTUATOR_KEYS("alpha"), // X
-        ACTUATOR_KEYS("beta"),  // Y
-        ACTUATOR_KEYS("gamma"), // Z
-#if MAX_ROBOT_ACTUATORS > 3
-        ACTUATOR_KEYS("delta"),   // A
-#if MAX_ROBOT_ACTUATORS > 4
-        ACTUATOR_KEYS("epsilon"), // B
-#if MAX_ROBOT_ACTUATORS > 5
-        ACTUATOR_KEYS("zeta")     // C
-#endif
-#endif
-#endif
-    };
-
-    // default acceleration setting, can be overriden with newer per axis settings
-    this->default_acceleration = THEKERNEL->config->value(acceleration_key)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
-
-    // make each motor
-    for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-        Pin pins[3]; //step, dir, enable
-        for (size_t i = 0; i < 3; i++) {
-            pins[i].from_string(THEKERNEL->config->value(keys[a][i])->by_default("nc")->as_string())->as_output();
-        }
-
-        if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
-            if(a <= Z_AXIS) {
-                printf("FATAL: motor %c is not defined in config\n", 'X' + a);
-                n_motors = a; // we only have this number of motors
-                return;
+    // configure the actuators
+    if(cr.get_section("actuator", m)) {
+        // make each motor
+        for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
+            Pin pins[3]; //step, dir, enable
+            for (size_t i = 0; i < 3; i++) {
+                if(pins[i].from_string(cr.get_string(m, keys[a][i], "nc")) != nullptr) {
+                    pins[i].as_output();
+                }
             }
-            break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
+
+            if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
+                if(a <= Z_AXIS) {
+                    printf("FATAL: motor %c is not defined in config\n", 'X' + a);
+                    n_motors = a; // we only have this number of motors
+                    return false;
+                }
+                break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
+            }
+
+            StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
+            // register this motor (NB This must be 0,1,2) of the actuators array
+            uint8_t n = register_motor(sm);
+            if(n != a) {
+                // this is a fatal error
+                printf("FATAL: motor %d does not match index %d\n", n, a);
+                return false;
+            }
+
+            actuators[a]->change_steps_per_mm(cr.get_float(m, keys[a][3], a == Z_AXIS ? 2560.0F : 80.0F));
+            actuators[a]->set_max_rate(cr.get_float(m, keys[a][4], 30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
+            actuators[a]->set_acceleration(cr.get_float(m, keys[a][5], NAN)); // mm/secs² if NAN it uses the default acceleration
         }
 
-        StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
-        // register this motor (NB This must be 0,1,2) of the actuators array
-        uint8_t n = register_motor(sm);
-        if(n != a) {
-            // this is a fatal error
-            printf("FATAL: motor %d does not match index %d\n", n, a);
-            return;
-        }
+        check_max_actuator_speeds(); // check the configs are sane
 
-        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(keys[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
-        actuators[a]->set_max_rate(THEKERNEL->config->value(keys[a][4])->by_default(30000.0F)->as_number() / 60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(THEKERNEL->config->value(keys[a][5])->by_default(NAN)->as_number()); // mm/secs²
+        // initialise actuator positions to current cartesian position (X0 Y0 Z0)
+        // so the first move can be correct if homing is not performed
+        ActuatorCoordinates actuator_pos;
+        arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
+        for (size_t i = 0; i < n_motors; i++)
+            actuators[i]->change_last_milestone(actuator_pos[i]);
+
+        //this->clearToolOffset();
     }
-
-    check_max_actuator_speeds(); // check the configs are sane
-
-    // if we have not specified a z acceleration see if the legacy config was set
-    if(isnan(actuators[Z_AXIS]->get_acceleration())) {
-        float acc = THEKERNEL->config->value(z_acceleration_key)->by_default(NAN)->as_number(); // disabled by default
-        if(!isnan(acc)) {
-            actuators[Z_AXIS]->set_acceleration(acc);
-        }
-    }
-
-    // initialise actuator positions to current cartesian position (X0 Y0 Z0)
-    // so the first move can be correct if homing is not performed
-    ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
-    for (size_t i = 0; i < n_motors; i++)
-        actuators[i]->change_last_milestone(actuator_pos[i]);
-
-    //this->clearToolOffset();
-#endif
 
     return true;
 }
 
 void Robot::on_halt(bool flg)
 {
-    halted= flg;
+    halted = flg;
 }
 
 uint8_t Robot::register_motor(StepperMotor *motor)
@@ -432,10 +414,10 @@ bool Robot::handle_dwell(GCode& gcode, OutputStream& os)
     if (delay_ms > 0) {
         // drain queue
         Conveyor::getInstance()->wait_for_idle();
-        usleep(delay_ms*1000);
-     }
+        usleep(delay_ms * 1000);
+    }
 
-     return true;
+    return true;
 }
 
 bool Robot::handle_G10(GCode& gcode, OutputStream& os)
