@@ -1,10 +1,8 @@
 #include "Pin.h"
+#include "StringUtils.h"
 
 #include "lpc43_pinconfig.h"
 #include "lpc43_gpio.h"
-
-#include <cctype>
-#include <algorithm>
 
 Pin::Pin()
 {
@@ -29,11 +27,6 @@ Pin::Pin(const char *s, TYPE_T t)
             case AS_OUTPUT: as_output(); break;
         }
     }
-}
-
-static std::string toUpper(std::string str) {
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    return str;
 }
 
 // look up table to convert GPIO port/pin into a PINCONF
@@ -105,7 +98,7 @@ Pin* Pin::from_string(std::string value)
     uint16_t port= 0;
     uint16_t pin= 0;
     size_t pos= 0;
-    if(toUpper(value.substr(0, 4)) == "GPIO") {
+    if(stringutils::toUpper(value.substr(0, 4)) == "GPIO") {
         // grab first integer as GPIO port.
         port = strtol(value.substr(4).c_str(), nullptr, 10);
         pos= value.find_first_of("[_", 4);
@@ -114,7 +107,7 @@ Pin* Pin::from_string(std::string value)
         // grab pin number
         pin = strtol(value.substr(pos+1).c_str(), nullptr, 10);
 
-    }else if(toUpper(value.substr(0, 1)) == "P") {
+    }else if(stringutils::toUpper(value.substr(0, 1)) == "P") {
         uint16_t x= strtol(value.substr(1).c_str(), nullptr, 16);
         pos= value.find_first_of("._", 1);
         if(pos == std::string::npos) return nullptr;

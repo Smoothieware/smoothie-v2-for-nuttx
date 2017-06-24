@@ -13,6 +13,7 @@
 #include "GCode.h"
 #include "StepTicker.h"
 #include "ConfigReader.h"
+#include "StringUtils.h"
 
 #include "BaseSolution.h"
 #include "CartesianSolution.h"
@@ -76,48 +77,6 @@
 
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
-
-// TODO move to utils
-static std::string wcs2gcode(int wcs) {
-    std::string str= "G5";
-    str.append(1, std::min(wcs, 5) + '4');
-    if(wcs >= 6) {
-        str.append(".").append(1, '1' + (wcs - 6));
-    }
-    return str;
-}
-
-// FIXME this does not handle empty strings correctly
-//split a string on a delimiter, return a vector of the split tokens
-static std::vector<std::string> split(const char *str, char c)
-{
-    std::vector<std::string> result;
-
-    do {
-        const char *begin = str;
-
-        while(*str != c && *str)
-            str++;
-
-        result.push_back(std::string(begin, str));
-    } while (0 != *str++);
-
-    return result;
-}
-
-// FIXME this does not handle empty strings correctly
-// parse a number list "1.1,2.2,3.3" and return the numbers in a std::vector of floats
-static std::vector<float> parse_number_list(const char *str)
-{
-    std::vector<std::string> l= split(str, ',');
-    std::vector<float> r;
-    for(auto& s : l){
-        float x = strtof(s.c_str(), nullptr);
-        r.push_back(x);
-    }
-    return r;
-}
-
 
 Robot *Robot::instance;
 
@@ -210,7 +169,7 @@ bool Robot::configure(ConfigReader& cr)
 
         if(!g92.empty()) {
             // optional setting for a fixed G92 offset
-            std::vector<float> t = parse_number_list(g92.c_str());
+            std::vector<float> t = stringutils::parse_number_list(g92.c_str());
             if(t.size() == 3) {
                 g92_offset = wcs_t(t[0], t[1], t[2]);
             }
@@ -832,13 +791,13 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
                 os.printf(";WCS settings\n");
-                os.printf("%s\n", wcs2gcode(current_wcs).c_str());
+                os.printf("%s\n", stringutils::wcs2gcode(current_wcs).c_str());
                 int n = 1;
                 for(auto &i : wcs_offsets) {
                     if(i != wcs_t(0, 0, 0)) {
                         float x, y, z;
                         std::tie(x, y, z) = i;
-                        os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n - 1).c_str());
+                        os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, stringutils::wcs2gcode(n - 1).c_str());
                     }
                     ++n;
                 }

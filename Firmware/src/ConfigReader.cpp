@@ -1,16 +1,5 @@
 #include "ConfigReader.h"
-
-#include <cctype>
-#include <algorithm>
-#include <string>
-
-// TODO move to utils
-inline std::string trim(const std::string &s)
-{
-    auto wsfront = std::find_if_not(s.begin(), s.end(), [](int c) {return std::isspace(c);});
-    auto wsback = std::find_if_not(s.rbegin(), s.rend(), [](int c) {return std::isspace(c);}).base();
-    return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
-}
+#include "StringUtils.h"
 
 // just extract the key/values from the specified section
 bool ConfigReader::get_section(const char *section, section_map_t& config)
@@ -22,7 +11,7 @@ bool ConfigReader::get_section(const char *section, section_map_t& config)
         std::getline(is, s);
 
         if(!is.good()) break;
-        s= trim(s);
+        s= stringutils::trim(s);
 
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {
@@ -43,7 +32,7 @@ bool ConfigReader::get_section(const char *section, section_map_t& config)
                 // extract all key/values from this section
                 if (std::regex_search(s, match, value_test)) {
                     // set this as a key value pair on the current name
-                    config[match[1]] = trim(match[2]);
+                    config[match[1]] = stringutils::trim(match[2]);
                 }
 
             }
@@ -63,7 +52,7 @@ bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& conf
         std::getline(is, s);
 
         if(!is.good()) break;
-        s= trim(s);
+        s= stringutils::trim(s);
 
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {
@@ -85,7 +74,7 @@ bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& conf
                 // and split them into subsections
                 if (std::regex_search(s, match, sub_value_test)) {
                     // set this as a key value pair on the current name
-                    config[match[1]][match[2]] = trim(match[3]);
+                    config[match[1]][match[2]] = stringutils::trim(match[3]);
                 }
 
             }
@@ -104,7 +93,7 @@ bool ConfigReader::get_sections(sections_t& config)
         std::getline(is, s);
 
         if(!is.good()) break;
-        s= trim(s);
+        s= stringutils::trim(s);
 
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {

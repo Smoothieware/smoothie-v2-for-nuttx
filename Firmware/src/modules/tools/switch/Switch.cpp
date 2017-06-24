@@ -461,6 +461,7 @@ void Switch::handle_switch_changed()
 // we need to protect switch_state from concurrent access so it is an atomic_bool
 // this just sets the state and lets handle_switch_changed() changethe actual pins
 // TODO however if there is no output_on_command and output_off_command set it could set the pins here instead
+// FIXME there is a race conidition where if the button is pressed and released faster than the comand loop runs then it will not see the button as active
 void Switch::pinpoll_tick()
 {
     if(!input_pin.connected()) return;

@@ -1,9 +1,9 @@
 #include "Dispatcher.h"
-//#include "Kernel.h"
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "OutputStream.h"
 #include "Module.h"
+#include "StringUtils.h"
 
 #include <ctype.h>
 #include <cmath>
@@ -124,27 +124,11 @@ bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 	return dispatch(gc, os);
 }
 
-// Separate command from arguments
-// return command and strip it from line
-// TODO goes into helpers
-static std::string get_command_arguments(std::string& line )
-{
-	std::string t = line;
-	size_t pos = line.find_first_of(" ");
-	if( pos == string::npos ) {
-		line = "";
-		return t;
-	}
-
-	line = line.substr( pos + 1);
-	return t.substr(0, pos);
-}
-
 // dispatch command to a command handler if one is registered
 bool Dispatcher::dispatch(const char *line, OutputStream& os) const
 {
 	std::string params(line);
-	std::string cmd = get_command_arguments(params);
+	std::string cmd = stringutils::get_command_arguments(params);
 	const auto& f = command_handlers.equal_range(cmd);
 	bool ret = false;
 

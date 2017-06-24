@@ -2,6 +2,7 @@
 #include "OutputStream.h"
 #include "Dispatcher.h"
 #include "Module.h"
+#include "StringUtils.h"
 
 #include <functional>
 #include <set>
@@ -38,21 +39,6 @@ bool CommandShell::initialize()
     return true;
 }
 
-// Get the first parameter, and remove it from the original string
-// TODO move to utils
-std::string shift_parameter( std::string &parameters )
-{
-    size_t beginning = parameters.find_first_of(" ");
-    if( beginning == std::string::npos ) {
-        std::string temp = parameters;
-        parameters = "";
-        return temp;
-    }
-    std::string temp = parameters.substr( 0, beginning );
-    parameters = parameters.substr(beginning + 1, parameters.size());
-    return temp;
-}
-
 // lists all the registered commands
 bool CommandShell::help_cmd(std::string& params, OutputStream& os)
 {
@@ -75,7 +61,7 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
     HELP("list files: -s show size");
     std::string path, opts;
     while(!params.empty()) {
-        std::string s = shift_parameter( params );
+        std::string s = stringutils::shift_parameter( params );
         if(s.front() == '-') {
             opts.append(s);
         } else {
@@ -119,7 +105,7 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
 bool CommandShell::rm_cmd(std::string& params, OutputStream& os)
 {
     HELP("delete file");
-    std::string fn = shift_parameter( params );
+    std::string fn = stringutils::shift_parameter( params );
     int s = remove(fn.c_str());
     if (s != 0) os.printf("Could not delete %s\n", fn.c_str());
     return true;
@@ -173,8 +159,8 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
 {
     HELP("display file: nnn option will show first nnn lines");
     // Get parameters ( filename and line limit )
-    std::string filename          = shift_parameter( params );
-    std::string limit_parameter   = shift_parameter( params );
+    std::string filename          = stringutils::shift_parameter( params );
+    std::string limit_parameter   = stringutils::shift_parameter( params );
     int limit = -1;
 
     if ( limit_parameter != "" ) {
@@ -236,8 +222,8 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
 {
     HELP("list switches or get/set named switch. if 2nd parameter is on/off it sets state if it is numeric it sets value");
 
-    std::string name = shift_parameter( params );
-    std::string value = shift_parameter( params );
+    std::string name = stringutils::shift_parameter( params );
+    std::string value = stringutils::shift_parameter( params );
 
     if(name.empty()) {
         // just list all the switches
@@ -301,8 +287,8 @@ bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
 {
     HELP("set and get gpio pins: use GPIO5[14] | gpio5_14 | P4_10 | p4.10 out/in [on/off]");
 
-    std::string gpio = shift_parameter( params );
-    std::string dir = shift_parameter( params );
+    std::string gpio = stringutils::shift_parameter( params );
+    std::string dir = stringutils::shift_parameter( params );
 
     if(gpio.empty()) return false;
 
@@ -319,7 +305,7 @@ bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
     }
 
     if(dir == "out") {
-        std::string v = shift_parameter( params );
+        std::string v = stringutils::shift_parameter( params );
         if(v.empty()) return false;
         Pin pin(gpio.c_str(), Pin::AS_OUTPUT);
         if(!pin.connected()) {
