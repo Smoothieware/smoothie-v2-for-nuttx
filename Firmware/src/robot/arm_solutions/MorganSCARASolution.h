@@ -1,13 +1,12 @@
-#ifndef MORGANSCARASOLUTION_H
-#define MORGANSCARASOLUTION_H
-//#include "libs/Module.h"
+#pragma once
+
 #include "BaseSolution.h"
 
 class Config;
 
 class MorganSCARASolution : public BaseSolution {
     public:
-        MorganSCARASolution(Config*);
+        MorganSCARASolution(ConfigReader&);
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) const override;
 
@@ -28,5 +27,3 @@ class MorganSCARASolution : public BaseSolution {
         float morgan_undefined_max;
         float slow_rate;
 };
-
-#endif // MORGANSCARASOLUTION_H

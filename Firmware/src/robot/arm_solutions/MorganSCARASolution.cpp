@@ -1,47 +1,45 @@
 #include "MorganSCARASolution.h"
-#include <fastmath.h>
-#include "checksumm.h"
-#include "ActuatorCoordinates.h"
-#include "ConfigValue.h"
-#include "libs/Kernel.h"
-#include "StreamOutputPool.h"
 
-#include "libs/nuts_bolts.h"
+#include "ConfigReader.h"
+#include "AxisDefns.h"
 
-#include "libs/Config.h"
+#include <math.h>
 
-#define arm1_length_checksum          CHECKSUM("arm1_length")
-#define arm2_length_checksum          CHECKSUM("arm2_length")
-#define morgan_offset_x_checksum      CHECKSUM("morgan_offset_x")
-#define morgan_offset_y_checksum      CHECKSUM("morgan_offset_y")
-#define morgan_scaling_x_checksum     CHECKSUM("morgan_scaling_x")
-#define morgan_scaling_y_checksum     CHECKSUM("morgan_scaling_y")
-#define morgan_homing_checksum        CHECKSUM("morgan_homing")
-#define morgan_undefined_min_checksum CHECKSUM("morgan_undefined_min")
-#define morgan_undefined_max_checksum CHECKSUM("morgan_undefined_max")
+#define arm1_length_key "arm1_length"
+#define arm2_length_key "arm2_length"
+#define morgan_offset_x_key "morgan_offset_x"
+#define morgan_offset_y_key "morgan_offset_y"
+#define morgan_scaling_x_key "morgan_scaling_x"
+#define morgan_scaling_y_key "morgan_scaling_y"
+#define morgan_homing_key "morgan_homing"
+#define morgan_undefined_min_key "morgan_undefined_min"
+#define morgan_undefined_max_key "morgan_undefined_max"
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)
 
-MorganSCARASolution::MorganSCARASolution(Config* config)
+MorganSCARASolution::MorganSCARASolution(ConfigReader& cr)
 {
+    ConfigReader::section_map_t m;
+    cr.get_section("morgan scara", m);
+
     // arm1_length is the length of the inner main arm from hinge to hinge
-    arm1_length         = config->value(arm1_length_checksum)->by_default(150.0f)->as_number();
+    arm1_length         = cr.get_float(m, arm1_length_key, 150.0f);
     // arm2_length is the length of the inner main arm from hinge to hinge
-    arm2_length         = config->value(arm2_length_checksum)->by_default(150.0f)->as_number();
+    arm2_length         = cr.get_float(m, arm2_length_key, 150.0f);
     // morgan_offset_x is the x offset of bed zero position towards the SCARA tower center
-    morgan_offset_x     = config->value(morgan_offset_x_checksum)->by_default(100.0f)->as_number();
+    morgan_offset_x     = cr.get_float(m, morgan_offset_x_key, 100.0f);
     // morgan_offset_y is the y offset of bed zero position towards the SCARA tower center
-    morgan_offset_y     = config->value(morgan_offset_y_checksum)->by_default(-60.0f)->as_number();
+    morgan_offset_y     = cr.get_float(m, morgan_offset_y_key, -60.0f);
     // Axis scaling is used in final calibration
-    morgan_scaling_x    = config->value(morgan_scaling_x_checksum)->by_default(1.0F)->as_number(); // 1 = 100% : No scaling
-    morgan_scaling_y    = config->value(morgan_scaling_y_checksum)->by_default(1.0F)->as_number();
+    morgan_scaling_x    = cr.get_float(m, morgan_scaling_x_key, 1.0F); // 1 = 100% : No scaling
+    morgan_scaling_y    = cr.get_float(m, morgan_scaling_y_key, 1.0F);
     // morgan_undefined is the ratio at which the SCARA position is undefined.
     // required to prevent the arm moving through singularity points
     // min: head close to tower
-    morgan_undefined_min  = config->value(morgan_undefined_min_checksum)->by_default(0.95f)->as_number();
+    morgan_undefined_min  = cr.get_float(m, morgan_undefined_min_key, 0.95f);
     // max: head on maximum reach
-    morgan_undefined_max  = config->value(morgan_undefined_max_checksum)->by_default(0.95f)->as_number();
+    morgan_undefined_max  = cr.get_float(m, morgan_undefined_max_key, 0.95f);
 
     init();
 }

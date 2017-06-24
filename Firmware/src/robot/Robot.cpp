@@ -6,26 +6,23 @@
 */
 
 #include "Robot.h"
-//#include "libs/Kernel.h"
-
 #include "Planner.h"
 #include "Conveyor.h"
 #include "Pin.h"
 #include "StepperMotor.h"
 #include "GCode.h"
 #include "StepTicker.h"
+#include "ConfigReader.h"
+
 #include "BaseSolution.h"
-// #include "CartesianSolution.h"
-// #include "RotatableCartesianSolution.h"
-// #include "LinearDeltaSolution.h"
-// #include "RotaryDeltaSolution.h"
-// #include "HBotSolution.h"
-// #include "CoreXZSolution.h"
-// #include "MorganSCARASolution.h"
+#include "CartesianSolution.h"
+#include "LinearDeltaSolution.h"
+#include "RotaryDeltaSolution.h"
+#include "HBotSolution.h"
+#include "CoreXZSolution.h"
+#include "MorganSCARASolution.h"
+
 #include "OutputStream.h"
-//#include "StreamOutputPool.h"
-//#include "ExtruderPublicAccess.h"
-//#include "GcodeDispatch.h"
 #include "ActuatorCoordinates.h"
 
 #include <math.h>
@@ -51,7 +48,6 @@
 // arm solutions
 #define  arm_solution_key               "arm_solution"
 #define  cartesian_key                  "cartesian"
-#define  rotatable_cartesian_key        "rotatable_cartesian"
 #define  rostock_key                    "rostock"
 #define  linear_delta_key               "linear_delta"
 #define  rotary_delta_key               "rotary_delta"
@@ -90,6 +86,38 @@ static std::string wcs2gcode(int wcs) {
     }
     return str;
 }
+
+// FIXME this does not handle empty strings correctly
+//split a string on a delimiter, return a vector of the split tokens
+static std::vector<std::string> split(const char *str, char c)
+{
+    std::vector<std::string> result;
+
+    do {
+        const char *begin = str;
+
+        while(*str != c && *str)
+            str++;
+
+        result.push_back(std::string(begin, str));
+    } while (0 != *str++);
+
+    return result;
+}
+
+// FIXME this does not handle empty strings correctly
+// parse a number list "1.1,2.2,3.3" and return the numbers in a std::vector of floats
+static std::vector<float> parse_number_list(const char *str)
+{
+    std::vector<std::string> l= split(str, ',');
+    std::vector<float> r;
+    for(auto& s : l){
+        float x = strtof(s.c_str(), nullptr);
+        r.push_back(x);
+    }
+    return r;
+}
+
 
 Robot *Robot::instance;
 
@@ -130,63 +158,66 @@ Robot::Robot() : Module("robot")
 
 bool Robot::configure(ConfigReader& cr)
 {
-#if 0
-    // Arm solutions are used to convert positions in millimeters into position in steps for each stepper motor.
-    // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
-    // To make adding those solution easier, they have their own, separate object.
-    // Here we read the config to find out which arm solution to use
-    if (this->arm_solution) delete this->arm_solution;
-    int solution_key = get_key(THEKERNEL->config->value(arm_solution_key)->by_default("cartesian")->as_string());
+    ConfigReader::section_map_t m;
+    if(cr.get_section("motion control", m)) {
 
-    if(solution_key == hbot_key || solution_key == corexy_key) {
-        this->arm_solution = new HBotSolution(THEKERNEL->config);
+        // Arm solutions are used to convert machine positions in millimeters into actuator positions in millimeters.
+        // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
+        // To make adding those solution easier, they have their own, separate object.
+        // Here we read the config to find out which arm solution to use
+        if (this->arm_solution) delete this->arm_solution;
 
-    } else if(solution_key == corexz_key) {
-        this->arm_solution = new CoreXZSolution(THEKERNEL->config);
+        std::string solution = cr.get_string(m, arm_solution_key, "cartesian");
 
-    } else if(solution_key == rostock_key || solution_key == kossel_key || solution_key == delta_key || solution_key ==  linear_delta_key) {
-        this->arm_solution = new LinearDeltaSolution(THEKERNEL->config);
+        if(solution == hbot_key || solution == corexy_key) {
+            this->arm_solution = new HBotSolution(cr);
 
-    } else if(solution_key == rotatable_cartesian_key) {
-        this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
+        } else if(solution == corexz_key) {
+            this->arm_solution = new CoreXZSolution(cr);
 
-    } else if(solution_key == rotary_delta_key) {
-        this->arm_solution = new RotaryDeltaSolution(THEKERNEL->config);
+        } else if(solution == rostock_key || solution == kossel_key || solution == delta_key || solution ==  linear_delta_key) {
+            this->arm_solution = new LinearDeltaSolution(cr);
 
-    } else if(solution_key == morgan_key) {
-        this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
+        } else if(solution == rotary_delta_key) {
+            this->arm_solution = new RotaryDeltaSolution(cr);
 
-    } else if(solution_key == cartesian_key) {
-        this->arm_solution = new CartesianSolution(THEKERNEL->config);
+        } else if(solution == morgan_key) {
+            this->arm_solution = new MorganSCARASolution(cr);
 
-    } else {
-        this->arm_solution = new CartesianSolution(THEKERNEL->config);
-    }
+        } else if(solution == cartesian_key) {
+            this->arm_solution = new CartesianSolution(cr);
 
-    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_key   )->by_default(  100.0F)->as_number();
-    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_key   )->by_default(  100.0F)->as_number();
-    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_key )->by_default(    0.0F)->as_number();
-    this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_key )->by_default(0.0f   )->as_number();
-    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_key  )->by_default(    0.0f)->as_number();
-    this->mm_max_arc_error    = THEKERNEL->config->value(mm_max_arc_error_key    )->by_default(   0.01f)->as_number();
-    this->arc_correction      = THEKERNEL->config->value(arc_correction_key      )->by_default(    5   )->as_number();
+        } else {
+            this->arm_solution = new CartesianSolution(cr);
+        }
 
-    // in mm/sec but specified in config as mm/min
-    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_key    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_key    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_key    )->by_default(  300.0F)->as_number() / 60.0F;
+        this->feed_rate           = cr.get_float(m, default_feed_rate_key, 100.0F);
+        this->seek_rate           = cr.get_float(m, default_seek_rate_key, 100.0F);
+        this->mm_per_line_segment = cr.get_float(m, mm_per_line_segment_key, 0.0F);
+        this->delta_segments_per_second = cr.get_float(m, delta_segments_per_second_key, 0.0f);
+        this->mm_per_arc_segment  = cr.get_float(m, mm_per_arc_segment_key, 0.0f);
+        this->mm_max_arc_error    = cr.get_float(m, mm_max_arc_error_key, 0.01f);
+        this->arc_correction      = cr.get_float(m, arc_correction_key, 5);
 
-    this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_key     )->by_default(true)->as_bool();
-    this->save_g92            = THEKERNEL->config->value(save_g92_key            )->by_default(false)->as_bool();
-    string g92                = THEKERNEL->config->value(set_g92_key             )->by_default("")->as_string();
-    if(!g92.empty()) {
-        // optional setting for a fixed G92 offset
-        std::vector<float> t = parse_number_list(g92.c_str());
-        if(t.size() == 3) {
-            g92_offset = wcs_t(t[0], t[1], t[2]);
+        // in mm/sec but specified in config as mm/min
+        this->max_speeds[X_AXIS]  = cr.get_float(m, x_axis_max_speed_key, 60000.0F) / 60.0F;
+        this->max_speeds[Y_AXIS]  = cr.get_float(m, y_axis_max_speed_key, 60000.0F) / 60.0F;
+        this->max_speeds[Z_AXIS]  = cr.get_float(m, z_axis_max_speed_key, 300.0F) / 60.0F;
+
+        this->segment_z_moves     = cr.get_bool(m, segment_z_moves_key, true);
+        this->save_g92            = cr.get_bool(m, save_g92_key, false);
+        std::string g92           = cr.get_string(m, set_g92_key, "");
+
+        if(!g92.empty()) {
+            // optional setting for a fixed G92 offset
+            std::vector<float> t = parse_number_list(g92.c_str());
+            if(t.size() == 3) {
+                g92_offset = wcs_t(t[0], t[1], t[2]);
+            }
         }
     }
 
+#if 0
     // default s value for laser
     //this->s_value             = THEKERNEL->config->value(laser_module_default_power_key)->by_default(0.8F)->as_number();
 
@@ -685,18 +716,6 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
                             int c = 'A' + i - A_AXIS;
                             if(gcode.has_arg(c)) {
                                 float v = gcode.get_arg(c);
-                                actuators[i]->set_max_rate(v);
-                            }
-                        }
-                    }
-
-
-                    // this format is deprecated
-                    if(gcode.get_subcode() == 0 && (gcode.has_arg('A') || gcode.has_arg('B') || gcode.has_arg('C'))) {
-                        os.printf("NOTE this format is deprecated, Use M203.1 instead\n");
-                        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                            if (gcode.has_arg('A' + i)) {
-                                float v = gcode.get_arg('A' + i);
                                 actuators[i]->set_max_rate(v);
                             }
                         }

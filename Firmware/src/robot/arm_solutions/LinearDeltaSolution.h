@@ -1,13 +1,9 @@
 #pragma once
-
-#include "libs/Module.h"
 #include "BaseSolution.h"
-
-class Config;
 
 class LinearDeltaSolution : public BaseSolution {
     public:
-        LinearDeltaSolution(Config*);
+        LinearDeltaSolution(ConfigReader&);
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) const override;
 
@@ -17,20 +13,22 @@ class LinearDeltaSolution : public BaseSolution {
     private:
         void init();
 
-        float arm_length;
-        float arm_radius;
-        float arm_length_squared;
+        float arm_length{250.0F};
+        float arm_radius{124.0F};
+        float tower1_offset{0.0F};
+        float tower2_offset{0.0F};
+        float tower3_offset{0.0F};
+        float tower1_angle{0.0F};
+        float tower2_angle{0.0F};
+        float tower3_angle{0.0F};
 
-        float delta_tower1_x;
-        float delta_tower1_y;
-        float delta_tower2_x;
-        float delta_tower2_y;
-        float delta_tower3_x;
-        float delta_tower3_y;
-        float tower1_offset;
-        float tower2_offset;
-        float tower3_offset;
-        float tower1_angle;
-        float tower2_angle;
-        float tower3_angle;
+        float arm_length_squared{0.0F};
+
+        float delta_tower1_x{0.0F};
+        float delta_tower1_y{0.0F};
+        float delta_tower2_x{0.0F};
+        float delta_tower2_y{0.0F};
+        float delta_tower3_x{0.0F};
+        float delta_tower3_y{0.0F};
+
 };

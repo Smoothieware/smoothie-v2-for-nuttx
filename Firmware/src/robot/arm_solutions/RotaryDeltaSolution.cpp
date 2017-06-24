@@ -1,25 +1,18 @@
 #include "RotaryDeltaSolution.h"
-#include "ActuatorCoordinates.h"
-#include "checksumm.h"
-#include "ConfigValue.h"
-#include "ConfigCache.h"
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/Config.h"
-#include "libs/utils.h"
-#include "StreamOutputPool.h"
-#include <fastmath.h>
 
-#define delta_e_checksum                CHECKSUM("delta_e")
-#define delta_f_checksum                CHECKSUM("delta_f")
-#define delta_re_checksum               CHECKSUM("delta_re")
-#define delta_rf_checksum               CHECKSUM("delta_rf")
-#define delta_z_offset_checksum         CHECKSUM("delta_z_offset")
+#include "ConfigReader.h"
+#include "AxisDefns.h"
 
-#define delta_ee_offs_checksum          CHECKSUM("delta_ee_offs")
-#define tool_offset_checksum            CHECKSUM("delta_tool_offset")
+#include <math.h>
 
-#define delta_mirror_xy_checksum        CHECKSUM("delta_mirror_xy")
+#define delta_e_key "delta_e"
+#define delta_f_key "delta_f"
+#define delta_re_key "delta_re"
+#define delta_rf_key "delta_rf"
+#define delta_z_offset_key "delta_z_offset"
+#define delta_ee_offs_key "delta_ee_offs"
+#define tool_offset_key "delta_tool_offset"
+#define delta_mirror_xy_key "delta_mirror_xy"
 
 const static float pi     = 3.14159265358979323846;    // PI
 const static float two_pi = 2 * pi;
@@ -29,34 +22,39 @@ const static float tan60  = 1.7320508075688772935274463415059; //sqrt3;
 const static float sin30  = 0.5;
 const static float tan30  = 0.57735026918962576450914878050196; //1/sqrt3
 
-RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
+RotaryDeltaSolution::RotaryDeltaSolution(ConfigReader& cr)
 {
+    ConfigReader::section_map_t m;
+    if(!cr.get_section("rotary delta", m)) {
+        printf("WARNING:config-RotaryDeltaSolution: No rotary delta section found\n");
+    }
+
     // End effector length
-    delta_e = config->value(delta_e_checksum)->by_default(131.636F)->as_number();
+    delta_e = cr.get_float(m, delta_e_key, 131.636F);
 
     // Base length
-    delta_f = config->value(delta_f_checksum)->by_default(190.526F)->as_number();
+    delta_f = cr.get_float(m, delta_f_key, 190.526F);
 
     // Carbon rod length
-    delta_re = config->value(delta_re_checksum)->by_default(270.000F)->as_number();
+    delta_re = cr.get_float(m, delta_re_key, 270.000F);
 
     // Servo horn length
-    delta_rf = config->value(delta_rf_checksum)->by_default(90.000F)->as_number();
+    delta_rf = cr.get_float(m, delta_rf_key, 90.000F);
 
     // Distance from delta 8mm rod/pulley to table/bed,
     // NOTE: For OpenPnP, set the zero to be about 25mm above the bed..
-    delta_z_offset = config->value(delta_z_offset_checksum)->by_default(290.700F)->as_number();
+    delta_z_offset = cr.get_float(m, delta_z_offset_key, 290.700F);
 
     // Ball joint plane to bottom of end effector surface
-    delta_ee_offs = config->value(delta_ee_offs_checksum)->by_default(15.000F)->as_number();
+    delta_ee_offs = cr.get_float(m, delta_ee_offs_key, 15.000F);
 
     // Distance between end effector ball joint plane and tip of tool (PnP)
-    tool_offset = config->value(tool_offset_checksum)->by_default(30.500F)->as_number();
+    tool_offset = cr.get_float(m, tool_offset_key, 30.500F);
 
     // mirror the XY axis
-    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(true)->as_bool();
+    mirror_xy = cr.get_bool(m, delta_mirror_xy_key, true);
 
-    debug_flag= false;
+    debug_flag = false;
     init();
 }
 
@@ -153,8 +151,8 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
     float x0 = cartesian_mm[X_AXIS];
     float y0 = cartesian_mm[Y_AXIS];
     if(mirror_xy) {
-        x0= -x0;
-        y0= -y0;
+        x0 = -x0;
+        y0 = -y0;
     }
 
     float z_with_offset = cartesian_mm[Z_AXIS] + z_calc_offset; //The delta calculation below places zero at the top.  Subtract the Z offset to make zero at the bottom.
@@ -171,12 +169,12 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
 
         //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different rotary delta.
         if(debug_flag) {
-            THEKERNEL->streams->printf("//ERROR: Delta calculation fail!  Unable to move to:\n");
-            THEKERNEL->streams->printf("//    x= %f\n", cartesian_mm[X_AXIS]);
-            THEKERNEL->streams->printf("//    y= %f\n", cartesian_mm[Y_AXIS]);
-            THEKERNEL->streams->printf("//    z= %f\n", cartesian_mm[Z_AXIS]);
-            THEKERNEL->streams->printf("// CalcZ= %f\n", z_calc_offset);
-            THEKERNEL->streams->printf("// Offz= %f\n", z_with_offset);
+            printf("//ERROR: Delta calculation fail!  Unable to move to:\n");
+            printf("//    x= %f\n", cartesian_mm[X_AXIS]);
+            printf("//    y= %f\n", cartesian_mm[Y_AXIS]);
+            printf("//    z= %f\n", cartesian_mm[Z_AXIS]);
+            printf("// CalcZ= %f\n", z_calc_offset);
+            printf("// Offz= %f\n", z_with_offset);
         }
     } else {
         actuator_mm[ALPHA_STEPPER] = alpha_theta;
@@ -184,13 +182,13 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
         actuator_mm[GAMMA_STEPPER] = gamma_theta;
 
         if(debug_flag) {
-            THEKERNEL->streams->printf("//cartesian x= %f\n\r", cartesian_mm[X_AXIS]);
-            THEKERNEL->streams->printf("// y= %f\n\r", cartesian_mm[Y_AXIS]);
-            THEKERNEL->streams->printf("// z= %f\n\r", cartesian_mm[Z_AXIS]);
-            THEKERNEL->streams->printf("// Offz= %f\n\r", z_with_offset);
-            THEKERNEL->streams->printf("// actuator x= %f\n\r", actuator_mm[X_AXIS]);
-            THEKERNEL->streams->printf("// y= %f\n\r", actuator_mm[Y_AXIS]);
-            THEKERNEL->streams->printf("// z= %f\n\r", actuator_mm[Z_AXIS]);
+            printf("//cartesian x= %f\n\r", cartesian_mm[X_AXIS]);
+            printf("// y= %f\n\r", cartesian_mm[Y_AXIS]);
+            printf("// z= %f\n\r", cartesian_mm[Z_AXIS]);
+            printf("// Offz= %f\n\r", z_with_offset);
+            printf("// actuator x= %f\n\r", actuator_mm[X_AXIS]);
+            printf("// y= %f\n\r", actuator_mm[Y_AXIS]);
+            printf("// z= %f\n\r", actuator_mm[Z_AXIS]);
         }
     }
 
@@ -202,13 +200,13 @@ void RotaryDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actua
     //Use forward kinematics
     delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], x, y, z);
     if(mirror_xy) {
-        cartesian_mm[X_AXIS]= -x;
-        cartesian_mm[Y_AXIS]= -y;
-        cartesian_mm[Z_AXIS]= z;
-    }else{
-        cartesian_mm[X_AXIS]= x;
-        cartesian_mm[Y_AXIS]= y;
-        cartesian_mm[Z_AXIS]= z;
+        cartesian_mm[X_AXIS] = -x;
+        cartesian_mm[Y_AXIS] = -y;
+        cartesian_mm[Z_AXIS] = z;
+    } else {
+        cartesian_mm[X_AXIS] = x;
+        cartesian_mm[Y_AXIS] = y;
+        cartesian_mm[Z_AXIS] = z;
     }
 }
 

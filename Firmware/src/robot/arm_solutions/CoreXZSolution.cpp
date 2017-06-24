@@ -1,15 +1,17 @@
 #include "CoreXZSolution.h"
-#include "ActuatorCoordinates.h"
-#include "ConfigValue.h"
-#include "checksumm.h"
+#include "ConfigReader.h"
+#include "AxisDefns.h"
 
-#define x_reduction_checksum         CHECKSUM("x_reduction")
-#define z_reduction_checksum         CHECKSUM("z_reduction")
+#define x_reduction_key         "x_reduction"
+#define z_reduction_key         "z_reduction"
 
-CoreXZSolution::CoreXZSolution(Config* config)
+CoreXZSolution::CoreXZSolution(ConfigReader& cr)
 {
-    x_reduction = config->value(x_reduction_checksum)->by_default(1.0f)->as_number();
-    z_reduction = config->value(z_reduction_checksum)->by_default(3.0f)->as_number();
+    ConfigReader::section_map_t m;
+    if(cr.get_section("corexz", m)) {
+        x_reduction = cr.get_float(m, x_reduction_key, 1.0f);
+        z_reduction = cr.get_float(m, z_reduction_key, 3.0f);
+    }
 }
 
 void CoreXZSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ) const {

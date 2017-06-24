@@ -1,13 +1,12 @@
 #pragma once
 
-#include "libs/Module.h"
 #include "BaseSolution.h"
 
-class Config;
+class ConfigReader;
 
 class RotaryDeltaSolution : public BaseSolution {
     public:
-        RotaryDeltaSolution(Config*);
+        RotaryDeltaSolution(ConfigReader&);
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) const override;
 

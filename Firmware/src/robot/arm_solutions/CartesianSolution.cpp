@@ -1,6 +1,6 @@
 #include "CartesianSolution.h"
-#include "ActuatorCoordinates.h"
-#include <math.h>
+
+#include "AxisDefns.h"
 
 void CartesianSolution::cartesian_to_actuator( const float cartesian_mm[], ActuatorCoordinates &actuator_mm ) const {
     actuator_mm[ALPHA_STEPPER] = cartesian_mm[X_AXIS];

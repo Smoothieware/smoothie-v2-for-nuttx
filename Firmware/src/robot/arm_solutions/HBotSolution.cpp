@@ -1,5 +1,6 @@
 #include "HBotSolution.h"
-#include "ActuatorCoordinates.h"
+#include "AxisDefns.h"
+
 #include <math.h>
 
 void HBotSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ) const

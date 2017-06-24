@@ -1,42 +1,43 @@
 #include "LinearDeltaSolution.h"
-#include "ActuatorCoordinates.h"
-#include "checksumm.h"
-#include "ConfigValue.h"
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/Config.h"
 
-#include <fastmath.h>
+#include "ConfigReader.h"
 #include "Vector3.h"
+#include "AxisDefns.h"
 
+#include <math.h>
 
-#define arm_length_checksum         CHECKSUM("arm_length")
-#define arm_radius_checksum         CHECKSUM("arm_radius")
+#define arm_length_key         "arm_length"
+#define arm_radius_key         "arm_radius"
 
-#define tower1_offset_checksum      CHECKSUM("delta_tower1_offset")
-#define tower2_offset_checksum      CHECKSUM("delta_tower2_offset")
-#define tower3_offset_checksum      CHECKSUM("delta_tower3_offset")
-#define tower1_angle_checksum       CHECKSUM("delta_tower1_angle")
-#define tower2_angle_checksum       CHECKSUM("delta_tower2_angle")
-#define tower3_angle_checksum       CHECKSUM("delta_tower3_angle")
+#define tower1_offset_key      "delta_tower1_offset"
+#define tower2_offset_key      "delta_tower2_offset"
+#define tower3_offset_key      "delta_tower3_offset"
+#define tower1_angle_key       "delta_tower1_angle"
+#define tower2_angle_key       "delta_tower2_angle"
+#define tower3_angle_key       "delta_tower3_angle"
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * (float)(1e ## y)) / (float)(1e ## y))
 #define PIOVER180   0.01745329251994329576923690768489F
 
-LinearDeltaSolution::LinearDeltaSolution(Config* config)
+LinearDeltaSolution::LinearDeltaSolution(ConfigReader& cr)
 {
-    // arm_length is the length of the arm from hinge to hinge
-    arm_length = config->value(arm_length_checksum)->by_default(250.0f)->as_number();
-    // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    arm_radius = config->value(arm_radius_checksum)->by_default(124.0f)->as_number();
+    ConfigReader::section_map_t m;
+    if(cr.get_section("linear delta", m)) {
+        // arm_length is the length of the arm from hinge to hinge
+        arm_length = cr.get_float(m, arm_length_key, 250.0f);
+        // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
+        arm_radius = cr.get_float(m, arm_radius_key, 124.0f);
 
-    tower1_angle = config->value(tower1_angle_checksum)->by_default(0.0f)->as_number();
-    tower2_angle = config->value(tower2_angle_checksum)->by_default(0.0f)->as_number();
-    tower3_angle = config->value(tower3_angle_checksum)->by_default(0.0f)->as_number();
-    tower1_offset = config->value(tower1_offset_checksum)->by_default(0.0f)->as_number();
-    tower2_offset = config->value(tower2_offset_checksum)->by_default(0.0f)->as_number();
-    tower3_offset = config->value(tower3_offset_checksum)->by_default(0.0f)->as_number();
+        tower1_angle = cr.get_float(m, tower1_angle_key, 0.0f);
+        tower2_angle = cr.get_float(m, tower2_angle_key, 0.0f);
+        tower3_angle = cr.get_float(m, tower3_angle_key, 0.0f);
+        tower1_offset = cr.get_float(m, tower1_offset_key, 0.0f);
+        tower2_offset = cr.get_float(m, tower2_offset_key, 0.0f);
+        tower3_offset = cr.get_float(m, tower3_offset_key, 0.0f);
+    }else{
+        printf("WARNING:config-LinearDeltaSolution: No linear delta section found\n");
+    }
 
     init();
 }
