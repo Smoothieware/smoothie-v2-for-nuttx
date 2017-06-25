@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <bitset>
 
 extern "C" {
     void lpc43_gpio_write(uint16_t gpiocfg, bool value);
@@ -14,6 +15,7 @@ class Pin
 public:
     Pin();
     Pin(const char *s);
+    virtual ~Pin();
 
     enum TYPE_T {AS_INPUT, AS_OUTPUT};
     Pin(const char *s, Pin::TYPE_T);
@@ -56,6 +58,8 @@ public:
     // void set_inverting(bool f) { inverting = f; }
 
 private:
+    static bool set_allocated(uint8_t, uint8_t, bool set= true);
+
     //Added pinName
     uint16_t gpiocfg;
 

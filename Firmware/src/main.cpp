@@ -402,6 +402,11 @@ static void *commandthrd(void *)
 #include <sys/mount.h>
 #include <fstream>
 
+// in memory config as sdcard is so slow
+#include "string-config.h"
+static std::string str(string_config);
+static std::stringstream ss(str);
+
 static int smoothie_startup(int, char **)
 {
     // do C++ initialization for static constructors first
@@ -417,7 +422,7 @@ static int smoothie_startup(int, char **)
     StepTicker *step_ticker = new StepTicker();
 
     // configure the Dispatcher
-    Dispatcher *dispatcher= new Dispatcher();
+    new Dispatcher();
 
     // open the config file
     do {
@@ -427,6 +432,7 @@ static int smoothie_startup(int, char **)
             break;
         }
 
+        #if 0
         std::fstream fs;
         fs.open("/sd/test-config.ini", std::fstream::in);
         if(!fs.is_open()) {
@@ -436,9 +442,13 @@ static int smoothie_startup(int, char **)
             break;
         }
 
-        printf("Starting configuration of modules...\n");
 
         ConfigReader cr(fs);
+        #else
+        ConfigReader cr(ss);
+        #endif
+
+        printf("Starting configuration of modules...\n");
 
         // configure the planner
         Planner *planner= new Planner();
@@ -463,7 +473,7 @@ static int smoothie_startup(int, char **)
         }
 
         // close the file stream
-        fs.close();
+        //fs.close();
 
         // unmount sdcard
         umount("/sd");
