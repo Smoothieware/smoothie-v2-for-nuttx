@@ -23,7 +23,7 @@ public:
     ~StepTicker();
     void set_frequency( float frequency );
     void set_unstep_time( float microseconds );
-    int register_motor(StepperMotor* motor);
+    int register_actuator(StepperMotor* motor);
     float get_frequency() const { return frequency; }
     void unstep_tick();
     const Block *get_current_block() const { return current_block; }

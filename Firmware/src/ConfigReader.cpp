@@ -111,11 +111,11 @@ bool ConfigReader::get_sections(sections_t& config)
     return !config.empty();
 }
 
-const std::string ConfigReader::get_string(const section_map_t& m, const char *key, const char *def)
+const char *ConfigReader::get_string(const section_map_t& m, const char *key, const char *def) const
 {
     auto s= m.find(key);
     if(s != m.end()) {
-        return s->second;
+        return s->second.c_str();
     }
 
     return def;

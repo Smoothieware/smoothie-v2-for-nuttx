@@ -22,9 +22,10 @@ class Robot;
 class Planner
 {
 public:
+    static Planner *getInstance() { return instance; }
     Planner();
     bool configure(ConfigReader& cr);
-    static Planner *getInstance() { return instance; }
+    bool initialize(uint8_t n);
 
 private:
     static Planner *instance;

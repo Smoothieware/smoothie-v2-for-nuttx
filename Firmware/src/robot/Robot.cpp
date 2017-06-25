@@ -41,6 +41,14 @@
 #define  save_g92_key                   "save_g92"
 #define  set_g92_key                    "set_g92"
 
+// actuator keys
+#define step_pin_key                    "step_pin"
+#define dir_pin_key                     "dir_pin"
+#define en_pin_key                      "en_pin"
+#define steps_per_mm_key                "steps_per_mm"
+#define max_rate_key                    "max_rate"
+#define acceleration_key                "acceleration"
+
 // arm solutions
 #define  arm_solution_key               "arm_solution"
 #define  cartesian_key                  "cartesian"
@@ -87,26 +95,17 @@ Robot::Robot() : Module("robot")
     this->n_motors = 0;
 }
 
-#define ACTUATOR_KEYS(X) {\
-    X "_step_pin",        \
-    X "_dir_pin",         \
-    X "_en_pin",          \
-    X "_steps_per_mm",    \
-    X "_max_rate",        \
-    X "_acceleration"     \
-}
-
 // Make keys for the Primary XYZ StepperMotors, and potentially A B C
-const char* const keys[][6] = {
-    ACTUATOR_KEYS("alpha"), // X
-    ACTUATOR_KEYS("beta"),  // Y
-    ACTUATOR_KEYS("gamma"), // Z
+const char* const actuator_keys[] = {
+    "alpha", // X
+    "beta",  // Y
+    "gamma", // Z
 #if MAX_ROBOT_ACTUATORS > 3
-    ACTUATOR_KEYS("delta"),   // A
+    "delta",   // A
 #if MAX_ROBOT_ACTUATORS > 4
-    ACTUATOR_KEYS("epsilon"), // B
+    "epsilon", // B
 #if MAX_ROBOT_ACTUATORS > 5
-    ACTUATOR_KEYS("zeta")     // C
+    "zeta"     // C
 #endif
 #endif
 #endif
@@ -167,13 +166,15 @@ bool Robot::configure(ConfigReader& cr)
 
     this->segment_z_moves     = cr.get_bool(m, segment_z_moves_key, true);
     this->save_g92            = cr.get_bool(m, save_g92_key, false);
-    std::string g92           = cr.get_string(m, set_g92_key, "");
+    const char *g92           = cr.get_string(m, set_g92_key, "");
 
-    if(!g92.empty()) {
+    if(strlen(g92) > 0) {
         // optional setting for a fixed G92 offset
-        std::vector<float> t = stringutils::parse_number_list(g92.c_str());
+        std::vector<float> t = stringutils::parse_number_list(g92);
         if(t.size() == 3) {
             g92_offset = wcs_t(t[0], t[1], t[2]);
+        }else{
+            printf("Warning:configure-robot: g92_offset config is bad\n");
         }
     }
 
@@ -181,40 +182,47 @@ bool Robot::configure(ConfigReader& cr)
     //this->s_value             = cr.get_float(m, laser_module_default_power_key, 0.8F)->as_number();
 
     // configure the actuators
-    if(!cr.get_section("actuator", m)) {
-        printf("WARNING:configure-robot-actuator: no actuator section found, defaults used\n");
+    ConfigReader::sub_section_map_t ssm;
+    if(!cr.get_sub_sections("actuator", ssm)) {
+        printf("ERROR:configure-robot-actuator: no actuator section found\n");
+        return false;
     }
 
     // make each motor
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-        Pin pins[3]; //step, dir, enable
-        for (size_t i = 0; i < 3; i++) {
-            if(pins[i].from_string(cr.get_string(m, keys[a][i], "nc")) != nullptr) {
-                pins[i].as_output();
-            }
-        }
+        auto s= ssm.find(actuator_keys[a]);
+        if(s == ssm.end()) break; //actuator not found and they must be in contiguous order
 
-        if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
+        auto& mm= s->second; // map of actuator config values for this actuator
+        Pin step_pin(cr.get_string(mm, step_pin_key, "nc"), Pin::AS_OUTPUT);
+        Pin dir_pin( cr.get_string(mm, dir_pin_key,  "nc"), Pin::AS_OUTPUT);
+        Pin en_pin(  cr.get_string(mm, en_pin_key,   "nc"), Pin::AS_OUTPUT);
+
+        printf("DEBUG: for actuator %s pins: %s, %s, %s\n", s->first.c_str(), step_pin.to_string().c_str(), dir_pin.to_string().c_str(), en_pin.to_string().c_str());
+
+        if(!step_pin.connected() || !dir_pin.connected()) { // step and dir must be defined, but enable is optional
             if(a <= Z_AXIS) {
-                printf("FATAL: motor %c is not defined in config\n", 'X' + a);
+                printf("FATAL: motor %c - %s is not defined in config\n", 'X' + a, s->first.c_str());
                 n_motors = a; // we only have this number of motors
                 return false;
             }
             break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
 
-        StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
-        // register this motor (NB This must be 0,1,2) of the actuators array
-        uint8_t n = register_motor(sm);
+        // create the actuator
+        StepperMotor *sm = new StepperMotor(step_pin, dir_pin, en_pin);
+
+        // register this actuator (NB This must be 0,1,2,...) of the actuators array
+        uint8_t n = register_actuator(sm);
         if(n != a) {
-            // this is a fatal error
+            // this is a fatal error as they must be contiguous
             printf("FATAL: motor %d does not match index %d\n", n, a);
             return false;
         }
 
-        actuators[a]->change_steps_per_mm(cr.get_float(m, keys[a][3], a == Z_AXIS ? 2560.0F : 80.0F));
-        actuators[a]->set_max_rate(cr.get_float(m, keys[a][4], 30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(cr.get_float(m, keys[a][5], NAN)); // mm/secs² if NAN it uses the default acceleration
+        actuators[a]->change_steps_per_mm(cr.get_float(mm, steps_per_mm_key, a == Z_AXIS ? 2560.0F : 80.0F));
+        actuators[a]->set_max_rate(       cr.get_float(mm, max_rate_key,     30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(   cr.get_float(mm, acceleration_key, NAN)); // mm/secs² if NAN it uses the default acceleration
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -314,10 +322,10 @@ void Robot::enable_all_motors(bool flg)
     }
 }
 
-uint8_t Robot::register_motor(StepperMotor *motor)
+uint8_t Robot::register_actuator(StepperMotor *motor)
 {
     // register this motor with the step ticker
-    StepTicker::getInstance()->register_motor(motor);
+    StepTicker::getInstance()->register_actuator(motor);
     if(n_motors >= k_max_actuators) {
         // this is a fatal error
         printf("FATAL: too many motors, increase k_max_actuators\n");

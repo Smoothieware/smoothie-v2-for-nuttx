@@ -431,6 +431,8 @@ static int smoothie_startup(int, char **)
     // configure the Dispatcher
     new Dispatcher();
 
+    bool ok= false;
+
     // open the config file
     do {
         int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
@@ -457,22 +459,24 @@ static int smoothie_startup(int, char **)
 
         printf("Starting configuration of modules...\n");
 
-        // configure the planner
+        printf("configure the planner\n");
         Planner *planner= new Planner();
         planner->configure(cr);
 
-        // configure the conveyor
+        printf("configure the conveyor\n");
         Conveyor *conveyor= new Conveyor();
         conveyor->configure(cr);
 
-        // configure robot
+        printf("configure the robot\n");
         Robot *robot= new Robot();
         if(!robot->configure(cr)) {
             printf("ERROR: Configuring robot failed\n");
+            break;
         }
 
         // this creates any configured switches then we can remove it
         {
+            printf("configure switches\n");
             Switch switches("loader");
             if(!switches.configure(cr)) {
                 printf("INFO: no switches loaded\n");
@@ -485,26 +489,34 @@ static int smoothie_startup(int, char **)
         // unmount sdcard
         umount("/sd");
 
-        // start conveyor and tell it how many actuators we have
-        conveyor->start(robot->get_number_registered_motors());
+        // initialize planner before conveyor this is when block queue is created
+        // which needs to know how many actuators there are, which it gets from robot
+        if(!planner->initialize(robot->get_number_registered_motors())) {
+            printf("ERROR: planner failed to initialize, out of memory?\n");
+            break;
+        }
+
+        // start conveyor last
+        conveyor->start();
 
         printf("...Ending configuration of modules\n");
-
+        ok = true;
     } while(0);
 
     // create the commandshell, it is dependent on some of the above
     CommandShell *shell= new CommandShell();
     shell->initialize();
 
-    // start the timers
-    if(!slow_ticker->start()) {
-        printf("Error: failed to start SlowTicker\n");
-    }
+    if(ok) {
+        // start the timers
+        if(!slow_ticker->start()) {
+            printf("Error: failed to start SlowTicker\n");
+        }
 
-    if(!step_ticker->start()) {
-        printf("Error: failed to start StepTicker\n");
+        if(!step_ticker->start()) {
+            printf("Error: failed to start StepTicker\n");
+        }
     }
-
 
     // launch the command thread that executes all incoming commands
     // We have to do this the long way as we want to set the stack size and priority

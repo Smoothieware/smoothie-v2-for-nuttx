@@ -16,6 +16,8 @@
 
 #define queue_delay_time_ms_key "queue_delay_time_ms"
 
+#define PQUEUE (Planner::getInstance()->queue)
+
 /*
  * The conveyor manages the planner queue, and starting the executing chain of blocks
  * TODO is this even required anymore?
@@ -42,12 +44,10 @@ bool Conveyor::configure(ConfigReader& cr)
 }
 
 // called when everything has been configured
-void Conveyor::start(uint8_t n)
+void Conveyor::start()
 {
     //StepTicker.getInstance()->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
-    Block::init(n); // set the number of motors which determines how big the tick info vector is
     running = true;
-    pqueue= Planner::getInstance()->queue;
 }
 
 void Conveyor::on_halt(bool flg)
@@ -64,7 +64,7 @@ void Conveyor::on_halt(bool flg)
 // checks that all motors are no longer moving
 bool Conveyor::is_idle() const
 {
-    if(pqueue->empty()) {
+    if(PQUEUE->empty()) {
         for(auto &a : Robot::getInstance()->actuators) {
             if(a->is_moving()) return false;
         }
@@ -79,7 +79,7 @@ bool Conveyor::is_idle() const
 void Conveyor::wait_for_idle(bool wait_for_motors)
 {
     // wait for the job queue to empty, forcing stepticker to run them
-    while (!pqueue->empty()) {
+    while (!PQUEUE->empty()) {
         check_queue(true); // forces queue to be made available to stepticker
     }
 
@@ -101,7 +101,7 @@ void Conveyor::check_queue(bool force)
     // don't check if we are not running
     if(!force && !running) return;
 
-    if(pqueue->empty()) {
+    if(PQUEUE->empty()) {
         allow_fetch = false;
         last_time_check = clock_systimer(); // reset timeout
         return;
@@ -109,7 +109,7 @@ void Conveyor::check_queue(bool force)
 
     // if we have been waiting for more than the required waiting time and the queue is not empty, or the queue is full, then allow stepticker to get the tail
     // we do this to allow an idle system to pre load the queue a bit so the first few blocks run smoothly.
-    if(force || pqueue->full() || (TICK2USEC(clock_systimer() - last_time_check) >= (queue_delay_time_ms * 1000)) ) {
+    if(force || PQUEUE->full() || (TICK2USEC(clock_systimer() - last_time_check) >= (queue_delay_time_ms * 1000)) ) {
         last_time_check = clock_systimer(); // reset timeout
         if(!flush) allow_fetch = true;
         return;
@@ -122,20 +122,21 @@ bool Conveyor::get_next_block(Block **block)
 {
     // empty the entire queue
     if (flush){
-        while (!pqueue->empty()) {
-            pqueue->release_tail();
+        while (!PQUEUE->empty()) {
+            PQUEUE->release_tail();
         }
     }
 
     // default the feerate to zero if there is no block available
     this->current_feedrate= 0;
 
-    if(halted || pqueue->empty()) return false; // we do not have anything to give
+    if(halted || PQUEUE->empty()) return false; // we do not have anything to give
 
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
 
-    Block *b= pqueue->get_tail();
+    Block *b= PQUEUE->get_tail();
+    assert(b != nullptr);
     // we cannot use this now if it is being updated
     if(!b->locked) {
         assert(b->is_ready); // should never happen
@@ -154,7 +155,7 @@ bool Conveyor::get_next_block(Block **block)
 void Conveyor::block_finished()
 {
     // release the tail
-    pqueue->release_tail();
+    PQUEUE->release_tail();
 }
 
 /*
@@ -183,12 +184,12 @@ void Conveyor::flush_queue()
 void Conveyor::dump_queue()
 {
     // start the iteration at the head
-    pqueue->start_iteration();
-    Block *b = pqueue->get_head();
+    PQUEUE->start_iteration();
+    Block *b = PQUEUE->get_head();
     int i= 0;
-    while (!pqueue->is_at_tail()) {
+    while (!PQUEUE->is_at_tail()) {
         printf("block %03d > ", ++i);
         b->debug();
-        b= pqueue->tailward_get(); // walk towards the tail
+        b= PQUEUE->tailward_get(); // walk towards the tail
     }
 }

@@ -20,7 +20,7 @@ public:
 
     Conveyor();
     bool configure(ConfigReader& cr);
-    void start(uint8_t n_actuators);
+    void start();
 
     void on_halt(bool flg);
 
@@ -41,9 +41,6 @@ public:
 
 private:
     static Conveyor *instance;
-
-    // keep a pointer to the queue that is in the Planner
-    PlannerQueue *pqueue;
 
     uint32_t queue_delay_time_ms{100};
     float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec

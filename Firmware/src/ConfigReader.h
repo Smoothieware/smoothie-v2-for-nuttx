@@ -22,7 +22,7 @@ public:
 
     const std::string& get_current_section() const { return current_section; }
 
-    const std::string get_string(const section_map_t&, const char *key, const char *def="");
+    const char *get_string(const section_map_t&, const char *key, const char *def="") const;
     float get_float(const section_map_t&, const char *key, float def=0.0F);
     int get_int(const section_map_t&, const char *key, int def=0);
     bool get_bool(const section_map_t&, const char *key, bool def=false);

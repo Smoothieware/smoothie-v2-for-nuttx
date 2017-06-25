@@ -25,6 +25,7 @@ Planner *Planner::instance;
 
 Planner::Planner()
 {
+    instance= this;
     memset(this->previous_unit_vec, 0, sizeof this->previous_unit_vec);
     fp_scale = (double)STEPTICKER_FPSCALE / pow((double)STEP_TICKER_FREQUENCY, 2.0); // we scale up by fixed point offset first to avoid tiny values
 }
@@ -43,10 +44,14 @@ bool Planner::configure(ConfigReader& cr)
         printf("WARNING: configure-planner: no planner section found. defaults loaded\n");
     }
 
-    //if(queue != nullptr) delete queue;
-    queue= new PlannerQueue(planner_queue_size);
-
     return true;
+}
+
+bool Planner::initialize(uint8_t n)
+{
+    Block::init(n); // set the number of motors which determines how big the tick info vector is
+    queue= new PlannerQueue(planner_queue_size);
+    return queue != nullptr;
 }
 
 // Append a block to the queue, compute it's speed factors
