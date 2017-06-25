@@ -42,7 +42,7 @@ bool Planner::configure(ConfigReader& cr)
         printf("WARNING: configure-planner: no planner section found. defaults loaded\n");
     }
 
-    if(queue != nullptr) delete queue;
+    //if(queue != nullptr) delete queue;
     queue= new PlannerQueue(planner_queue_size);
 
     return true;

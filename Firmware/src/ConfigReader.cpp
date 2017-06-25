@@ -4,6 +4,7 @@
 // just extract the key/values from the specified section
 bool ConfigReader::get_section(const char *section, section_map_t& config)
 {
+    reset();
     current_section=  section;
     bool in_section= false;
     while (!is.eof()) {
@@ -45,6 +46,7 @@ bool ConfigReader::get_section(const char *section, section_map_t& config)
 // just extract the key/values from the specified section and split them into sub sections
 bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& config)
 {
+    reset();
     current_section=  section;
     bool in_section= false;
     while (!is.eof()) {
@@ -86,6 +88,7 @@ bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& conf
 // just extract the sections
 bool ConfigReader::get_sections(sections_t& config)
 {
+    reset();
     current_section=  "";
 
     while (!is.eof()) {

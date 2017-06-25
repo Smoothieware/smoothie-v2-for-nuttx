@@ -122,64 +122,65 @@ const char* const keys[][6] = {
 bool Robot::configure(ConfigReader& cr)
 {
     ConfigReader::section_map_t m;
-    if(cr.get_section("motion control", m)) {
+    if(!cr.get_section("motion control", m)) {
+        printf("WARNING:configure-robot: no robot section found, defaults used\n");
+    }
 
-        // Arm solutions are used to convert machine positions in millimeters into actuator positions in millimeters.
-        // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
-        // To make adding those solution easier, they have their own, separate object.
-        // Here we read the config to find out which arm solution to use
-        if (this->arm_solution) delete this->arm_solution;
+    // Arm solutions are used to convert machine positions in millimeters into actuator positions in millimeters.
+    // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
+    // To make adding those solution easier, they have their own, separate object.
+    // Here we read the config to find out which arm solution to use
+    if (this->arm_solution) delete this->arm_solution;
 
-        std::string solution = cr.get_string(m, arm_solution_key, "cartesian");
+    std::string solution = cr.get_string(m, arm_solution_key, "cartesian");
 
-        if(solution == hbot_key || solution == corexy_key) {
-            this->arm_solution = new HBotSolution(cr);
+    if(solution == hbot_key || solution == corexy_key) {
+        this->arm_solution = new HBotSolution(cr);
 
-        } else if(solution == corexz_key) {
-            this->arm_solution = new CoreXZSolution(cr);
+    } else if(solution == corexz_key) {
+        this->arm_solution = new CoreXZSolution(cr);
 
-        } else if(solution == rostock_key || solution == kossel_key || solution == delta_key || solution ==  linear_delta_key) {
-            this->arm_solution = new LinearDeltaSolution(cr);
+    } else if(solution == rostock_key || solution == kossel_key || solution == delta_key || solution ==  linear_delta_key) {
+        this->arm_solution = new LinearDeltaSolution(cr);
 
-        } else if(solution == rotary_delta_key) {
-            this->arm_solution = new RotaryDeltaSolution(cr);
+    } else if(solution == rotary_delta_key) {
+        this->arm_solution = new RotaryDeltaSolution(cr);
 
-        } else if(solution == morgan_key) {
-            this->arm_solution = new MorganSCARASolution(cr);
+    } else if(solution == morgan_key) {
+        this->arm_solution = new MorganSCARASolution(cr);
 
-        } else if(solution == cartesian_key) {
-            this->arm_solution = new CartesianSolution(cr);
+    } else if(solution == cartesian_key) {
+        this->arm_solution = new CartesianSolution(cr);
 
-        } else {
-            this->arm_solution = new CartesianSolution(cr);
-        }
+    } else {
+        this->arm_solution = new CartesianSolution(cr);
+    }
 
-        this->feed_rate           = cr.get_float(m, default_feed_rate_key, 100.0F);
-        this->seek_rate           = cr.get_float(m, default_seek_rate_key, 100.0F);
-        this->mm_per_line_segment = cr.get_float(m, mm_per_line_segment_key, 0.0F);
-        this->delta_segments_per_second = cr.get_float(m, delta_segments_per_second_key, 0.0f);
-        this->mm_per_arc_segment  = cr.get_float(m, mm_per_arc_segment_key, 0.0f);
-        this->mm_max_arc_error    = cr.get_float(m, mm_max_arc_error_key, 0.01f);
-        this->arc_correction      = cr.get_float(m, arc_correction_key, 5);
+    this->feed_rate           = cr.get_float(m, default_feed_rate_key, 100.0F);
+    this->seek_rate           = cr.get_float(m, default_seek_rate_key, 100.0F);
+    this->mm_per_line_segment = cr.get_float(m, mm_per_line_segment_key, 0.0F);
+    this->delta_segments_per_second = cr.get_float(m, delta_segments_per_second_key, 0.0f);
+    this->mm_per_arc_segment  = cr.get_float(m, mm_per_arc_segment_key, 0.0f);
+    this->mm_max_arc_error    = cr.get_float(m, mm_max_arc_error_key, 0.01f);
+    this->arc_correction      = cr.get_float(m, arc_correction_key, 5);
 
-        // in mm/sec but specified in config as mm/min
-        this->max_speeds[X_AXIS]  = cr.get_float(m, x_axis_max_speed_key, 60000.0F) / 60.0F;
-        this->max_speeds[Y_AXIS]  = cr.get_float(m, y_axis_max_speed_key, 60000.0F) / 60.0F;
-        this->max_speeds[Z_AXIS]  = cr.get_float(m, z_axis_max_speed_key, 300.0F) / 60.0F;
+    // in mm/sec but specified in config as mm/min
+    this->max_speeds[X_AXIS]  = cr.get_float(m, x_axis_max_speed_key, 60000.0F) / 60.0F;
+    this->max_speeds[Y_AXIS]  = cr.get_float(m, y_axis_max_speed_key, 60000.0F) / 60.0F;
+    this->max_speeds[Z_AXIS]  = cr.get_float(m, z_axis_max_speed_key, 300.0F) / 60.0F;
 
-        // default acceleration setting, can be overriden with newer per axis settings
-        this->default_acceleration = cr.get_float(m, default_acceleration_key, 100.0F); // Acceleration is in mm/s²
+    // default acceleration setting, can be overriden with newer per axis settings
+    this->default_acceleration = cr.get_float(m, default_acceleration_key, 100.0F); // Acceleration is in mm/s²
 
-        this->segment_z_moves     = cr.get_bool(m, segment_z_moves_key, true);
-        this->save_g92            = cr.get_bool(m, save_g92_key, false);
-        std::string g92           = cr.get_string(m, set_g92_key, "");
+    this->segment_z_moves     = cr.get_bool(m, segment_z_moves_key, true);
+    this->save_g92            = cr.get_bool(m, save_g92_key, false);
+    std::string g92           = cr.get_string(m, set_g92_key, "");
 
-        if(!g92.empty()) {
-            // optional setting for a fixed G92 offset
-            std::vector<float> t = stringutils::parse_number_list(g92.c_str());
-            if(t.size() == 3) {
-                g92_offset = wcs_t(t[0], t[1], t[2]);
-            }
+    if(!g92.empty()) {
+        // optional setting for a fixed G92 offset
+        std::vector<float> t = stringutils::parse_number_list(g92.c_str());
+        if(t.size() == 3) {
+            g92_offset = wcs_t(t[0], t[1], t[2]);
         }
     }
 
@@ -187,50 +188,52 @@ bool Robot::configure(ConfigReader& cr)
     //this->s_value             = cr.get_float(m, laser_module_default_power_key, 0.8F)->as_number();
 
     // configure the actuators
-    if(cr.get_section("actuator", m)) {
-        // make each motor
-        for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-            Pin pins[3]; //step, dir, enable
-            for (size_t i = 0; i < 3; i++) {
-                if(pins[i].from_string(cr.get_string(m, keys[a][i], "nc")) != nullptr) {
-                    pins[i].as_output();
-                }
-            }
+    if(!cr.get_section("actuator", m)) {
+        printf("WARNING:configure-robot-actuator: no actuator section found, defaults used\n");
+    }
 
-            if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
-                if(a <= Z_AXIS) {
-                    printf("FATAL: motor %c is not defined in config\n", 'X' + a);
-                    n_motors = a; // we only have this number of motors
-                    return false;
-                }
-                break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
+    // make each motor
+    for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
+        Pin pins[3]; //step, dir, enable
+        for (size_t i = 0; i < 3; i++) {
+            if(pins[i].from_string(cr.get_string(m, keys[a][i], "nc")) != nullptr) {
+                pins[i].as_output();
             }
-
-            StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
-            // register this motor (NB This must be 0,1,2) of the actuators array
-            uint8_t n = register_motor(sm);
-            if(n != a) {
-                // this is a fatal error
-                printf("FATAL: motor %d does not match index %d\n", n, a);
-                return false;
-            }
-
-            actuators[a]->change_steps_per_mm(cr.get_float(m, keys[a][3], a == Z_AXIS ? 2560.0F : 80.0F));
-            actuators[a]->set_max_rate(cr.get_float(m, keys[a][4], 30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
-            actuators[a]->set_acceleration(cr.get_float(m, keys[a][5], NAN)); // mm/secs² if NAN it uses the default acceleration
         }
 
-        check_max_actuator_speeds(); // check the configs are sane
+        if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
+            if(a <= Z_AXIS) {
+                printf("FATAL: motor %c is not defined in config\n", 'X' + a);
+                n_motors = a; // we only have this number of motors
+                return false;
+            }
+            break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
+        }
 
-        // initialise actuator positions to current cartesian position (X0 Y0 Z0)
-        // so the first move can be correct if homing is not performed
-        ActuatorCoordinates actuator_pos;
-        arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
-        for (size_t i = 0; i < n_motors; i++)
-            actuators[i]->change_last_milestone(actuator_pos[i]);
+        StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
+        // register this motor (NB This must be 0,1,2) of the actuators array
+        uint8_t n = register_motor(sm);
+        if(n != a) {
+            // this is a fatal error
+            printf("FATAL: motor %d does not match index %d\n", n, a);
+            return false;
+        }
 
-        //this->clearToolOffset();
+        actuators[a]->change_steps_per_mm(cr.get_float(m, keys[a][3], a == Z_AXIS ? 2560.0F : 80.0F));
+        actuators[a]->set_max_rate(cr.get_float(m, keys[a][4], 30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(cr.get_float(m, keys[a][5], NAN)); // mm/secs² if NAN it uses the default acceleration
     }
+
+    check_max_actuator_speeds(); // check the configs are sane
+
+    // initialise actuator positions to current cartesian position (X0 Y0 Z0)
+    // so the first move can be correct if homing is not performed
+    ActuatorCoordinates actuator_pos;
+    arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
+    for (size_t i = 0; i < n_motors; i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
+
+    //this->clearToolOffset();
 
     // register gcodes and mcodes
     using std::placeholders::_1;

@@ -41,7 +41,7 @@ private:
 
     double fp_scale; // optimize to store this as it does not change
 
-    PlannerQueue *queue;
+    PlannerQueue *queue{nullptr};
     float previous_unit_vec[N_PRIMARY_AXIS];
 
     float xy_junction_deviation{0.05F};    // Setting

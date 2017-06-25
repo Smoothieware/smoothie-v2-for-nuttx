@@ -8,6 +8,7 @@
 StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
     if(en.connected()) {
+        //TODO how to do enable
         //set_high_on_debug(en.port_number, en.pin);
     }
 
@@ -39,6 +40,7 @@ StepperMotor::~StepperMotor()
 //     }
 // }
 
+// TODO how to do enable
 // void StepperMotor::on_enable(void *argument)
 // {
 //     // argument is a uin32_t where bit0 is on or off, and bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C etc

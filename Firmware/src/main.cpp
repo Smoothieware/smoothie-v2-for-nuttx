@@ -410,15 +410,14 @@ static int smoothie_startup(int, char **)
 
     printf("Smoothie V2.0alpha starting up\n");
 
-    // create the commandshell
-    CommandShell *shell= new CommandShell();
-    shell->initialize();
-
     // create the SlowTicker here as it us used by some modules
     SlowTicker *slow_ticker = new SlowTicker();
 
     // create the StepTicker
     StepTicker *step_ticker = new StepTicker();
+
+    // configure the Dispatcher
+    Dispatcher *dispatcher= new Dispatcher();
 
     // open the config file
     do {
@@ -475,6 +474,10 @@ static int smoothie_startup(int, char **)
         printf("...Ending configuration of modules\n");
 
     } while(0);
+
+    // create the commandshell, it is dependent on some of the above
+    CommandShell *shell= new CommandShell();
+    shell->initialize();
 
     // start the timers
     if(!slow_ticker->start()) {
@@ -568,7 +571,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     // We need to do this as the cxxinitialize takes more stack than the default task has,
     // this causes corruption and random crashes
     task_create("smoothie_task", SCHED_PRIORITY_DEFAULT,
-                10000, // stack size may need to increase
+                20000, // stack size may need to increase
                 (main_t)smoothie_startup,
                 (FAR char * const *)NULL);
 
