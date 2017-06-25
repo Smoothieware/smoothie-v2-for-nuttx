@@ -61,7 +61,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 
 		if (gc.has_error()) {
 			// report error
-			if(is_grbl_mode) {
+			if(grbl_mode) {
 				os.printf("error: ");
 			} else {
 				os.printf("Error: ");

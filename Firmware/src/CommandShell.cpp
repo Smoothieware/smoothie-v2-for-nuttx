@@ -3,6 +3,7 @@
 #include "Dispatcher.h"
 #include "Module.h"
 #include "StringUtils.h"
+#include "Robot.h"
 
 #include <functional>
 #include <set>
@@ -35,6 +36,8 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "gpio", std::bind( &CommandShell::gpio_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "get", std::bind( &CommandShell::get_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "$#", std::bind( &CommandShell::grblDP_cmd, this, _1, _2) );
 
     return true;
 }
@@ -158,7 +161,7 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
 bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
 {
     HELP("display file: nnn option will show first nnn lines");
-    // Get parameters ( filename and line limit )
+    // Get params ( filename and line limit )
     std::string filename          = stringutils::shift_parameter( params );
     std::string limit_parameter   = stringutils::shift_parameter( params );
     int limit = -1;
@@ -338,3 +341,190 @@ bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
 
     return true;
 }
+
+bool CommandShell::get_cmd(std::string& params, OutputStream& os)
+{
+    HELP("get pos|wcs|state")
+    std::string what = stringutils::shift_parameter( params );
+    bool handled= true;
+    if (what == "temp") {
+        // struct pad_temperature temp;
+        // string type = shift_parameter( params );
+        // if(type.empty()) {
+        //     // scan all temperature controls
+        //     std::vector<struct pad_temperature> controllers;
+        //     bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+        //     if (ok) {
+        //         for (auto &c : controllers) {
+        //            os.printf("%s (%d) temp: %f/%f @%d\r\n", c.designator.c_str(), c.id, c.current_temperature, c.target_temperature, c.pwm);
+        //         }
+
+        //     } else {
+        //         os.printf("no heaters found\r\n");
+        //     }
+
+        // }else{
+        //     bool ok = PublicData::get_value( temperature_control_checksum, current_temperature_checksum, get_checksum(type), &temp );
+
+        //     if (ok) {
+        //         os.printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
+        //     } else {
+        //         os.printf("%s is not a known temperature device\r\n", type.c_str());
+        //     }
+        // }
+
+    } else if (what == "fk" || what == "ik") {
+        // string p= shift_parameter( params );
+        // bool move= false;
+        // if(p == "-m") {
+        //     move= true;
+        //     p= shift_parameter( params );
+        // }
+
+        // std::vector<float> v= parse_number_list(p.c_str());
+        // if(p.empty() || v.size() < 1) {
+        //     os.printf("error:usage: get [fk|ik] [-m] x[,y,z]\n");
+        //     return;
+        // }
+
+        // float x= v[0];
+        // float y= (v.size() > 1) ? v[1] : x;
+        // float z= (v.size() > 2) ? v[2] : y;
+
+        // if(what == "fk") {
+        //     // do forward kinematics on the given actuator position and display the cartesian coordinates
+        //     ActuatorCoordinates apos{x, y, z};
+        //     float pos[3];
+        //     Robot::getInstance()->arm_solution->actuator_to_cartesian(apos, pos);
+        //     os.printf("cartesian= X %f, Y %f, Z %f\n", pos[0], pos[1], pos[2]);
+        //     x= pos[0];
+        //     y= pos[1];
+        //     z= pos[2];
+
+        // }else{
+        //     // do inverse kinematics on the given cartesian position and display the actuator coordinates
+        //     float pos[3]{x, y, z};
+        //     ActuatorCoordinates apos;
+        //     Robot::getInstance()->arm_solution->cartesian_to_actuator(pos, apos);
+        //     os.printf("actuator= X %f, Y %f, Z %f\n", apos[0], apos[1], apos[2]);
+        // }
+
+        // if(move) {
+        //     // move to the calculated, or given, XYZ
+        //     char cmd[64];
+        //     snprintf(cmd, sizeof(cmd), "G53 G0 X%f Y%f Z%f", x, y, z);
+        //     struct SerialMessage message;
+        //     message.message = cmd;
+        //     message.stream = &(StreamOutput::NullStream);
+        //     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        //     THECONVEYOR->wait_for_idle();
+        // }
+
+   } else if (what == "pos") {
+        // convenience to call all the various M114 variants, shows ABC axis where relevant
+        std::string buf;
+        Robot::getInstance()->print_position(0, buf); os.printf("last %s\n", buf.c_str()); buf.clear();
+        Robot::getInstance()->print_position(1, buf); os.printf("realtime %s\n", buf.c_str()); buf.clear();
+        Robot::getInstance()->print_position(2, buf); os.printf("%s\n", buf.c_str()); buf.clear();
+        Robot::getInstance()->print_position(3, buf); os.printf("%s\n", buf.c_str()); buf.clear();
+        Robot::getInstance()->print_position(4, buf); os.printf("%s\n", buf.c_str()); buf.clear();
+        Robot::getInstance()->print_position(5, buf); os.printf("%s\n", buf.c_str()); buf.clear();
+
+    } else if (what == "wcs") {
+        // print the wcs state
+        std::string cmd("-v");
+        grblDP_cmd(cmd, os);
+
+    } else if (what == "state") {
+        // also $G
+        // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        os.printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f S%1.4f]\n",
+            1, // Dispatcher.getInstance()->get_modal_command(),
+            stringutils::wcs2gcode(Robot::getInstance()->get_current_wcs()).c_str(),
+            Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Y_AXIS && Robot::getInstance()->plane_axis_2 == Z_AXIS ? 17 :
+              Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == Y_AXIS ? 18 :
+              Robot::getInstance()->plane_axis_0 == Y_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == X_AXIS ? 19 : 17,
+            Robot::getInstance()->inch_mode ? 20 : 21,
+            Robot::getInstance()->absolute_mode ? 90 : 91,
+            0, //get_active_tool(),
+            Robot::getInstance()->from_millimeters(Robot::getInstance()->get_feed_rate()),
+            Robot::getInstance()->get_s_value());
+
+    } else if (what == "status") {
+        // also ? on serial and usb
+        //os.printf("%s\n", THEKERNEL->get_query_string().c_str());
+
+    } else {
+
+        handled= false;
+    }
+
+    return handled;
+}
+
+bool CommandShell::grblDP_cmd(std::string& params, OutputStream& os)
+{
+    /*
+    [G54:95.000,40.000,-23.600]
+    [G55:0.000,0.000,0.000]
+    [G56:0.000,0.000,0.000]
+    [G57:0.000,0.000,0.000]
+    [G58:0.000,0.000,0.000]
+    [G59:0.000,0.000,0.000]
+    [G28:0.000,0.000,0.000]
+    [G30:0.000,0.000,0.000]
+    [G92:0.000,0.000,0.000]
+    [TLO:0.000]
+    [PRB:0.000,0.000,0.000:0]
+    */
+
+    HELP("show grbl $ command")
+
+    bool verbose = stringutils::shift_parameter( params ).find_first_of("Vv") != std::string::npos;
+
+    std::vector<Robot::wcs_t> v= Robot::getInstance()->get_wcs_state();
+    if(verbose) {
+        char current_wcs= std::get<0>(v[0]);
+        os.printf("[current WCS: %s]\n", stringutils::wcs2gcode(current_wcs).c_str());
+    }
+
+    int n= std::get<1>(v[0]);
+    for (int i = 1; i <= n; ++i) {
+        os.printf("[%s:%1.4f,%1.4f,%1.4f]\n", stringutils::wcs2gcode(i-1).c_str(),
+            Robot::getInstance()->from_millimeters(std::get<0>(v[i])),
+            Robot::getInstance()->from_millimeters(std::get<1>(v[i])),
+            Robot::getInstance()->from_millimeters(std::get<2>(v[i])));
+    }
+
+    float rd[]{0,0,0};
+    //PublicData::get_value( endstops_checksum, saved_position_checksum, &rd ); TODO use request
+    os.printf("[G28:%1.4f,%1.4f,%1.4f]\n",
+        Robot::getInstance()->from_millimeters(rd[0]),
+        Robot::getInstance()->from_millimeters(rd[1]),
+        Robot::getInstance()->from_millimeters(rd[2]));
+
+    os.printf("[G30:%1.4f,%1.4f,%1.4f]\n",  0.0F, 0.0F, 0.0F); // not implemented
+
+    os.printf("[G92:%1.4f,%1.4f,%1.4f]\n",
+        Robot::getInstance()->from_millimeters(std::get<0>(v[n+1])),
+        Robot::getInstance()->from_millimeters(std::get<1>(v[n+1])),
+        Robot::getInstance()->from_millimeters(std::get<2>(v[n+1])));
+
+    if(verbose) {
+        os.printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n",
+            Robot::getInstance()->from_millimeters(std::get<0>(v[n+2])),
+            Robot::getInstance()->from_millimeters(std::get<1>(v[n+2])),
+            Robot::getInstance()->from_millimeters(std::get<2>(v[n+2])));
+    }else{
+        os.printf("[TL0:%1.4f]\n", Robot::getInstance()->from_millimeters(std::get<2>(v[n+2])));
+    }
+
+    // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
+    float px, py, pz;
+    uint8_t ps;
+    std::tie(px, py, pz, ps) = Robot::getInstance()->get_last_probe_position();
+    os.printf("[PRB:%1.4f,%1.4f,%1.4f:%d]\n", Robot::getInstance()->from_millimeters(px), Robot::getInstance()->from_millimeters(py), Robot::getInstance()->from_millimeters(pz), ps);
+
+    return true;
+}
+

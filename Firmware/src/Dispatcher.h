@@ -33,6 +33,7 @@ public:
     bool dispatch(const char *line, OutputStream& os) const;
     bool load_configuration() const;
     void clear_handlers();
+    bool is_grbl_mode() const { return grbl_mode; }
 
 private:
     static Dispatcher *instance;
@@ -48,6 +49,6 @@ private:
     CommandHandlers_t command_handlers;
     mutable bool loaded_configuration{false};
 
-    bool is_grbl_mode{false};
+    bool grbl_mode{false};
 };
 

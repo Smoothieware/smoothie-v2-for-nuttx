@@ -710,6 +710,7 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
             std::string buf;
             print_position(gcode.get_subcode(), buf, true); // ignore extruders as they will print E themselves
             os.set_prepend_ok();
+            os.set_append_nl();
             os.puts(buf.c_str());
             return true;;
         }
