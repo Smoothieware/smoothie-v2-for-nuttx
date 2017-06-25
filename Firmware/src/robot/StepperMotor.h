@@ -18,6 +18,8 @@ class StepperMotor
         // called from step ticker ISR
         inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
+        // TODO for SPI motors, we could check the en_pin and if nc then we call the linked advanced motor driver and tell it to enable
+        // the driver can set a function pointer to the enable call it needs and set it in the appropriate actuator.
         void enable(bool state) { en_pin.set(!state); };
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };

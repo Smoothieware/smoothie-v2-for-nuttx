@@ -78,9 +78,7 @@ bool Conveyor::is_idle() const
 // This must be called in the command thread context and will stall the command thread
 void Conveyor::wait_for_idle(bool wait_for_motors)
 {
-    // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
-    // forcing them to be jobs
-    running = false; // stops on_idle calling check_queue
+    // wait for the job queue to empty, forcing stepticker to run them
     while (!pqueue->empty()) {
         check_queue(true); // forces queue to be made available to stepticker
     }
@@ -92,7 +90,6 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
         }
     }
 
-    running = true;
     // returning now means that everything has totally finished
 }
 

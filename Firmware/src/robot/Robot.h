@@ -61,6 +61,7 @@ class Robot : public Module {
         bool delta_move(const float delta[], float rate_mm_s, uint8_t naxis);
         uint8_t register_motor(StepperMotor*);
         uint8_t get_number_registered_motors() const {return n_motors; }
+        void enable_all_motors(bool flg);
 
         bool is_halted() const { return halted; }
 

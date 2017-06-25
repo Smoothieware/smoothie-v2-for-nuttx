@@ -32,14 +32,6 @@ StepperMotor::~StepperMotor()
 {
 }
 
-// void StepperMotor::on_halt(void *argument)
-// {
-//     if(argument == nullptr) {
-//         enable(false);
-//         moving= false;
-//     }
-// }
-
 // TODO how to do enable
 // void StepperMotor::on_enable(void *argument)
 // {

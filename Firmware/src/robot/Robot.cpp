@@ -299,6 +299,19 @@ bool Robot::configure(ConfigReader& cr)
 void Robot::on_halt(bool flg)
 {
     halted = flg;
+    for(auto a : actuators) {
+        // TODO how to handle the SPI motor drivers?
+        a->enable(false);
+        a->stop_moving();
+    }
+}
+
+void Robot::enable_all_motors(bool flg)
+{
+    for(auto a : actuators) {
+        // TODO how to handle the SPI motor drivers?
+        a->enable(flg);
+    }
 }
 
 uint8_t Robot::register_motor(StepperMotor *motor)
@@ -315,7 +328,7 @@ uint8_t Robot::register_motor(StepperMotor *motor)
     return n_motors++;
 }
 
-void  Robot::push_state()
+void Robot::push_state()
 {
     bool am = this->absolute_mode;
     bool em = this->e_absolute_mode;
@@ -652,35 +665,31 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
             absolute_mode = true;
             break;
         case 17:
-            // TODO
-            //THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
+            enable_all_motors(true); // turn all enable pins on
             break;
 
         case 18: // this allows individual motors to be turned off, no parameters falls through to turn all off
             if(gcode.get_num_args() > 0) {
-                // bitmap of motors to turn off, where bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C
-                uint32_t bm = 0;
+                Conveyor::getInstance()->wait_for_idle();
+
+                // motors to turn off
                 for (int i = 0; i < n_motors; ++i) {
                     char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - 3));
-                    if(gcode.has_arg(axis)) bm |= (0x02 << i); // set appropriate bit
+                    if(gcode.has_arg(axis)) actuators[i]->enable(false); // turn it off
                 }
+
                 // handle E parameter as currently selected extruder ABC
                 if(gcode.has_arg('E')) {
                     // find first selected extruder
                     int i = get_active_extruder();
-                    if(i > 0) {
-                        bm |= (0x02 << i); // set appropriate bit
-                    }
+                    actuators[i]->enable(false);
                 }
-
-                Conveyor::getInstance()->wait_for_idle();
-                //THEKERNEL->call_event(ON_ENABLE, (void *)bm); // TODO
                 break;
             }
-        // fall through
+            // else fall through to turn all off
         case 84:
             Conveyor::getInstance()->wait_for_idle();
-            //THEKERNEL->call_event(ON_ENABLE, nullptr); // TODO turn all enable pins off
+            enable_all_motors(false); // turn all enable pins off
             break;
 
         case 82: e_absolute_mode = true; break;
@@ -1289,6 +1298,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     //     // if we also got a HALT then break out of this
     //     if(halted) return false;
     // }
+
+    // make sure the motors are enabled
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
