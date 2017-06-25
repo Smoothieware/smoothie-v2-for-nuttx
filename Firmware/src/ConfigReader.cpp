@@ -141,7 +141,6 @@ bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& conf
                 std::string key2;
                 std::string value;
                 // extract all key/values from this section
-                // extract all key/values from this section
                 // and split them into subsections
                 if(extract_sub_key_value(s.c_str(), key1, key2, value)) {
                     // set this as a key value pair on the current name
