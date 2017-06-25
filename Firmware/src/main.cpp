@@ -427,6 +427,8 @@ static int smoothie_startup(int, char **)
 
     // create the StepTicker
     StepTicker *step_ticker = new StepTicker();
+    step_ticker->set_frequency(10000); // 100KHz
+    step_ticker->set_unstep_time(10); // 2us step pulse by default
 
     // configure the Dispatcher
     new Dispatcher();

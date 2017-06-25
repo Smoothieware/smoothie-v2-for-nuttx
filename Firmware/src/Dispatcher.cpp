@@ -52,9 +52,9 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 	}
 
 	// special case is M500 - M503
-	if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
-		ret = handle_configuration_commands(gc, os);
-	}
+	// if(gc.has_m() && gc.get_code() >= 500 && gc.get_code() <= 503) {
+	// 	ret = handle_configuration_commands(gc, os);
+	// }
 
 	if(ret) {
 		bool send_ok = true;

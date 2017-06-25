@@ -45,36 +45,4 @@ gamma.dir_pin = p7_1 # Pin for gamma stepper direction, add '!' to reverse direc
 gamma.en_pin = nc # Pin for gamma enable\n\
 gamma.max_rate = 300.0 # Maximum rate in mm/min\n\
 z.axis_max_speed = 300 # Maximum speed in mm/min\n\
-gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
-\n\
-[switch]\n\
-fan.enable = false # Enable this module\n\
-fan.input_on_command = M106 # Command that will turn this switch on\n\
-fan.input_off_command = M107 # Command that will turn this switch off\n\
-fan.output_pin = 2.6 # Pin this module controls\n\
-fan.output_type = pwm # PWM output settable with S parameter in the input_on_comand\n\
-\n\
-misc.enable = false             # Enable this module\n\
-misc.input_on_command = M42              # Command that will turn this switch on\n\
-misc.input_off_command = M43              # Command that will turn this switch off\n\
-misc.output_pin = 2.4              # Pin this module controls\n\
-misc.output_type = digital          # Digital means this is just an on or off pin\n\
-\n\
-led1.enable            = true\n\
-led1.input_on_command  = M1\n\
-led1.input_off_command = M2\n\
-led1.output_pin        = gpio1_0\n\
-led1.output_type       = digital\n\
-\n\
-led2.enable            = true\n\
-led2.input_on_command  = M3\n\
-led2.input_off_command = M4\n\
-led2.output_pin        = gpio3_3\n\
-led2.output_type       = sigmadeltapwm\n\
-\n\
-but1.enable             = true                     # Enable this module\n\
-but1.input_pin          = gpio0_7!                 # button\n\
-but1.output_on_command  = M1                       # command to send\n\
-but1.output_off_command = M2                       # command to send\n\
-but1.input_pin_behavior = toggle\n\
-";
+gamma.acceleration = 500  # overrides the default acceleration for this axis\n";

@@ -51,13 +51,8 @@ static bool unstep_timer_handler(uint32_t *next_interval_us)
 // timers are specified in microseconds
 #define BASE_FREQUENCY 1000000L
 
-int StepTicker::initial_setup(const char *dev, void *timer_handler)
+int StepTicker::initial_setup(const char *dev, void *timer_handler, uint32_t per)
 {
-    struct timer_sethandler_s handler;
-
-    if(period == 0) {
-        period = BASE_FREQUENCY / 10; // default to 100KHz
-    }
 
     /* Open the timer device */
     int fd = open(dev, O_RDONLY);
@@ -66,7 +61,7 @@ int StepTicker::initial_setup(const char *dev, void *timer_handler)
         return -1;
     }
 
-    int ret = ioctl(fd, TCIOC_SETTIMEOUT, period);
+    int ret = ioctl(fd, TCIOC_SETTIMEOUT, per);
     if (ret < 0) {
         printf("ERROR: Failed to set the %s period to %d: %d\n", dev, period, errno);
         close(fd);
@@ -74,6 +69,7 @@ int StepTicker::initial_setup(const char *dev, void *timer_handler)
     }
 
     // Attach the timer handler
+    struct timer_sethandler_s handler;
     handler.newhandler = (tccb_t)timer_handler;
     handler.oldhandler = NULL;
 
@@ -101,10 +97,10 @@ bool StepTicker::start()
         }
 
         // setup the step timer
-        step_fd = initial_setup(STEP_TICKER_DEVNAME, (void*)step_timer_handler);
+        step_fd = initial_setup(STEP_TICKER_DEVNAME, (void*)step_timer_handler, period);
 
         // setup the unstep timer (does not start until needed)
-        unstep_fd = initial_setup(UNSTEP_TICKER_DEVNAME, (void*)unstep_timer_handler);
+        unstep_fd = initial_setup(UNSTEP_TICKER_DEVNAME, (void*)unstep_timer_handler, delay);
 
         if(step_fd == -1 || unstep_fd == -1) {
             printf("Stepticker failed to setup\n");
@@ -144,13 +140,13 @@ bool StepTicker::stop()
 
 bool StepTicker::start_unstep_ticker()
 {
-    int ret = ioctl(unstep_fd, TCIOC_START, 0);
-    if (ret < 0) {
-        printf("ERROR: Failed to start the unstep timer: %d\n", errno);
-        close(unstep_fd);
-        unstep_fd = -1;
-        return false;
-    }
+    // int ret = ioctl(unstep_fd, TCIOC_START, 0);
+    // if (ret < 0) {
+    //     printf("ERROR: Failed to start the unstep timer: %d\n", errno);
+    //     //close(unstep_fd);
+    //     //unstep_fd = -1;
+    //     return false;
+    // }
 
     return true;
 }
@@ -180,12 +176,14 @@ void StepTicker::set_frequency( float freq )
 // Set the reset delay, must be called initial_setup()
 void StepTicker::set_unstep_time( float microseconds )
 {
-    uint32_t delay = floorf(microseconds);
+    delay = floorf(microseconds);
 
-    // set frequency of unstep  callback
-    int ret = ioctl(unstep_fd, TCIOC_SETTIMEOUT, delay);
-    if (ret < 0) {
-        printf("ERROR: Failed to set the unstep ticker delay to %d: %d\n", delay, errno);
+    if(started) {
+        // set frequency of unstep  callback
+        int ret = ioctl(unstep_fd, TCIOC_SETTIMEOUT, delay);
+        if (ret < 0) {
+            printf("ERROR: Failed to set the unstep ticker delay to %d: %d\n", delay, errno);
+        }
     }
 
     // TODO check that the unstep time is less than the step period, if not slow down step ticker
