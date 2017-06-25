@@ -350,6 +350,7 @@ static void uart_comms()
 }
 
 #include "Module.h"
+#include "Conveyor.h"
 /*
  * All commands must be executed inthe contrxt of this thread. It is equivalent to the main_loop in v1.
  * Commands are sent to this thread via the message queue from things that can block (like I/O)
@@ -376,6 +377,7 @@ static void *commandthrd(void *)
         const char *line;
         OutputStream *os;
 
+        // This wil timeout after 200 ms
         if(receive_message_queue(mqfd, &line, &os)) {
             //printf("DEBUG: got line: %s\n", line);
             dispatch_line(*os, line);
@@ -386,6 +388,12 @@ static void *commandthrd(void *)
 
         // call in_command_ctx for all modules that want it
         Module::broadcast_in_commmand_ctx();
+
+        // we check the queue to see if it is ready to run
+        // TODO troubl eis we may stall waiting for the queue i some other module,
+        // we specifically deal with this in append_block, but need to check for other places
+        // This used to be done n on_idle which never blocked
+        Conveyor::getInstance()->check_queue();
     }
 }
 
@@ -395,7 +403,6 @@ static void *commandthrd(void *)
 #include "ConfigReader.h"
 #include "Switch.h"
 #include "Planner.h"
-#include "Conveyor.h"
 #include "Robot.h"
 
 

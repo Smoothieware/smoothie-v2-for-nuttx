@@ -6,6 +6,7 @@
 #include "AxisDefns.h"
 #include "StepTicker.h"
 #include "Robot.h"
+#include "Conveyor.h"
 
 #include <math.h>
 #include <algorithm>
@@ -210,14 +211,15 @@ bool Planner::append_block(ActuatorCoordinates& actuator_pos, uint8_t n_motors, 
         // stall the command thread until we have room in the queue
         usleep(10000); // is 10ms a good stall time?
 
-        // THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
-
         if(Robot::getInstance()->is_halted()) {
             // we do not want to stick more stuff on the queue if we are in halt state
             // clear the block on the head
             block->clear();
             return false; // if we got a halt then we are done here
         }
+
+        // we check the queue to see if it is ready to run
+        Conveyor::getInstance()->check_queue();
     }
 
     return true;

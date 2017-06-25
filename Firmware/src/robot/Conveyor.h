@@ -24,6 +24,8 @@ public:
 
     void on_halt(bool flg);
 
+    void check_queue(bool force= false);
+
     void wait_for_idle(bool wait_for_motors=true);
     bool is_idle() const;
     bool is_halted() const { return halted; }
@@ -39,7 +41,6 @@ public:
 
 private:
     static Conveyor *instance;
-    void check_queue(bool force= false);
 
     // keep a pointer to the queue that is in the Planner
     PlannerQueue *pqueue;

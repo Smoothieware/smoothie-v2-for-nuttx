@@ -59,14 +59,6 @@ void Conveyor::on_halt(bool flg)
     }
 }
 
-// TODO this maybe needs to be a thread
-// void Conveyor::on_idle(void*)
-// {
-//     if (running) {
-//         check_queue();
-//     }
-// }
-
 // see if we are idle
 // this checks the block queue is empty, and that the step queue is empty and
 // checks that all motors are no longer moving
@@ -91,13 +83,12 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     running = false; // stops on_idle calling check_queue
     while (!pqueue->empty()) {
         check_queue(true); // forces queue to be made available to stepticker
-        // THEKERNEL->call_event(ON_IDLE, this);
     }
 
     if(wait_for_motors) {
         // now we wait for all motors to stop moving
         while(!is_idle()) {
-            // THEKERNEL->call_event(ON_IDLE, this);
+            usleep(10000); // is 10ms ok?
         }
     }
 
@@ -105,16 +96,14 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     // returning now means that everything has totally finished
 }
 
-// TODO
-//     // not sure if this is the correct place but we need to turn on the motors if they were not already on
-//     THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
-//
-
-// TODO
-// should be called when idle, but we haev no on_idle so where is this called from? do we have thread?
+// should be called when idle, si call it when the command loop runs
 void Conveyor::check_queue(bool force)
 {
     static systime_t last_time_check = clock_systimer();
+
+    // don't check if we are not running
+    if(!force && !running) return;
+
     if(pqueue->empty()) {
         allow_fetch = false;
         last_time_check = clock_systimer(); // reset timeout

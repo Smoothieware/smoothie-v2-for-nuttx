@@ -1283,7 +1283,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 
     // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
-    // TODO
+    // TODO implement feed hold
     // while(THEKERNEL->get_feed_hold()) {
     //     usleep(100000);
     //     // if we also got a HALT then break out of this
@@ -1292,7 +1292,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
-    // NOTE this call will bock until there is room in the block queue, on_idle will continue to be called
+    // NOTE this call will bock until there is room in the block queue
     if(Planner::getInstance()->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the new compensated machine position
         memcpy(this->compensated_machine_position, transformed_target, n_motors * sizeof(float));
