@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <algorithm>
+#include <cstring>
 
 // split string into array on separator
 std::vector<std::string> stringutils::split(const char *str, const char *sep)

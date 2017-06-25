@@ -10,20 +10,21 @@ static void timer_callback(void)
     ++timer_cnt;
 }
 
+static SlowTicker *slowticker= new SlowTicker;
 REGISTER_TEST(SlowTicker, test_20_hz)
 {
-    SlowTicker& slt= SlowTicker::getInstance();
-    TEST_ASSERT_TRUE(slt.start());
+    SlowTicker *slt= SlowTicker::getInstance();
+    TEST_ASSERT_TRUE(slt->start());
 
-    int n= slt.attach(20, timer_callback);
+    int n= slt->attach(20, timer_callback);
 
     for (int i = 0; i < 5; ++i) {
         usleep(1000000);
         printf("time %d seconds, timer %d calls\n", i, timer_cnt);
     }
 
-    slt.detach(n);
-    slt.stop();
+    slt->detach(n);
+    slt->stop();
 
     TEST_ASSERT_INT_WITHIN(2, 100, timer_cnt);
 }
@@ -45,10 +46,10 @@ REGISTER_TEST(SlowTicker, test_10_hz)
     timer_cnt= 0;
 
     // test where the interrupt triggers a semaphore and the thread is waiting on a semaphore
-    SlowTicker& slt= SlowTicker::getInstance();
-    TEST_ASSERT_TRUE(slt.start());
+    SlowTicker *slt= SlowTicker::getInstance();
+    TEST_ASSERT_TRUE(slt->start());
 
-    int n= slt.attach(10, timer_callback2);
+    int n= slt->attach(10, timer_callback2);
 
     // allow 5 seconds of events
     systime_t st = clock_systimer();
@@ -61,8 +62,8 @@ REGISTER_TEST(SlowTicker, test_10_hz)
 
     printf("elapsed time %dus, timer %d calls\n", TICK2USEC(en-st), timer_cnt);
 
-    slt.detach(n);
-    slt.stop();
+    slt->detach(n);
+    slt->stop();
     sem_destroy(&g_sem);
 
     TEST_ASSERT_EQUAL_INT(50, timer_cnt);

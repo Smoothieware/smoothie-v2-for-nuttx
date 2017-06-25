@@ -66,6 +66,9 @@ static int test_runner(void)
         }
 
         UnityDefaultTestRun(test_wrapper, name, ln);
+
+        // if we get any errors stop here
+        if(Unity.TestFailures > 0) break;
     }
 
     return (UnityEnd());
@@ -90,7 +93,7 @@ extern "C" int smoothie_main(int argc, char *argv[])
     }
 
     task_create("tests", SCHED_PRIORITY_DEFAULT,
-                20000,
+                30000,
                 (main_t)run_tests,
                 (FAR char * const *)NULL);
 

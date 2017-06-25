@@ -81,9 +81,9 @@ REGISTER_TEST(StreamsTest, OutputStream_prependok)
 	std::ostringstream oss;
 	OutputStream os(&oss);
 	// output the result after the ok
-	os.setPrependOK(true);
+	os.set_prepend_ok(true);
 	os.printf("This is after the ok\n");
-	os.setPrependOK(false);
+	os.set_prepend_ok(false);
 	os.printf("ok ");
 	int n= os.flush_prepend(); // this flushes the internally stored string to the output
 	TEST_ASSERT_EQUAL_INT(21, n);
