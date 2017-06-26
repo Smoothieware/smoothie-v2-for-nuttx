@@ -5,6 +5,8 @@
 #include <set>
 #include <istream>
 
+class ConfigWriter;
+
 class ConfigReader
 {
 public:
@@ -27,11 +29,13 @@ public:
     bool get_bool(const section_map_t&, const char *key, bool def=false);
 
 private:
-    bool match_section(const char *line, std::string& section_name);
-    bool extract_key_value(const char *line, std::string& key, std::string& value);
-    bool extract_sub_key_value(const char *line, std::string& key1, std::string& key2, std::string& value);
-    void strip_comments(std::string& s);
+    static bool match_section(const char *line, std::string& section_name);
+    static bool extract_key_value(const char *line, std::string& key, std::string& value);
+    static bool extract_sub_key_value(const char *line, std::string& key1, std::string& key2, std::string& value);
+    static void strip_comments(std::string& s);
 
     std::istream& is;
     std::string current_section;
+
+    friend ConfigWriter;
 };
