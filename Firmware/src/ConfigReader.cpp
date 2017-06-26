@@ -53,7 +53,7 @@ bool ConfigReader::extract_sub_key_value(const char *line, std::string& key1, st
     return true;
 }
 
-void strip_comments(std::string& s)
+void ConfigReader::strip_comments(std::string& s)
 {
     auto n= s.find_first_of("#");
     if(n != std::string::npos) {
