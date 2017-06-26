@@ -437,13 +437,13 @@ static int smoothie_startup(int, char **)
 
     // open the config file
     do {
+        #if 0
         int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
         if(0 != ret) {
             std::cout << "Error mounting: " << "/dev/mmcsd0: " << ret << "\n";
             break;
         }
 
-        #if 0
         std::fstream fs;
         fs.open("/sd/test-config.ini", std::fstream::in);
         if(!fs.is_open()) {
@@ -489,7 +489,7 @@ static int smoothie_startup(int, char **)
         //fs.close();
 
         // unmount sdcard
-        umount("/sd");
+        //umount("/sd");
 
         // initialize planner before conveyor this is when block queue is created
         // which needs to know how many actuators there are, which it gets from robot
