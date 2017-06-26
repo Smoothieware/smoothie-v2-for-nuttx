@@ -25,13 +25,7 @@ bool ConfigReader::extract_key_value(const char *line, std::string& key, std::st
     if(p == nullptr) return false;
     key.assign(line, p - line - 1);
     key = stringutils::trim(key);
-
-    const char *p1 = strchr(line, '#');
-    if(p1 != nullptr) {
-        value.assign(p + 1, p1 - p - 1);
-    } else {
-        value.assign(p+1);
-    }
+    value.assign(p+1);
     value = stringutils::trim(value);
     return true;
 }
@@ -53,15 +47,18 @@ bool ConfigReader::extract_sub_key_value(const char *line, std::string& key1, st
     key2.assign(p1 + 1, p - p1 - 1);
     key2 = stringutils::trim(key2);
 
-    const char *p2 = strchr(line, '#');
-    if(p2 != nullptr) {
-        value.assign(p + 1, p2 - p - 1);
-    } else {
-        value.assign(p+1);
-    }
+    value.assign(p+1);
 
     value = stringutils::trim(value);
     return true;
+}
+
+void strip_comments(std::string& s)
+{
+    auto n= s.find_first_of("#");
+    if(n != std::string::npos) {
+        s= s.substr(0, n);
+    }
 }
 
 // just extract the key/values from the specified section
@@ -77,8 +74,11 @@ bool ConfigReader::get_section(const char *section, section_map_t& config)
         if(!is.good()) break;
         s = stringutils::trim(s);
 
+
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {
+            strip_comments(s);
+
             std::string sec;
 
             if (match_section(s.c_str(), sec)) {
@@ -123,6 +123,7 @@ bool ConfigReader::get_sub_sections(const char *section, sub_section_map_t& conf
 
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {
+            strip_comments(s);
             std::string sec;
 
             if (match_section(s.c_str(), sec)) {
@@ -164,10 +165,12 @@ bool ConfigReader::get_sections(sections_t& config)
         std::getline(is, s);
 
         if(!is.good()) break;
+
         s = stringutils::trim(s);
 
         // only check lines that are not blank and are not all comments
         if (s.size() > 0 && s[0] != '#') {
+            strip_comments(s);
             std::string sec;
 
             if (match_section(s.c_str(), sec)) {
@@ -345,8 +348,8 @@ misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\npsu.ena
 
 static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106 # comment\nfan.input_off_command = M107\n\
 fan.output_pin = 2.6 # pin to use\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
-misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\n\
-[dummy]\nenable = false #set to true\n#ignore comment\n");
+misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\npsu#.x = bad\n\
+[dummy]\nenable = false #set to true\ntest2 # = bad\n   #ignore comment\n #[bogus]\n[bogus2 #]\n");
 
 static std::stringstream ss1(str);
 static ConfigReader cr(ss1);
@@ -354,23 +357,19 @@ static ConfigReader cr(ss1);
 void ConfigTest_get_sections(void)
 {
     ConfigReader::sections_t sections;
-    //systime_t st = clock_systimer();
     TEST_ASSERT_TRUE(cr.get_sections(sections));
-    //systime_t en = clock_systimer();
-    //printf("elapsed time %d us\n", TICK2USEC(en-st));
-
+    std::cout << "sections:\n" << sections << "\n";
     TEST_ASSERT_TRUE(sections.find("switch") != sections.end());
     TEST_ASSERT_TRUE(sections.find("dummy") != sections.end());
     TEST_ASSERT_TRUE(sections.find("none") == sections.end());
+    TEST_ASSERT_TRUE(sections.find("bogus") == sections.end());
+    TEST_ASSERT_EQUAL_INT(2, sections.size());
 }
 
 void ConfigTest_load_section(void)
 {
     ConfigReader::section_map_t m;
-    //systime_t st = clock_systimer();
     bool b = cr.get_section("dummy", m);
-    //systime_t en = clock_systimer();
-    //printf("elapsed time %d us\n", TICK2USEC(en-st));
     std::cout << m << "\n";
 
     TEST_ASSERT_TRUE(b);
@@ -385,15 +384,20 @@ void ConfigTest_load_sub_sections(void)
     ConfigReader::sub_section_map_t ssmap;
     TEST_ASSERT_TRUE(ssmap.empty());
 
-    //systime_t st = clock_systimer();
     TEST_ASSERT_TRUE(cr.get_sub_sections("switch", ssmap));
-    //systime_t en = clock_systimer();
-    //printf("elapsed time %d us\n", TICK2USEC(en-st));
 
     std::cout << ssmap << "\n";
 
     TEST_ASSERT_EQUAL_STRING("switch", cr.get_current_section().c_str());
     TEST_ASSERT_EQUAL_INT(3, ssmap.size());
+
+    TEST_ASSERT_TRUE(ssmap.find("fan") != ssmap.end());
+    TEST_ASSERT_TRUE(ssmap.find("misc") != ssmap.end());
+    TEST_ASSERT_TRUE(ssmap.find("psu") != ssmap.end());
+
+    TEST_ASSERT_EQUAL_INT(1, ssmap["psu"].size());
+    TEST_ASSERT_EQUAL_INT(5, ssmap["fan"].size());
+    TEST_ASSERT_EQUAL_INT(7, ssmap["misc"].size());
 
     bool fanok = false;
     bool miscok = false;
@@ -451,7 +455,7 @@ void ConfigTest_load_sub_sections(void)
 }
 
 
-int main(int argc, char const *argv[])
+int main()
 {
     UNITY_BEGIN();
     RUN_TEST(ConfigTest_get_sections);
