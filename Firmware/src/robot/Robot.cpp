@@ -1489,7 +1489,7 @@ bool Robot::append_arc(GCode&  gcode, const float target[], const float offset[]
     // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
     uint16_t segments = ceilf(millimeters_of_travel / arc_segment);
 
-    //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY
+    //printf("Radius %f - Segment Length %f - Number of Segments %d\n",radius,arc_segment,segments);  // Testing Purposes ONLY
     float theta_per_segment = angular_travel / segments;
     float linear_per_segment = linear_travel / segments;
 
@@ -1625,3 +1625,130 @@ float Robot::get_feed_rate() const
     // return THEKERNEL->gcode_dispatch->get_modal_command() == 0 ? seek_rate : feed_rate;
     return feed_rate;
 }
+
+// return a GRBL-like query string for ? command
+void Robot::get_query_string(std::string& str)
+{
+    bool homing= false;
+    bool running = false;
+    bool feed_hold= false;
+
+    // see if we are homing
+    Module *m= Module::lookup("homing");
+    if(m != nullptr) {
+        int state;
+        bool ok= m->request("status", &state);
+        if(ok && state == 1) homing = true;
+    }
+
+    str.append("<");
+    if(halted) {
+        str.append("Alarm");
+    } else if(homing) {
+        running = true;
+        str.append("Home");
+    } else if(feed_hold) {
+        str.append("Hold");
+    } else if(Conveyor::getInstance()->is_idle()) {
+        str.append("Idle");
+    } else {
+        running = true;
+        str.append("Run");
+    }
+
+    if(running) {
+        float mpos[3];
+        get_current_machine_position(mpos);
+        // current_position/mpos includes the compensation transform so we need to get the inverse to get actual position
+        if(compensationTransform) compensationTransform(mpos, true); // get inverse compensation transform
+
+        char buf[128];
+        // machine position
+        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", from_millimeters(mpos[0]), from_millimeters(mpos[1]), from_millimeters(mpos[2]));
+
+        if(new_status_format) {
+            str.append("|MPos:").append(buf, n);
+
+#if MAX_ROBOT_ACTUATORS > 3
+            // deal with the ABC axis (E will be A)
+            for (int i = A_AXIS; i < get_number_registered_motors(); ++i) {
+                // current actuator position
+                n = snprintf(buf, sizeof(buf), ",%1.4f", from_millimeters(actuators[i]->get_current_position()));
+                str.append(buf, n);
+            }
+#endif
+
+        }else{
+            str.append(",MPos:").append(buf, n);
+        }
+
+        // work space position
+        Robot::wcs_t pos = mcs2wcs(mpos);
+        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+
+        if(new_status_format) {
+            str.append("|WPos:").append(buf, n);
+            // current feedrate
+            float fr= from_millimeters(Conveyor::getInstance()->get_current_feedrate()*60.0F);
+            n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+            str.append(buf, n);
+            float sr= get_s_value();
+            n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
+            str.append(buf, n);
+
+            // // current Laser power
+            // #ifndef NO_TOOLS_LASER
+            //     Laser *plaser= nullptr;
+            //     if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
+            //        float lp= plaser->get_current_power();
+            //         n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
+            //         str.append(buf, n);
+            //     }
+            // #endif
+
+        }else{
+            str.append(",WPos:").append(buf, n);
+        }
+
+        str.append(">\n");
+
+    } else {
+        // return the last milestone if idle
+        char buf[128];
+        // machine position
+        Robot::wcs_t mpos = get_axis_position();
+        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", from_millimeters(std::get<X_AXIS>(mpos)), from_millimeters(std::get<Y_AXIS>(mpos)), from_millimeters(std::get<Z_AXIS>(mpos)));
+        if(new_status_format) {
+            str.append("|MPos:").append(buf, n);
+#if MAX_ROBOT_ACTUATORS > 3
+            // deal with the ABC axis (E will be A)
+            for (int i = A_AXIS; i < get_number_registered_motors(); ++i) {
+                // current actuator position
+                n = snprintf(buf, sizeof(buf), ",%1.4f", from_millimeters(actuators[i]->get_current_position()));
+                str.append(buf, n);
+            }
+#endif
+
+        }else{
+            str.append(",MPos:").append(buf, n);
+        }
+
+        // work space position
+        Robot::wcs_t pos = mcs2wcs(mpos);
+        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+        if(new_status_format) {
+            str.append("|WPos:").append(buf, n);
+        }else{
+            str.append(",WPos:").append(buf, n);
+        }
+
+        if(new_status_format) {
+            float fr= from_millimeters(get_feed_rate());
+            n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+            str.append(buf, n);
+        }
+
+        str.append(">\n");
+    }
+}
+

@@ -19,7 +19,7 @@ Dispatcher *Dispatcher::instance;
 
 Dispatcher::Dispatcher()
 {
-	instance= this;
+	instance = this;
 }
 
 std::set<std::string> Dispatcher::get_commands() const
@@ -31,12 +31,40 @@ std::set<std::string> Dispatcher::get_commands() const
 	return s;
 }
 
+// goes in Flash, list of Mxxx codes that are allowed when in Halted state
+static const int allowed_mcodes[]= {2,5,9,30,105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
+static bool is_allowed_mcode(int m) {
+    for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
+        if(allowed_mcodes[i] == m) return true;
+    }
+    return false;
+}
+
 // Must be called from the command thread context
 bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 {
 	if(gc.has_m() && gc.get_code() == 503) {
 		// alias M503 to M500.3
 		gc.set_command('M', 500, 3);
+	}
+
+	if(Module::is_halted()) {
+		// If we are halted then we reject most g/m codes unless in exception list
+		if(gc.has_m() && gc.get_code() == 999) {
+			Module::broadcast_halt(false);
+			os.printf("WARNING: After HALT you should HOME as position is currently unknown\nok\n");
+			return true;
+		}
+
+		// we return an error if it is not an allowed m code
+		if(!gc.has_m() || !is_allowed_mcode(gc.get_code())){
+			if(grbl_mode) {
+				os.printf("error:Alarm lock\n");
+			} else {
+				os.printf("!!\n");
+			}
+			return true;
+		}
 	}
 
 	auto& handler = gc.has_g() ? gcode_handlers : mcode_handlers;

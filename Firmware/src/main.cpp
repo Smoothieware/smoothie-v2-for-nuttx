@@ -18,8 +18,14 @@
 #include <unistd.h>
 #include <iostream>
 
+#include "Module.h"
+
 // static std::mutex m;
 // static std::condition_variable cv;
+
+//set in uart thread to signal command_thread to print a query response
+static bool do_query = false;
+static OutputStream *query_os = nullptr;
 
 static int setup_CDC()
 {
@@ -130,7 +136,7 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
         ts.tv_sec  += 1;
     }
 
-    //int nbytes = mq_receive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0);    int nbytes = nbytes = mq_timedreceive(g_recv_mqfd, msg_buffer, TEST_MSGLEN, 0, &ts);
+    //int nbytes = mq_receive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0);
     int nbytes = mq_timedreceive(mqfd, (char *)&msg_buffer, sizeof(comms_msg_t), 0, &ts);
     if (nbytes < 0) {
         // mq_receive failed.  If the error is because of EINTR or ETIMEDOUT then it is not a failure. but we return anyway
@@ -173,6 +179,20 @@ bool dispatch_line(OutputStream& os, const char *line)
 
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
+
+        // we could handle this in CommandShell
+        if(strlen(line) >= 2 && line[1] == 'X') {
+            // handle $X
+            if(Module::is_halted()) {
+                Module::broadcast_halt(false);
+                os.puts("[Caution: Unlocked]\nok\n");
+            }else{
+                os.puts("ok\n");
+            }
+            return true;
+        }
+
+        // dispatch command
         if(!THEDISPATCHER->dispatch(line, os)) {
             if(line[0] == '$') {
                 os.puts("error:Invalid statement\n");
@@ -199,7 +219,7 @@ bool dispatch_line(OutputStream& os, const char *line)
         return true;
     }
 
-    // dispatch gcode to MotionControl and Planner
+    // dispatch gcodes
     for(auto& i : gcodes) {
         if(!THEDISPATCHER->dispatch(i, os)) {
             // no handler for this gcode, return ok - nohandler
@@ -253,7 +273,19 @@ static void usb_comms()
     for(;;) {
         n = read(fd, &line[cnt], 1);
         if(n == 1) {
-            if(discard) {
+            if(line[cnt] == 24) { // ^X
+                if(!Module::is_halted()) {
+                    Module::broadcast_halt(true);
+                    os.puts("ALARM: Abort during cycle\n");
+                }
+                discard = false;
+                cnt = 0;
+
+            } else if(line[cnt] == '?') {
+                do_query = true;
+                query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
+
+            } else if(discard) {
                 // we discard long lines until we get the newline
                 if(line[cnt] == '\n') discard = false;
 
@@ -310,7 +342,25 @@ static void uart_comms()
         n = read(0, &line[cnt], 1);
 
         if(n == 1) {
-            if(discard) {
+            if(line[cnt] == 24) { // ^X
+                if(!Module::is_halted()) {
+                    Module::broadcast_halt(true);
+                    os.puts("ALARM: Abort during cycle\n");
+                }
+                discard = false;
+                cnt = 0;
+
+            } else if(line[cnt] == '?') {
+                do_query = true;
+                query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
+
+                // } else if(line[cnt] == '!') {
+                //     do_feed_hold(true);
+
+                // } else if(line[cnt] == '~') {
+                //     do_feed_hold(false);
+
+            } else if(discard) {
                 // we discard long lines until we get the newline
                 if(line[cnt] == '\n') discard = false;
 
@@ -349,10 +399,11 @@ static void uart_comms()
     printf("UART Comms thread exiting\n");
 }
 
-#include "Module.h"
 #include "Conveyor.h"
+#include "Robot.h"
+
 /*
- * All commands must be executed inthe contrxt of this thread. It is equivalent to the main_loop in v1.
+ * All commands must be executed in the context of this thread. It is equivalent to the main_loop in v1.
  * Commands are sent to this thread via the message queue from things that can block (like I/O)
  * How to queue things from interupts like from Switch?
  * 1. We could have a timeout on the I/O queue of about 100-200ms and check an internal queue for commands
@@ -377,22 +428,33 @@ static void *commandthrd(void *)
         const char *line;
         OutputStream *os;
 
-        // This wil timeout after 200 ms
+        // This will timeout after 200 ms
         if(receive_message_queue(mqfd, &line, &os)) {
             //printf("DEBUG: got line: %s\n", line);
             dispatch_line(*os, line);
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
-        }else{
+        } else {
             // timed out or other error
+        }
+
+        // set in comms thread, and executed here to avoid thread clashes
+        if(do_query) {
+            do_query = false;
+            std::string r;
+            Robot::getInstance()->get_query_string(r);
+            if(query_os != nullptr) {
+                query_os->puts(r.c_str());
+                query_os = nullptr;
+            }
         }
 
         // call in_command_ctx for all modules that want it
         Module::broadcast_in_commmand_ctx();
 
         // we check the queue to see if it is ready to run
-        // TODO troubl eis we may stall waiting for the queue i some other module,
+        // TODO trouble is we may stall waiting for the queue in some other module,
         // we specifically deal with this in append_block, but need to check for other places
-        // This used to be done n on_idle which never blocked
+        // This used to be done in on_idle which never blocked
         Conveyor::getInstance()->check_queue();
     }
 }
@@ -433,11 +495,11 @@ static int smoothie_startup(int, char **)
     // configure the Dispatcher
     new Dispatcher();
 
-    bool ok= false;
+    bool ok = false;
 
     // open the config file
     do {
-        #if 0
+#if 0
         int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
         if(0 != ret) {
             std::cout << "Error mounting: " << "/dev/mmcsd0: " << ret << "\n";
@@ -455,22 +517,22 @@ static int smoothie_startup(int, char **)
 
 
         ConfigReader cr(fs);
-        #else
+#else
         ConfigReader cr(ss);
-        #endif
+#endif
 
         printf("Starting configuration of modules...\n");
 
         printf("configure the planner\n");
-        Planner *planner= new Planner();
+        Planner *planner = new Planner();
         planner->configure(cr);
 
         printf("configure the conveyor\n");
-        Conveyor *conveyor= new Conveyor();
+        Conveyor *conveyor = new Conveyor();
         conveyor->configure(cr);
 
         printf("configure the robot\n");
-        Robot *robot= new Robot();
+        Robot *robot = new Robot();
         if(!robot->configure(cr)) {
             printf("ERROR: Configuring robot failed\n");
             break;
@@ -506,7 +568,7 @@ static int smoothie_startup(int, char **)
     } while(0);
 
     // create the commandshell, it is dependent on some of the above
-    CommandShell *shell= new CommandShell();
+    CommandShell *shell = new CommandShell();
     shell->initialize();
 
     if(ok) {

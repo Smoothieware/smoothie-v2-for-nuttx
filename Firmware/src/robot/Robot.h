@@ -62,6 +62,7 @@ class Robot : public Module {
         uint8_t register_actuator(StepperMotor*);
         uint8_t get_number_registered_motors() const {return n_motors; }
         void enable_all_motors(bool flg);
+        void get_query_string(std::string&);
 
         bool is_halted() const { return halted; }
 
@@ -157,4 +158,5 @@ class Robot : public Module {
         uint8_t n_motors;                                    //count of the motors/axis registered
 
         bool halted{false};
+        bool new_status_format{true};
 };

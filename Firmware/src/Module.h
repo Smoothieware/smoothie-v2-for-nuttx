@@ -39,6 +39,8 @@ public:
 
     // sends the on_halt event to all modules, flg is true if halt, false if cleared
     static void broadcast_halt(bool flg);
+    static bool is_halted() { return halted; }
+
     static std::vector<std::string> print_modules();
     static void broadcast_in_commmand_ctx();
 
@@ -65,4 +67,5 @@ private:
     // set if sucessfully registered
     bool added{false};
 
+    static bool halted;
 };

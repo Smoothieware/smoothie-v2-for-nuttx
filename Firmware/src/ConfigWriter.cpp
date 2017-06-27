@@ -18,6 +18,7 @@
  *
  */
 
+// TODO there is a lot of code duplication here, need to refactor to simplify and remove it
 bool ConfigWriter::write(const char *section, const char* key, const char *value)
 {
     bool in_section = false;

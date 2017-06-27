@@ -2,6 +2,7 @@
 
 // static
 std::map<const std::string, Module::modrec_t> Module::registry;
+bool Module::halted= false;
 
 Module::Module(const char* grp, const char* inst) : group_name(grp), instance_name(inst)
 {
@@ -73,6 +74,7 @@ bool Module::add(const char* group, const char* instance)
 
 void Module::broadcast_halt(bool flg)
 {
+    halted= flg;
     for(auto& i : registry) {
         // foreach entry in the registry
         auto& x = i.second;
@@ -87,9 +89,11 @@ void Module::broadcast_halt(bool flg)
             x.module->on_halt(flg);
 
         } else {
-            // TODO something bad happened neoither map nor module is set
+            // TODO something bad happened neither map nor module is set
         }
     }
+
+    // TODO if was not idle then fixup positions maybe do this in Robot
 }
 
 void Module::broadcast_in_commmand_ctx()
