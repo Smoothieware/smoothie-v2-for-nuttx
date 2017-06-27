@@ -136,7 +136,7 @@ bool ConfigWriter::write(const char *section, const char* key, const char *value
     return true;;
 }
 
-#if 1
+#if 0
 #include <iostream>
 #include <fstream>
 
@@ -188,5 +188,110 @@ int main(int argc, char const *argv[])
     fsout.close();
 
     return 1;
+}
+#endif
+
+#if 1
+#include "unity.h"
+
+#include <iostream>
+#include <sstream>
+#include "../TestUnits/prettyprint.hpp"
+
+static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106 # comment\nfan.input_off_command = M107\n\
+fan.output_pin = 2.6 # pin to use\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
+misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\npsu#.x = bad\n\
+[dummy]\nenable = false #set to true\ntest2 # = bad\n   #ignore comment\n #[bogus]\n[bogus2 #]\n");
+
+
+void ConfigTest_write_no_change(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.enable", "true"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
+}
+
+void ConfigTest_write_change_value(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "misc.enable", "false"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+
+    auto pos = oss.str().find("misc.enable");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_EQUAL_INT(iss.str().find("misc.enable"), pos);
+
+    // check it is the same upto that change
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos+11) == iss.str().substr(0, pos+11));
+
+    // make sure it was changed to false
+    TEST_ASSERT_EQUAL_STRING("false", oss.str().substr(pos+14, 5).c_str());
+
+    // check rest is unchanged
+    TEST_ASSERT_TRUE(oss.str().substr(pos+19) == iss.str().substr(pos+18));
+}
+
+void ConfigTest_write_new_section(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("new_section", "key1", "key2"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    auto pos = oss.str().find("[new_section]\nkey1 = key2\n");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_EQUAL_INT(iss.str().size(), pos);
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+}
+
+void ConfigTest_write_new_key_to_section(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "new.enable", "false"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    // find new entry
+    auto pos = oss.str().find("new.enable = false\n");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+
+    // check it is the same upto that change
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+
+    // make sure it was inserted at the end of the [switch] section
+    TEST_ASSERT_EQUAL_INT(iss.str().find("[dummy]"), pos);
+
+    // check rest is unchanged
+    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos+20).c_str(), iss.str().substr(pos).c_str());
+}
+
+int main()
+{
+    UNITY_BEGIN();
+    RUN_TEST(ConfigTest_write_no_change);
+    RUN_TEST(ConfigTest_write_change_value);
+    RUN_TEST(ConfigTest_write_new_section);
+    RUN_TEST(ConfigTest_write_new_key_to_section);
+
+    return UNITY_END();
 }
 #endif
