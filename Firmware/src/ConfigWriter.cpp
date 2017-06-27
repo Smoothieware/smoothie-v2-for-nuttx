@@ -24,6 +24,10 @@ bool ConfigWriter::write(const char *section, const char* key, const char *value
     bool left_section = false;
     bool changed_line = false;
 
+    // sanity check
+    if(section == nullptr || strlen(section) == 0 || key == nullptr || strlen(key) == 0)
+        return false;
+
     // first find the section we want
     while (!is.eof()) {
         std::string s;
@@ -33,7 +37,7 @@ bool ConfigWriter::write(const char *section, const char* key, const char *value
         if(!is.good()) {
             if(is.eof()) {
                 // make sure we don't need to add a new section
-                if(!changed_line) {
+                if(!changed_line && value != nullptr && strlen(value) > 0) {
                     std::string new_line;
                     if(!in_section) {
                         // need to add new section at the end of the file, unless we were in the last section
@@ -89,12 +93,15 @@ bool ConfigWriter::write(const char *section, const char* key, const char *value
                     // this is the one we want to change
                     // write the new key value
                     // then copy the rest of the file
-                    std::string new_line(key);
-                    new_line.append(" = ");
-                    new_line.append(value);
-                    new_line.push_back('\n');
-                    os.write(new_line.c_str(), new_line.size());
-                    if(!os.good()) return false;
+                    // if value is blank then we simply delete the key
+                    if(value != nullptr && strlen(value) > 0) {
+                        std::string new_line(key);
+                        new_line.append(" = ");
+                        new_line.append(value);
+                        new_line.push_back('\n');
+                        os.write(new_line.c_str(), new_line.size());
+                        if(!os.good()) return false;
+                    }
                     changed_line = true;
 
                 } else {
@@ -107,10 +114,13 @@ bool ConfigWriter::write(const char *section, const char* key, const char *value
             } else if(left_section) {
                 // we just left the section, and we did not find the key/value so we write the new one
                 // TODO this leaves a space after the last entry if there was one in the source file
-                std::string new_line(key);
-                new_line.append(" = ");
-                new_line.append(value);
-                new_line.append("\n\n");
+                std::string new_line;
+                if(value != nullptr && strlen(value) > 0) {
+                    new_line.append(key);
+                    new_line.append(" = ");
+                    new_line.append(value);
+                    new_line.append("\n\n");
+                }
                 // add the last read section header
                 new_line.append(s);
                 new_line.push_back('\n');
@@ -233,13 +243,13 @@ void ConfigTest_write_change_value(void)
     TEST_ASSERT_EQUAL_INT(iss.str().find("misc.enable"), pos);
 
     // check it is the same upto that change
-    TEST_ASSERT_TRUE(oss.str().substr(0, pos+11) == iss.str().substr(0, pos+11));
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos + 11) == iss.str().substr(0, pos + 11));
 
     // make sure it was changed to false
-    TEST_ASSERT_EQUAL_STRING("false", oss.str().substr(pos+14, 5).c_str());
+    TEST_ASSERT_EQUAL_STRING("false", oss.str().substr(pos + 14, 5).c_str());
 
     // check rest is unchanged
-    TEST_ASSERT_TRUE(oss.str().substr(pos+19) == iss.str().substr(pos+18));
+    TEST_ASSERT_TRUE(oss.str().substr(pos + 19) == iss.str().substr(pos + 18));
 }
 
 void ConfigTest_write_new_section(void)
@@ -281,7 +291,58 @@ void ConfigTest_write_new_key_to_section(void)
     TEST_ASSERT_EQUAL_INT(iss.str().find("[dummy]"), pos);
 
     // check rest is unchanged
-    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos+20).c_str(), iss.str().substr(pos).c_str());
+    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos + 20).c_str(), iss.str().substr(pos).c_str());
+}
+
+void ConfigTest_write_remove_key_from_section(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.input_on_command", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    // make sure entry is gone
+    TEST_ASSERT_TRUE(std::string::npos == oss.str().find("fan.input_on_command"));
+
+    // check it is the same upto that change
+    auto pos = iss.str().find("fan.input_on_command");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+
+    // check rest is unchanged
+    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos).c_str(), iss.str().substr(pos + 38).c_str());
+}
+
+void ConfigTest_write_remove_nonexistant_key_from_section(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.xxx", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+
+    // check it is unchanged
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
+}
+
+void ConfigTest_write_remove_nonexistant_key(void)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("xxx", "yyy", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+
+    // check it is unchanged
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
 }
 
 int main()
@@ -291,6 +352,9 @@ int main()
     RUN_TEST(ConfigTest_write_change_value);
     RUN_TEST(ConfigTest_write_new_section);
     RUN_TEST(ConfigTest_write_new_key_to_section);
+    RUN_TEST(ConfigTest_write_remove_key_from_section);
+    RUN_TEST(ConfigTest_write_remove_nonexistant_key_from_section);
+    RUN_TEST(ConfigTest_write_remove_nonexistant_key);
 
     return UNITY_END();
 }
