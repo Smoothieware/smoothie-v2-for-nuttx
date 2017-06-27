@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "ConfigReader.h"
+#include "ConfigWriter.h"
 #include "TestRegistry.h"
 
 #include "prettyprint.hpp"
@@ -9,8 +10,8 @@
 
 static std::string str("[switch]\nfan.enable = true\nfan.input_on_command = M106 # comment\nfan.input_off_command = M107\n\
 fan.output_pin = 2.6 # pin to use\nfan.output_type = pwm\nmisc.enable = true\nmisc.input_on_command = M42\nmisc.input_off_command = M43\n\
-misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\n\
-[dummy]\nenable = false #set to true\n#ignore comment\n");
+misc.output_pin = 2.4\nmisc.output_type = digital\nmisc.value = 123.456\nmisc.ivalue= 123\npsu.enable = false\npsu#.x = bad\n\
+[dummy]\nenable = false #set to true\ntest2 # = bad\n   #ignore comment\n #[bogus]\n[bogus2 #]\n");
 
 REGISTER_TEST(ConfigTest, get_sections)
 {
@@ -63,6 +64,14 @@ REGISTER_TEST(ConfigTest, load_sub_sections)
 
     TEST_ASSERT_EQUAL_STRING("switch", cr.get_current_section().c_str());
     TEST_ASSERT_EQUAL_INT(3, ssmap.size());
+
+    TEST_ASSERT_TRUE(ssmap.find("fan") != ssmap.end());
+    TEST_ASSERT_TRUE(ssmap.find("misc") != ssmap.end());
+    TEST_ASSERT_TRUE(ssmap.find("psu") != ssmap.end());
+
+    TEST_ASSERT_EQUAL_INT(1, ssmap["psu"].size());
+    TEST_ASSERT_EQUAL_INT(5, ssmap["fan"].size());
+    TEST_ASSERT_EQUAL_INT(7, ssmap["misc"].size());
 
     bool fanok= false;
     bool miscok= false;
@@ -117,4 +126,135 @@ REGISTER_TEST(ConfigTest, load_sub_sections)
     TEST_ASSERT_TRUE(fanok);
     TEST_ASSERT_TRUE(miscok);
     TEST_ASSERT_FALSE(psuok);
+}
+
+REGISTER_TEST(ConfigTest, write_no_change)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.enable", "true"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
+}
+
+REGISTER_TEST(ConfigTest, write_change_value)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "misc.enable", "false"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+
+    auto pos = oss.str().find("misc.enable");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_EQUAL_INT(iss.str().find("misc.enable"), pos);
+
+    // check it is the same upto that change
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos + 11) == iss.str().substr(0, pos + 11));
+
+    // make sure it was changed to false
+    TEST_ASSERT_EQUAL_STRING("false", oss.str().substr(pos + 14, 5).c_str());
+
+    // check rest is unchanged
+    TEST_ASSERT_TRUE(oss.str().substr(pos + 19) == iss.str().substr(pos + 18));
+}
+
+REGISTER_TEST(ConfigTest, write_new_section)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("new_section", "key1", "key2"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    auto pos = oss.str().find("[new_section]\nkey1 = key2\n");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_EQUAL_INT(iss.str().size(), pos);
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+}
+
+REGISTER_TEST(ConfigTest, write_new_key_to_section)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "new.enable", "false"));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    // find new entry
+    auto pos = oss.str().find("new.enable = false\n");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+
+    // check it is the same upto that change
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+
+    // make sure it was inserted at the end of the [switch] section
+    TEST_ASSERT_EQUAL_INT(iss.str().find("[dummy]"), pos);
+
+    // check rest is unchanged
+    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos + 20).c_str(), iss.str().substr(pos).c_str());
+}
+
+REGISTER_TEST(ConfigTest, write_remove_key_from_section)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.input_on_command", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+    TEST_ASSERT_FALSE(oss.str() == iss.str());
+
+    // make sure entry is gone
+    TEST_ASSERT_TRUE(std::string::npos == oss.str().find("fan.input_on_command"));
+
+    // check it is the same upto that change
+    auto pos = iss.str().find("fan.input_on_command");
+    TEST_ASSERT_TRUE(pos != std::string::npos);
+    TEST_ASSERT_TRUE(oss.str().substr(0, pos) == iss.str().substr(0, pos));
+
+    // check rest is unchanged
+    TEST_ASSERT_EQUAL_STRING(oss.str().substr(pos).c_str(), iss.str().substr(pos + 38).c_str());
+}
+
+REGISTER_TEST(ConfigTest, write_remove_nonexistant_key_from_section)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("switch", "fan.xxx", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+
+    // check it is unchanged
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
+}
+
+REGISTER_TEST(ConfigTest, write_remove_nonexistant_key)
+{
+    std::istringstream iss(str);
+    std::ostringstream oss;
+    ConfigWriter cw(iss, oss);
+    TEST_ASSERT_TRUE(oss.str().empty());
+
+    TEST_ASSERT_TRUE(cw.write("xxx", "yyy", nullptr));
+    TEST_ASSERT_FALSE(oss.str().empty());
+
+    // check it is unchanged
+    TEST_ASSERT_TRUE(oss.str() == iss.str());
 }
