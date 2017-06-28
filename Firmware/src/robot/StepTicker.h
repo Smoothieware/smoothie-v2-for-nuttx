@@ -48,12 +48,11 @@ private:
 
     Block *current_block{nullptr};
     float frequency{0};
-    uint32_t period{0};
     uint32_t delay{0};
     uint32_t current_tick{0};
 
-    int step_fd{-1};
-    int unstep_fd{-1};
+    int step_per{-1};
+    int unstep_per{-1};
 
     uint8_t num_motors{0};
 

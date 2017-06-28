@@ -131,7 +131,7 @@ SRC.each do |s|
   FileUtils.mkdir_p(d) unless Dir.exists?(d)
 end
 
-include_dirs = ["./nuttx-export", "./nuttx-export/include"] + [Dir.glob(['./src/**/'])].flatten # ,'./staging/**/'
+include_dirs = ["./nuttx-export", "./nuttx-export/include", "./nuttx-export/arch/common"] + [Dir.glob(['./src/**/'])].flatten # ,'./staging/**/'
 sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./nuttx-export/include/libcxx", "./nuttx-export/arch/chip"]
 
 # [Dir.glob([PROG + '/**/Inc/**', './mri/**/'])].flatten
