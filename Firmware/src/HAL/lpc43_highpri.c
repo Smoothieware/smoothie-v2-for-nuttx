@@ -31,7 +31,7 @@
 
 static void (*app_handler)();
 
-static void tmr0_handler(void)
+__attribute__  ((section (".ramfunctions"))) void tmr0_handler(void)
 {
     /* Acknowledge the timer interrupt */
     putreg32(0x0f, LPC43_TMR_IR);

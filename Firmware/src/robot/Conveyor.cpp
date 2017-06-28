@@ -118,7 +118,7 @@ void Conveyor::check_queue(bool force)
 
 // called from step ticker ISR
 // we only ever access or change the read/tail index of the queue so this is thread safe
-bool Conveyor::get_next_block(Block **block)
+__attribute__  ((section (".ramfunctions"))) bool Conveyor::get_next_block(Block **block)
 {
     // empty the entire queue
     if (flush){
@@ -152,7 +152,7 @@ bool Conveyor::get_next_block(Block **block)
 }
 
 // called from step ticker ISR when block is finished, do not do anything slow here
-void Conveyor::block_finished()
+__attribute__  ((section (".ramfunctions"))) void Conveyor::block_finished()
 {
     // release the tail
     PQUEUE->release_tail();

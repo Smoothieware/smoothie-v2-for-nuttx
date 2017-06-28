@@ -35,7 +35,7 @@ StepTicker::~StepTicker()
 }
 
 // ISR callbacks from timer
-static void step_timer_handler(void)
+__attribute__  ((section (".ramfunctions")))  void step_timer_handler(void)
 {
     StepTicker::getInstance()->step_tick();
 }
@@ -89,19 +89,6 @@ bool StepTicker::stop()
     return false;
 }
 
-bool StepTicker::start_unstep_ticker()
-{
-    // int ret = ioctl(unstep_fd, TCIOC_START, 0);
-    // if (ret < 0) {
-    //     printf("ERROR: Failed to start the unstep timer: %d\n", errno);
-    //     //close(unstep_fd);
-    //     //unstep_fd = -1;
-    //     return false;
-    // }
-
-    return true;
-}
-
 // Set the base stepping frequency
 void StepTicker::set_frequency( float freq )
 {
@@ -139,8 +126,23 @@ void StepTicker::set_unstep_time( float microseconds )
     // TODO check that the unstep time is less than the step period, if not slow down step ticker
 }
 
+__attribute__  ((section (".ramfunctions")))  bool StepTicker::start_unstep_ticker()
+{
+    // int ret = ioctl(unstep_fd, TCIOC_START, 0);
+    // if (ret < 0) {
+    //     printf("ERROR: Failed to start the unstep timer: %d\n", errno);
+    //     //close(unstep_fd);
+    //     //unstep_fd = -1;
+    //     return false;
+    // }
+
+    // FIXME HACK!! so we can see the pulse on the LA
+    unstep_tick();
+    return true;
+}
+
 // Reset step pins on any motor that was stepped
-void StepTicker::unstep_tick()
+__attribute__  ((section (".ramfunctions")))  void StepTicker::unstep_tick()
 {
     for (int i = 0; i < num_motors; i++) {
         if(this->unstep[i]) {
@@ -163,7 +165,7 @@ void StepTicker::unstep_tick()
 // }
 
 // step clock
-void StepTicker::step_tick (void)
+__attribute__  ((section (".ramfunctions")))  void StepTicker::step_tick (void)
 {
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
@@ -275,7 +277,7 @@ void StepTicker::step_tick (void)
 }
 
 // only called from the step tick ISR (single consumer)
-bool StepTicker::start_next_block()
+__attribute__  ((section (".ramfunctions"))) bool StepTicker::start_next_block()
 {
     if(current_block == nullptr) return false;
 

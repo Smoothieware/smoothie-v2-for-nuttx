@@ -6,7 +6,7 @@ verbose(ENV['verbose'] == '1')
 TESTING = ENV['testing'].nil? ? false : ENV['testing'] == '1'
 
 PROG = 'smoothiev2'
-TARGET = "Bambino"
+TARGET = ENV['target'].nil? ? "Bambino" : ENV['target']
 
 DEBUG = ENV['debug'] == '1'
 
@@ -108,13 +108,13 @@ if TESTING
 
 
   SRC= src
-  puts "Building Test Cases"
+  puts "Building Test Cases debug: #{DEBUG}"
 
 else
   src = FileList['src/**/*.{c,cpp,s}'] #, 'staging/**/*.cpp' ]
   #src.exclude(/\/arm_solutions\/*/) # we don't want to look at these yet
   SRC = src
-  puts "Building Firmware"
+  puts "Building Firmware debug: #{DEBUG}"
 end
 
 $using_cpp= SRC.find { |i| File.extname(i) == ".cpp" }.nil? ? false : true
@@ -148,7 +148,8 @@ CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-ab
 CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-exceptions -fno-rtti -std=gnu++11 -fno-builtin-printf'
 
 # Linker script to be used.
-LSCRIPT = "./nuttx-export/build/spificonfig.ld"
+LSCRIPT = TARGET == 'LPC4337' ? "./v2pro4337.ld"  : "./nuttx-export/build/spificonfig.ld"
+
 # TODO need to figure this out from tool path
 LIBGCC = "#{LIBSDIR}/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a "
 LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
