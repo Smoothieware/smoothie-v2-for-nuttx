@@ -53,10 +53,14 @@ bool StepTicker::start()
     if(!started) {
 
         // setup the step timer
-        uint32_t per = highpri_tmr0_setup(frequency, (void *)step_timer_handler);
-        if(per ==  0) {
+        int permod = highpri_tmr0_setup(frequency, (void *)step_timer_handler);
+        if(permod <  0) {
             printf("ERROR: tmr0 setup failed\n");
             return false;
+        }
+        if(permod != 0) {
+            printf("Warning: stepticker is not accurate: %d\n", permod);
+            // TODO adjust actual step frequency accordingly
         }
 
         // setup the unstep timer (does not start until needed)

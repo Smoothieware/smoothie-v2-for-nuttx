@@ -83,5 +83,6 @@ int highpri_tmr0_setup(uint32_t frequency, void (*handler)())
     up_enable_irq(LPC43M4_IRQ_TIMER0);
     LPC43_TMR_ENABLEINT(dev, 0);
 
-    return period;
+    // return the inaccuracy of the frequency if it does not exactly divide the frequency
+    return clk_frequency % period;
 }

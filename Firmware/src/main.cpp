@@ -487,9 +487,9 @@ static int smoothie_startup(int, char **)
     // create the SlowTicker here as it us used by some modules
     SlowTicker *slow_ticker = new SlowTicker();
 
-    // create the StepTicker
+    // create the StepTicker, don't start it yet
     StepTicker *step_ticker = new StepTicker();
-    step_ticker->set_frequency(10000); // 100KHz
+    step_ticker->set_frequency(1000); // 100KHz
     step_ticker->set_unstep_time(2); // 2us step pulse by default
 
     // configure the Dispatcher
