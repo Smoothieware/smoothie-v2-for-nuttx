@@ -44,7 +44,7 @@ private:
     int initial_setup(const char *dev, void *timer_handler, uint32_t per);
     bool start_next_block();
     std::array<StepperMotor*, k_max_actuators> motor;
-    std::bitset<k_max_actuators> unstep;
+    uint32_t unstep{0}; // bitset was inefficient
 
     Block *current_block{nullptr};
     float frequency{0};

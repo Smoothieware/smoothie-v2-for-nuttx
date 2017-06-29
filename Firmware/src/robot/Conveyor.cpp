@@ -18,6 +18,8 @@
 
 #define PQUEUE (Planner::getInstance()->queue)
 
+#define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+
 /*
  * The conveyor manages the planner queue, and starting the executing chain of blocks
  * TODO is this even required anymore?
@@ -118,7 +120,7 @@ void Conveyor::check_queue(bool force)
 
 // called from step ticker ISR
 // we only ever access or change the read/tail index of the queue so this is thread safe
-__attribute__  ((section (".ramfunctions"))) bool Conveyor::get_next_block(Block **block)
+__ramfunc__ bool Conveyor::get_next_block(Block **block)
 {
     // empty the entire queue
     if (flush){
@@ -136,10 +138,10 @@ __attribute__  ((section (".ramfunctions"))) bool Conveyor::get_next_block(Block
     if(!allow_fetch) return false;
 
     Block *b= PQUEUE->get_tail();
-    assert(b != nullptr);
+    //assert(b != nullptr);
     // we cannot use this now if it is being updated
     if(!b->locked) {
-        assert(b->is_ready); // should never happen
+        //assert(b->is_ready); // should never happen
 
         b->is_ticking= true;
         b->recalculate_flag= false;
@@ -152,7 +154,7 @@ __attribute__  ((section (".ramfunctions"))) bool Conveyor::get_next_block(Block
 }
 
 // called from step ticker ISR when block is finished, do not do anything slow here
-__attribute__  ((section (".ramfunctions"))) void Conveyor::block_finished()
+__ramfunc__ void Conveyor::block_finished()
 {
     // release the tail
     PQUEUE->release_tail();

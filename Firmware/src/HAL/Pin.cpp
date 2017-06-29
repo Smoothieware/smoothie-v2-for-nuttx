@@ -1,9 +1,6 @@
 #include "Pin.h"
 #include "StringUtils.h"
 
-#include "lpc43_pinconfig.h"
-#include "lpc43_gpio.h"
-
 Pin::Pin()
 {
     this->inverting = false;

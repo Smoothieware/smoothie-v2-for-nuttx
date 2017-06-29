@@ -22,12 +22,13 @@ Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_INPUT);
 #define SET_STEPTICKER_DEBUG_PIN(n)
 #endif
 
+#define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+
 StepTicker *StepTicker::instance;
 
 StepTicker::StepTicker()
 {
     instance = this; // setup the Singleton instance of the stepticker
-    this->unstep.reset();
 }
 
 StepTicker::~StepTicker()
@@ -35,7 +36,7 @@ StepTicker::~StepTicker()
 }
 
 // ISR callbacks from timer
-__attribute__  ((section (".ramfunctions")))  void step_timer_handler(void)
+__ramfunc__  void step_timer_handler(void)
 {
     StepTicker::getInstance()->step_tick();
 }
@@ -126,7 +127,7 @@ void StepTicker::set_unstep_time( float microseconds )
     // TODO check that the unstep time is less than the step period, if not slow down step ticker
 }
 
-__attribute__  ((section (".ramfunctions")))  bool StepTicker::start_unstep_ticker()
+__ramfunc__  bool StepTicker::start_unstep_ticker()
 {
     // int ret = ioctl(unstep_fd, TCIOC_START, 0);
     // if (ret < 0) {
@@ -142,14 +143,16 @@ __attribute__  ((section (".ramfunctions")))  bool StepTicker::start_unstep_tick
 }
 
 // Reset step pins on any motor that was stepped
-__attribute__  ((section (".ramfunctions")))  void StepTicker::unstep_tick()
+__ramfunc__  void StepTicker::unstep_tick()
 {
+    uint32_t bitmsk= 1;
     for (int i = 0; i < num_motors; i++) {
-        if(this->unstep[i]) {
+        if(this->unstep & bitmsk) {
             this->motor[i]->unstep();
         }
+        bitmsk <<= 1;
     }
-    this->unstep.reset();
+    this->unstep= 0;
 }
 
 // extern "C" void PendSV_Handler(void)
@@ -165,7 +168,7 @@ __attribute__  ((section (".ramfunctions")))  void StepTicker::unstep_tick()
 // }
 
 // step clock
-__attribute__  ((section (".ramfunctions")))  void StepTicker::step_tick (void)
+__ramfunc__  void StepTicker::step_tick (void)
 {
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
@@ -226,7 +229,7 @@ __attribute__  ((section (".ramfunctions")))  void StepTicker::step_tick (void)
             // step the motor
             bool ismoving = motor[m]->step(); // returns false if the moving flag was set to false externally (probes, endstops etc)
             // we stepped so schedule an unstep
-            unstep.set(m);
+            unstep |= (1<<m);
 
             if(!ismoving || current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
                 // done
@@ -246,7 +249,7 @@ __attribute__  ((section (".ramfunctions")))  void StepTicker::step_tick (void)
     // Note there could be a race here if we run another tick before the unsteps have happened,
     // right now it takes about 3-4us but if the unstep were near 10uS or greater it would be an issue
     // also it takes at least 2us to get here so even when set to 1us pulse width it will still be about 3us
-    if( unstep.any()) {
+    if( unstep != 0) {
         start_unstep_ticker();
     }
 
@@ -277,7 +280,7 @@ __attribute__  ((section (".ramfunctions")))  void StepTicker::step_tick (void)
 }
 
 // only called from the step tick ISR (single consumer)
-__attribute__  ((section (".ramfunctions"))) bool StepTicker::start_next_block()
+__ramfunc__ bool StepTicker::start_next_block()
 {
     if(current_block == nullptr) return false;
 

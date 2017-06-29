@@ -5,10 +5,11 @@
 #include <string>
 #include <bitset>
 
-extern "C" {
-    void lpc43_gpio_write(uint16_t gpiocfg, bool value);
-    bool lpc43_gpio_read(uint16_t gpiocfg);
-}
+#include "lpc43_pinconfig.h"
+#include "lpc43_gpio.h"
+
+#define putreg8(v,a)   (*(volatile uint8_t *)(a) = (v))
+#define getreg8(a)     (*(volatile uint8_t *)(a))
 
 class Pin
 {
@@ -32,25 +33,23 @@ public:
     Pin* as_output();
     Pin* as_input();
 
-    // TODO we need to do this inline without calling lpc43_gpio_read due to ISR being in SRAM not FLASH
+    // we need to do this inline without calling lpc43_gpio_read due to ISR being in SRAM not FLASH
     inline bool get() const
     {
         if (!this->valid) return false;
-        return this->inverting ^ lpc43_gpio_read(gpiocfg);
+        //return this->inverting ^ lpc43_gpio_read(gpiocfg);
+        return (getreg8(LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT))) & GPIO_B) != 0;
     }
 
-    // TODO we need to do this inline without calling lpc43_gpio_write due to ISR being in SRAM not FLASH
+    // we need to do this inline without calling lpc43_gpio_write due to ISR being in SRAM not FLASH
     inline void set(bool value)
     {
         if (!this->valid) return;
-        if ( this->inverting ^ value ) {
-            lpc43_gpio_write(gpiocfg, true);
-        } else {
-            lpc43_gpio_write(gpiocfg, false);
-        }
+        //lpc43_gpio_write(gpiocfg, this->inverting ^ value);
+        putreg8((uint8_t)value, LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT)));
     }
 
-    uint16_t get_gpiocfg() const { return gpiocfg; }
+    inline uint16_t get_gpiocfg() const { return gpiocfg; }
 
     // mbed::PwmOut *hardware_pwm();
 
