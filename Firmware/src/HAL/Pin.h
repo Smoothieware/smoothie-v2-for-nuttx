@@ -32,12 +32,14 @@ public:
     Pin* as_output();
     Pin* as_input();
 
+    // TODO we need to do this inline without calling lpc43_gpio_read due to ISR being in SRAM not FLASH
     inline bool get() const
     {
         if (!this->valid) return false;
         return this->inverting ^ lpc43_gpio_read(gpiocfg);
     }
 
+    // TODO we need to do this inline without calling lpc43_gpio_write due to ISR being in SRAM not FLASH
     inline void set(bool value)
     {
         if (!this->valid) return;
