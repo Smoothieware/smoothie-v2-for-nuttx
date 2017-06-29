@@ -39,7 +39,7 @@ REGISTER_TEST(TimeTest, read_flash)
 
     uint32_t n= 8000000;
     systime_t st = clock_systimer();
-    while(p < (uint32_t *)(0x14000000+(n/4))) {
+    while(p < (uint32_t *)(0x14000000+n)) {
         uint32_t c= *p++;
     }
     systime_t en = clock_systimer();
