@@ -43,16 +43,16 @@ float get_pll1_clk()
     // get PLL1
     uint32_t fmr= (0x09<<24) | (1<<23) | (0xFF);
     putreg32(fmr, 0x40050014);
-    usleep(1000);
+    usleep(100000);
     uint32_t mf= *(uint32_t *)0x40050014;
-    printf("mf= %08X\n", mf);
+    //printf("mf= %08X\n", mf);
     float freq= 12e6F * (((mf>>9) & 0x3FFF)/255.0F);
     printf("Measured PLL1= %10.1f Hz\n", freq);
 
     // get DIVB
     fmr= (0x0D<<24) | (1<<23) | (0xFF);
     putreg32(fmr, 0x40050014);
-    usleep(1000);
+    usleep(100000);
     mf= *(uint32_t *)0x40050014;
     freq= 12e6F * (((mf>>9) & 0x3FFF)/255.0F);
     printf("Measured DIVB= %10.1f Hz\n", freq);
