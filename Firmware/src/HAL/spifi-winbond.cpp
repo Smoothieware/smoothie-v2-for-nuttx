@@ -2,15 +2,13 @@
 #include <stdio.h>
 
 // SPIFI Peripheral
-typedef struct SPIFI_t
-{
+typedef struct SPIFI_t {
     volatile uint32_t CTRL;
     volatile uint32_t CMD;
     volatile uint32_t ADDR;
     volatile uint32_t IDATA;
     volatile uint32_t CLIMIT;
-    volatile union
-    {
+    volatile union {
         volatile uint8_t  DATA8;
         volatile uint16_t DATA16;
         volatile uint32_t DATA32;
@@ -19,62 +17,60 @@ typedef struct SPIFI_t
     volatile uint32_t STAT;
 } SPIFI_t;
 
-SPIFI_t* SPIFI = (SPIFI_t*)0x40003000;
+#define SPIFI_STAT_MCINIT                    (1 << 0)
+#define SPIFI_STAT_CMD                       (1 << 1)
+#define SPIFI_STAT_RESET                     (1 << 4)
 
-const uint32_t SPIFI_STAT_MCINIT                    = 1 << 0;
-const uint32_t SPIFI_STAT_CMD                       = 1 << 1;
-const uint32_t SPIFI_STAT_RESET                     = 1 << 4;
+#define SPIFI_CTRL_TIMEOUT_SHIFT             (0)
+#define SPIFI_CTRL_TIMEOUT_MAX               (0xFFFF << SPIFI_CTRL_TIMEOUT_SHIFT)
+#define SPIFI_CTRL_CSHIGH_SHIFT              (16)
+#define SPIFI_CTRL_RFCLK                     (1 << 29)
+#define SPIFI_CTRL_FBCLK                     (1 << 30)
 
-const uint32_t SPIFI_CTRL_TIMEOUT_SHIFT             = 0;
-const uint32_t SPIFI_CTRL_TIMEOUT_MAX               = 0xFFFF << SPIFI_CTRL_TIMEOUT_SHIFT;
-const uint32_t SPIFI_CTRL_CSHIGH_SHIFT              = 16;
-const uint32_t SPIFI_CTRL_RFCLK                     = 1 << 29;
-const uint32_t SPIFI_CTRL_FBCLK                     = 1 << 30;
-
-const uint32_t SPIFI_CMD_DATALEN_SHIFT              = 0;
-const uint32_t SPIFI_CMD_DOUT_SHIFT                 = 15;
-const uint32_t SPIFI_CMD_DOUT_OUTPUT                = 1 << SPIFI_CMD_DOUT_SHIFT;
-const uint32_t SPIFI_CMD_DOUT_INPUT                 = 0 << SPIFI_CMD_DOUT_SHIFT;
-const uint32_t SPIFI_CMD_INTLEN_SHIFT               = 16;
-const uint32_t SPIFI_CMD_FIELDFORM_SHIFT            = 19;
-const uint32_t SPIFI_CMD_FIELDFORM_ALL_SERIAL       = 0 << SPIFI_CMD_FIELDFORM_SHIFT;
-const uint32_t SPIFI_CMD_FIELDFORM_OPCODE_SERIAL    = 2 << SPIFI_CMD_FIELDFORM_SHIFT;
-const uint32_t SPIFI_CMD_FRAMEFORM_SHIFT            = 21;
-const uint32_t SPIFI_CMD_FRAMEFORM_OPCODE           = 1 << SPIFI_CMD_FRAMEFORM_SHIFT;
-const uint32_t SPIFI_CMD_FRAMEFORM_OPCODE_3ADDRESS  = 4 << SPIFI_CMD_FRAMEFORM_SHIFT;
-const uint32_t SPIFI_CMD_FRAMEFORM_3ADDRESS         = 6 << SPIFI_CMD_FRAMEFORM_SHIFT;
-const uint32_t SPIFI_CMD_OPCODE_SHIFT               = 24;
+#define SPIFI_CMD_DATALEN_SHIFT              (0)
+#define SPIFI_CMD_DOUT_SHIFT                 (15)
+#define SPIFI_CMD_DOUT_OUTPUT                (1 << SPIFI_CMD_DOUT_SHIFT)
+#define SPIFI_CMD_DOUT_INPUT                 (0 << SPIFI_CMD_DOUT_SHIFT)
+#define SPIFI_CMD_INTLEN_SHIFT               (16)
+#define SPIFI_CMD_FIELDFORM_SHIFT            (19)
+#define SPIFI_CMD_FIELDFORM_ALL_SERIAL       (0 << SPIFI_CMD_FIELDFORM_SHIFT)
+#define SPIFI_CMD_FIELDFORM_OPCODE_SERIAL    (2 << SPIFI_CMD_FIELDFORM_SHIFT)
+#define SPIFI_CMD_FRAMEFORM_SHIFT            (21)
+#define SPIFI_CMD_FRAMEFORM_OPCODE           (1 << SPIFI_CMD_FRAMEFORM_SHIFT)
+#define SPIFI_CMD_FRAMEFORM_OPCODE_3ADDRESS  (4 << SPIFI_CMD_FRAMEFORM_SHIFT)
+#define SPIFI_CMD_FRAMEFORM_3ADDRESS         (6 << SPIFI_CMD_FRAMEFORM_SHIFT)
+#define SPIFI_CMD_OPCODE_SHIFT               (24)
 
 
 // System Control Unit Peripheral
-uint32_t           SCU_BASE = 0x40086000;
+#define SCU_BASE 0x40086000
 
-volatile uint32_t* SFSP3_3 = (volatile uint32_t*)(SCU_BASE + 0x18C);
-volatile uint32_t* SFSP3_4 = (volatile uint32_t*)(SCU_BASE + 0x190);
-volatile uint32_t* SFSP3_5 = (volatile uint32_t*)(SCU_BASE + 0x194);
-volatile uint32_t* SFSP3_6 = (volatile uint32_t*)(SCU_BASE + 0x198);
-volatile uint32_t* SFSP3_7 = (volatile uint32_t*)(SCU_BASE + 0x19C);
-volatile uint32_t* SFSP3_8 = (volatile uint32_t*)(SCU_BASE + 0x1A0);
+#define SFSP3_3 ((volatile uint32_t*)(SCU_BASE + 0x18C))
+#define SFSP3_4 ((volatile uint32_t*)(SCU_BASE + 0x190))
+#define SFSP3_5 ((volatile uint32_t*)(SCU_BASE + 0x194))
+#define SFSP3_6 ((volatile uint32_t*)(SCU_BASE + 0x198))
+#define SFSP3_7 ((volatile uint32_t*)(SCU_BASE + 0x19C))
+#define SFSP3_8 ((volatile uint32_t*)(SCU_BASE + 0x1A0))
 
-const uint32_t SFS_MODE_SHIFT   = 0;
-const uint32_t SFS_MODE_3       = 3 << SFS_MODE_SHIFT;
-const uint32_t SFS_EPUN_SHIFT   = 4;
-const uint32_t SFS_EPUN_DISABLE = 1 << SFS_EPUN_SHIFT;  // Disable pull-down.
-const uint32_t SFS_EHS_SHIFT    = 5;
-const uint32_t SFS_EHS_FAST     = 1 << SFS_EHS_SHIFT;
-const uint32_t SFS_EZI_SHIFT    = 6;
-const uint32_t SFS_EZI_ENABLE   = 1 << SFS_EZI_SHIFT;   // Enable input buffer.
-const uint32_t SFS_ZIF_SHIFT    = 7;
-const uint32_t SFS_ZIF_DISABLE  = 1 << SFS_ZIF_SHIFT;   // Disable input glitch filter.
+#define SFS_MODE_SHIFT   (0)
+#define SFS_MODE_3       (3 << SFS_MODE_SHIFT)
+#define SFS_EPUN_SHIFT   (4)
+#define SFS_EPUN_DISABLE (1 << SFS_EPUN_SHIFT)  // Disable pull-down
+#define SFS_EHS_SHIFT    (5)
+#define SFS_EHS_FAST     (1 << SFS_EHS_SHIFT)
+#define SFS_EZI_SHIFT    (6)
+#define SFS_EZI_ENABLE   (1 << SFS_EZI_SHIFT)   // Enable input buffer
+#define SFS_ZIF_SHIFT    (7)
+#define SFS_ZIF_DISABLE  (1 << SFS_ZIF_SHIFT)   // Disable input glitch filter
 
 
 // Clock Generatio Unit Peripheral
-volatile uint32_t* CGU_IDIVB_CTRL = (volatile uint32_t*)0x4005004C;
+#define CGU_IDIVB_CTRL ((volatile uint32_t*)0x4005004C)
 
-const uint32_t CGU_IDIV_CTRL_IDIV_SHIFT = 2;
-const uint32_t CGU_IDIV_CTRL_AUTOBLOCK = 1 << 11;
-const uint32_t CGU_IDIV_CTRL_CLKSEL_SHIFT = 24;
-const uint32_t CGU_IDIV_CTRL_CLKSEL_PLL1 = 0x9 << CGU_IDIV_CTRL_CLKSEL_SHIFT;
+#define CGU_IDIV_CTRL_IDIV_SHIFT 2
+#define CGU_IDIV_CTRL_AUTOBLOCK (1 << 11)
+#define CGU_IDIV_CTRL_CLKSEL_SHIFT 24
+#define CGU_IDIV_CTRL_CLKSEL_PLL1 (0x9 << CGU_IDIV_CTRL_CLKSEL_SHIFT)
 
 
 __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
@@ -85,6 +81,8 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
 
     // Disable interrupts since interrupts in FLASH can't fire while we are setting up SPIFI.
     __asm volatile ("cpsid i" : : : "memory");
+
+    SPIFI_t* SPIFI = (SPIFI_t*)0x40003000;
 
     // Set the SPIFI pins for low-slew high speed output.
     volatile uint32_t* SPIFI_SCK_PIN_CONFIG = SFSP3_3;
@@ -103,8 +101,7 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
 
     // Reset the SPIFI peripheral to exit memory mode.
     SPIFI->STAT = SPIFI_STAT_RESET;
-    while (SPIFI->STAT & SPIFI_STAT_RESET)
-    {
+    while (SPIFI->STAT & SPIFI_STAT_RESET) {
     }
 
     // Remember what the command registers looked like before we start using it to query JEDEC ID.
@@ -119,8 +116,7 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
     uint8_t        manufacturerId = 0;
     uint16_t       capacity = 0;
     // Issue read twice since the first read after reset doesn't seem to give good results.
-    for (int i = 0 ; i < 2 ; i++)
-    {
+    for (int i = 0 ; i < 2 ; i++) {
         SPIFI->CMD = (3 << SPIFI_CMD_DATALEN_SHIFT) |
                      SPIFI_CMD_DOUT_INPUT |
                      (0 << SPIFI_CMD_INTLEN_SHIFT) |
@@ -133,22 +129,19 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
     }
 
     // Put things back the way they were if we aren't setting up winbond SPIFI FLASH.
-    if (manufacturerId != WINBOND_MANUFACTURER_ID)
-    {
+    if (manufacturerId != WINBOND_MANUFACTURER_ID) {
         // Need to reset the FRAMEFORM since they seem to be zeroed out.
         spifiOrigCmd |= SPIFI_CMD_FRAMEFORM_OPCODE_3ADDRESS;
         spifiOrigMCmd |= SPIFI_CMD_FRAMEFORM_3ADDRESS;
 
         // Send initial command with opcode and wait for it to complete.
         SPIFI->CMD = spifiOrigCmd;
-        while (SPIFI->STAT & SPIFI_STAT_CMD)
-        {
+        while (SPIFI->STAT & SPIFI_STAT_CMD) {
         }
 
         // Setup the memory command with no opcode to get back into memory mode.
         SPIFI->MCMD = spifiOrigMCmd;
-        while (0 == (SPIFI->STAT & SPIFI_STAT_MCINIT))
-        {
+        while (0 == (SPIFI->STAT & SPIFI_STAT_MCINIT)) {
         }
 
         goto CleanupAndExit;
@@ -171,17 +164,15 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
                  SPIFI_CMD_FIELDFORM_OPCODE_SERIAL |
                  SPIFI_CMD_FRAMEFORM_OPCODE_3ADDRESS |
                  (FLASH_OPCODE_FAST_READ << SPIFI_CMD_OPCODE_SHIFT);
-    while (SPIFI->STAT & SPIFI_STAT_CMD)
-    {
+    while (SPIFI->STAT & SPIFI_STAT_CMD) {
     }
 
     // Setup the memory command with no opcode to get back into memory mode.
     SPIFI->MCMD = (3 << SPIFI_CMD_INTLEN_SHIFT) |
-                 SPIFI_CMD_FIELDFORM_OPCODE_SERIAL |
-                 SPIFI_CMD_FRAMEFORM_3ADDRESS |
-                 (FLASH_OPCODE_FAST_READ << SPIFI_CMD_OPCODE_SHIFT);
-    while (0 == (SPIFI->STAT & SPIFI_STAT_MCINIT))
-    {
+                  SPIFI_CMD_FIELDFORM_OPCODE_SERIAL |
+                  SPIFI_CMD_FRAMEFORM_3ADDRESS |
+                  (FLASH_OPCODE_FAST_READ << SPIFI_CMD_OPCODE_SHIFT);
+    while (0 == (SPIFI->STAT & SPIFI_STAT_MCINIT)) {
     }
 
 CleanupAndExit:
