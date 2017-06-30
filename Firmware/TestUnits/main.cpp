@@ -85,8 +85,11 @@ static int run_tests(int argc, char *argv[])
     return ret;
 }
 
+void configureSPIFI();
 extern "C" int smoothie_main(int argc, char *argv[])
 {
+    configureSPIFI(); // full speed ahead
+
     int ret = boardctl(BOARDIOC_INIT, 0);
     if(OK != ret) {
         printf("ERROR: BOARDIOC_INIT falied\n");

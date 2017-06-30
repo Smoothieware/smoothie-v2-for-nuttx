@@ -37,17 +37,16 @@ __attribute__  ((section (".ramfunctions"))) void runMemoryTest()
     printf("elapsed time %d us over %d bytes %1.4f mb/sec\n", TICK2USEC(en-st), n, (float)n/TICK2USEC(en-st));
 }
 
-void configureSPIFI();
+//void configureSPIFI();
 float get_pll1_clk();
 
 REGISTER_TEST(TimeTest, read_flash)
 {
+    // get_pll1_clk();
+
+    // configureSPIFI(); // done in main now
+
     get_pll1_clk();
-
-    configureSPIFI();
-
-    get_pll1_clk();
-
     runMemoryTest();
 }
 
