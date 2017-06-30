@@ -16,12 +16,13 @@
 #ifdef STEPTICKER_DEBUG_PIN
 // debug pins, only used if defined in src/makefile
 #include "Pin.h"
-Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_INPUT);
+Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_OUTPUT);
 #define SET_STEPTICKER_DEBUG_PIN(n) { stepticker_debug_pin.set(n); }
 #else
 #define SET_STEPTICKER_DEBUG_PIN(n)
 #endif
 
+// TODO move ramfunc define to a utils.h
 #define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 StepTicker *StepTicker::instance;
@@ -67,9 +68,9 @@ bool StepTicker::start()
         // setup the unstep timer (does not start until needed)
 //       unstep_fd = initial_setup(UNSTEP_TICKER_DEVNAME, (void*)unstep_timer_handler, delay);
 
+        started = true;
     }
 
-    started = true;
     current_tick = 0;
 
     return true;

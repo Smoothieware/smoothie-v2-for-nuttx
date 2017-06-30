@@ -144,8 +144,8 @@ DEFINES= defines.join(' ')
 
 DEPFLAGS = '-MMD '
 CSTD = '-std=c99'
-CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffast-math " + (DEBUG ? "-O0 -g " : "-O2 -g")
-CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-exceptions -fno-rtti -std=gnu++11 -fno-builtin-printf'
+CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16  " + (DEBUG ? "-O0 -g " : "-O2 -g")
+CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-exceptions -fno-rtti -std=gnu++11 -fno-builtin-printf -fno-builtin-isnan -ffast-math'
 
 # Linker script to be used.
 LSCRIPT = TARGET == 'LPC4337' ? "./v2pro4337.ld"  : "./nuttx-export/build/spificonfig.ld"

@@ -18,6 +18,7 @@
 
 #define PQUEUE (Planner::getInstance()->queue)
 
+// TODO move ramfunc define to a utils.h
 #define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 /*

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sstream>
+#include <cmath>
 
 #include "TestRegistry.h"
 
@@ -32,6 +33,13 @@ REGISTER_TEST(TimeTest, delta_ik)
 
     TEST_PASS();
 }
+
+// REGISTER_TEST(TimeTest, isnan)
+// {
+//     float f= NAN;
+//     TEST_ASSERT_TRUE(::isnan(f));
+//     TEST_ASSERT_FALSE(::isnan(0.0F));
+// }
 
 REGISTER_TEST(TimeTest, read_flash)
 {

@@ -24,7 +24,7 @@
 #include <string>
 #include <algorithm>
 
-#define hypotf(a, b) (sqrtf(powf(a, 2) + powf(b, 2)))
+#define hypotf(a, b) (sqrtf(((a)*(a)) + ((b)*(b))))
 
 #define  default_seek_rate_key          "default_seek_rate"
 #define  default_feed_rate_key          "default_feed_rate"
@@ -222,7 +222,7 @@ bool Robot::configure(ConfigReader& cr)
 
         actuators[a]->change_steps_per_mm(cr.get_float(mm, steps_per_mm_key, a == Z_AXIS ? 2560.0F : 80.0F));
         actuators[a]->set_max_rate(       cr.get_float(mm, max_rate_key,     30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(   cr.get_float(mm, acceleration_key, NAN)); // mm/secs² if NAN it uses the default acceleration
+        actuators[a]->set_acceleration(   cr.get_float(mm, acceleration_key, -1)); // mm/secs² if -1 it uses the default acceleration
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -784,8 +784,8 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
                 char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
                 if(gcode.has_arg(axis)) {
                     float acc = gcode.get_arg(axis); // mm/s^2
-                    // enforce positive
-                    if (acc <= 0.0F) acc = NAN;
+                    // negative or zero disables it
+                    if (acc <= 0.0F) acc = -1;
                     actuators[i]->set_acceleration(acc);
                 }
             }
@@ -803,7 +803,7 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
                 float jd = gcode.get_arg('Z');
                 // enforce minimum, -1 disables it and uses regular junction deviation
                 if (jd <= -1.0F)
-                    jd = NAN;
+                    jd = 0;
                 Planner::getInstance()->z_junction_deviation = jd;
             }
             if (gcode.has_arg('S')) {
@@ -845,16 +845,16 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
             }
             os.printf("\n");
 
-            // only print if not NAN
+            // only print if not 0
             os.printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
             for (int i = 0; i < n_motors; ++i) {
                 if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
                 char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                if(!isnan(actuators[i]->get_acceleration())) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
+                if(actuators[i]->get_acceleration() > 0) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
             }
             os.printf("\n");
 
-            os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, isnan(Planner::getInstance()->z_junction_deviation) ? -1 : Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
+            os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
 
             os.printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
 
@@ -956,13 +956,15 @@ void Robot::process_move(GCode& gcode, enum MOTION_MODE_T motion_mode)
 {
     // we have a G0/G1/G2/G3 so extract parameters and apply offsets to get machine coordinate target
     // get XYZ and one E (which goes to the selected extruder)
-    float param[4] {NAN, NAN, NAN, NAN};
+    float param[4] {0, 0, 0, 0};
+    bool is_param[4] {false, false, false, false};
 
     // process primary axis
     for(int i = X_AXIS; i <= Z_AXIS; ++i) {
         char letter = 'X' + i;
         if( gcode.has_arg(letter) ) {
             param[i] = this->to_millimeters(gcode.get_arg(letter));
+            is_param[i]= true;
         }
     }
 
@@ -980,33 +982,33 @@ void Robot::process_move(GCode& gcode, enum MOTION_MODE_T motion_mode)
     if(!next_command_is_MCS) {
         if(this->absolute_mode) {
             // apply wcs offsets and g92 offset and tool offset
-            if(!isnan(param[X_AXIS])) {
+            if(is_param[X_AXIS]) {
                 target[X_AXIS] = param[X_AXIS] + std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset) + std::get<X_AXIS>(tool_offset);
             }
 
-            if(!isnan(param[Y_AXIS])) {
+            if(is_param[Y_AXIS]) {
                 target[Y_AXIS] = param[Y_AXIS] + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset) + std::get<Y_AXIS>(tool_offset);
             }
 
-            if(!isnan(param[Z_AXIS])) {
+            if(is_param[Z_AXIS]) {
                 target[Z_AXIS] = param[Z_AXIS] + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset) + std::get<Z_AXIS>(tool_offset);
             }
 
         } else {
             // they are deltas from the machine_position if specified
             for(int i = X_AXIS; i <= Z_AXIS; ++i) {
-                if(!isnan(param[i])) target[i] = param[i] + machine_position[i];
+                if(is_param[i]) target[i] = param[i] + machine_position[i];
             }
         }
 
     } else {
         // already in machine coordinates, we do not add wcs or tool offset for that
         for(int i = X_AXIS; i <= Z_AXIS; ++i) {
-            if(!isnan(param[i])) target[i] = param[i];
+            if(is_param[i]) target[i] = param[i];
         }
     }
 
-    float delta_e = NAN;
+    float delta_e = 0;
 
 #if MAX_ROBOT_ACTUATORS > 3
     // process extruder parameters, for active extruder only (only one active extruder at a time)
@@ -1017,7 +1019,7 @@ void Robot::process_move(GCode& gcode, enum MOTION_MODE_T motion_mode)
     }
 
     // do E for the selected extruder
-    if(selected_extruder > 0 && !isnan(param[E_AXIS])) {
+    if(selected_extruder > 0 && is_param[E_AXIS]) {
         if(this->e_absolute_mode) {
             target[selected_extruder] = param[E_AXIS];
             delta_e = target[selected_extruder] - machine_position[selected_extruder];
@@ -1124,6 +1126,7 @@ void Robot::reset_axis_position(float position, int axis)
 void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 {
     for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+        // FIXME we cannot use isnan anymore
         if(!isnan(ac[i])) actuators[i]->change_last_milestone(ac[i]);
     }
 
@@ -1290,7 +1293,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
         if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            if(ma > 0.0001F) {  // if axis does not have acceleration set then it uses the default_acceleration
                 float ca = fabsf((d / distance) * acceleration);
                 if (ca > ma) {
                     acceleration *= ( ma / ca );
@@ -1374,7 +1377,7 @@ bool Robot::append_line(GCode& gcode, const float target[], float rate_mm_s, flo
         NOTE we need to do this before we segment the line (for deltas)
     */
     if(!isnan(delta_e) && gcode.has_g() && gcode.get_code() == 1) {
-        // TODO
+        // TODO donl't use isnan and implement e scaling
         //float data[2] = {delta_e, rate_mm_s / millimeters_of_travel};
         // if(PublicData::set_value(extruder_key, target_key, data)) {
         //     rate_mm_s *= data[1]; // adjust the feedrate
