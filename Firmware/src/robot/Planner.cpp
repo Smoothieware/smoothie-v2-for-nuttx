@@ -36,7 +36,7 @@ bool Planner::configure(ConfigReader& cr)
     ConfigReader::section_map_t m;
     if(cr.get_section("planner", m)) {
         xy_junction_deviation = cr.get_float(m, junction_deviation_key, 0.05F);
-        z_junction_deviation = cr.get_float(m, z_junction_deviation_key, NAN);
+        z_junction_deviation = cr.get_float(m, z_junction_deviation_key, -1);
         minimum_planner_speed = cr.get_float(m, minimum_planner_speed_key, 0.0f);
         planner_queue_size= cr.get_int(m, planner_queue_size_key, 32);
 
@@ -95,7 +95,7 @@ bool Planner::append_block(ActuatorCoordinates& actuator_pos, uint8_t n_motors, 
     if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
         if(block->steps[GAMMA_STEPPER] != 0) {
             // z only move
-            if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+            if(this->z_junction_deviation >= 0.0F) junction_deviation = this->z_junction_deviation;
 
         } else {
             // is not a primary axis move

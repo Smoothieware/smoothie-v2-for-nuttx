@@ -802,8 +802,7 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
             if (gcode.has_arg('Z')) {
                 float jd = gcode.get_arg('Z');
                 // enforce minimum, -1 disables it and uses regular junction deviation
-                if (jd <= -1.0F)
-                    jd = 0;
+                if (jd <= -1.0F) jd = -1;
                 Planner::getInstance()->z_junction_deviation = jd;
             }
             if (gcode.has_arg('S')) {
@@ -1016,6 +1015,7 @@ void Robot::process_move(GCode& gcode, enum MOTION_MODE_T motion_mode)
     if(gcode.has_arg('E')) {
         selected_extruder = get_active_extruder();
         param[E_AXIS] = gcode.get_arg('E');
+        is_param[E_AXIS] = true;
     }
 
     // do E for the selected extruder
@@ -1376,8 +1376,8 @@ bool Robot::append_line(GCode& gcode, const float target[], float rate_mm_s, flo
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
     */
-    if(!isnan(delta_e) && gcode.has_g() && gcode.get_code() == 1) {
-        // TODO donl't use isnan and implement e scaling
+    if(delta_e != 0 && gcode.has_g() && gcode.get_code() == 1) {
+        // TODO don't use isnan and implement e scaling, maybe move this to process_params
         //float data[2] = {delta_e, rate_mm_s / millimeters_of_travel};
         // if(PublicData::set_value(extruder_key, target_key, data)) {
         //     rate_mm_s *= data[1]; // adjust the feedrate

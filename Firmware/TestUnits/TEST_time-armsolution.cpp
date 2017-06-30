@@ -10,8 +10,48 @@
 #include "ActuatorCoordinates.h"
 
 #include "ConfigReader.h"
-static std::string str("[linear delta]\n");
 
+__attribute__  ((section (".ramfunctions"))) void runMemoryTest()
+{
+    register uint32_t* p = (uint32_t *)0x14000000;
+    register uint32_t r1;
+    register uint32_t r2;
+    register uint32_t r3;
+    register uint32_t r4;
+    register uint32_t r5;
+    register uint32_t r6;
+    register uint32_t r7;
+    register uint32_t r8;
+
+    uint32_t n= 8000000;
+    systime_t st = clock_systimer();
+    while(p < (uint32_t *)(0x14000000+n)) {
+        asm volatile ("ldm.w %[ptr]!,{%[r1],%[r2],%[r3],%[r4],%[r5],%[r6],%[r7],%[r8]}" :
+                        [r1] "=r" (r1), [r2] "=r" (r2), [r3] "=r" (r3), [r4] "=r" (r4),
+                        [r5] "=r" (r5), [r6] "=r" (r6),[r7] "=r" (r7), [r8] "=r" (r8),
+                        [ptr] "=r" (p)                                                  :
+                        "r" (p)                                                         : );
+    }
+    systime_t en = clock_systimer();
+
+    printf("elapsed time %d us over %d bytes %1.4f mb/sec\n", TICK2USEC(en-st), n, (float)n/TICK2USEC(en-st));
+}
+
+void configureSPIFI();
+float get_pll1_clk();
+
+REGISTER_TEST(TimeTest, read_flash)
+{
+    get_pll1_clk();
+
+    configureSPIFI();
+
+    get_pll1_clk();
+
+    runMemoryTest();
+}
+
+static std::string str("[linear delta]\n");
 REGISTER_TEST(TimeTest, delta_ik)
 {
     std::stringstream ss1(str);
@@ -40,16 +80,3 @@ REGISTER_TEST(TimeTest, delta_ik)
 //     TEST_ASSERT_TRUE(::isnan(f));
 //     TEST_ASSERT_FALSE(::isnan(0.0F));
 // }
-
-REGISTER_TEST(TimeTest, read_flash)
-{
-    uint32_t *p = (uint32_t *)0x14000000;
-
-    uint32_t n= 8000000;
-    systime_t st = clock_systimer();
-    while(p < (uint32_t *)(0x14000000+n)) {
-        uint32_t c= *p++;
-    }
-    systime_t en = clock_systimer();
-    printf("elapsed time %d us over %d bytes %1.4f mb/sec\n", TICK2USEC(en-st), n, (float)n/TICK2USEC(en-st));
-}
