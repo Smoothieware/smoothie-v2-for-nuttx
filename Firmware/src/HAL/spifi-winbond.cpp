@@ -17,6 +17,8 @@ typedef struct SPIFI_t {
     volatile uint32_t STAT;
 } SPIFI_t;
 
+#define SPIFI_REG 0x40003000;
+
 #define SPIFI_STAT_MCINIT                    (1 << 0)
 #define SPIFI_STAT_CMD                       (1 << 1)
 #define SPIFI_STAT_RESET                     (1 << 4)
@@ -64,7 +66,7 @@ typedef struct SPIFI_t {
 #define SFS_ZIF_DISABLE  (1 << SFS_ZIF_SHIFT)   // Disable input glitch filter
 
 
-// Clock Generatio Unit Peripheral
+// Clock Generation Unit Peripheral
 #define CGU_IDIVB_CTRL ((volatile uint32_t*)0x4005004C)
 
 #define CGU_IDIV_CTRL_IDIV_SHIFT 2
@@ -82,7 +84,7 @@ __attribute__  ((section (".ramfunctions"))) void configureSPIFI()
     // Disable interrupts since interrupts in FLASH can't fire while we are setting up SPIFI.
     __asm volatile ("cpsid i" : : : "memory");
 
-    SPIFI_t* SPIFI = (SPIFI_t*)0x40003000;
+    SPIFI_t* SPIFI = (SPIFI_t*)SPIFI_REG;
 
     // Set the SPIFI pins for low-slew high speed output.
     volatile uint32_t* SPIFI_SCK_PIN_CONFIG = SFSP3_3;
