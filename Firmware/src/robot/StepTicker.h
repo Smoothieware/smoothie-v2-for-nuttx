@@ -31,7 +31,6 @@ public:
     void step_tick (void);
     void handle_finish (void);
     bool start();
-    bool stop();
 
     // whatever setup the block should register this to know when it is done
     std::function<void()> finished_fnc{nullptr};

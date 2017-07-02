@@ -23,7 +23,7 @@ Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_OUTPUT);
 #endif
 
 // TODO move ramfunc define to a utils.h
-#define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 StepTicker *StepTicker::instance;
 
@@ -37,18 +37,21 @@ StepTicker::~StepTicker()
 }
 
 // ISR callbacks from timer
-__ramfunc__  void step_timer_handler(void)
+_ramfunc_ static void step_timer_handler(void)
 {
     StepTicker::getInstance()->step_tick();
 }
 
 // ISR callbacks from timer
-// static void unstep_timer_handler(void)
-// {
-//     StepTicker::getInstance()->unstep_tick();
-// }
+_ramfunc_ static void unstep_timer_handler(void)
+{
+    StepTicker::getInstance()->unstep_tick();
+}
 
+// these are defined in HAL/lpc43_highpri.c
 extern "C" int highpri_tmr0_setup(uint32_t frequency, void *handler);
+extern "C" int highpri_tmr1_setup(uint32_t delay, void *handler);
+extern "C" void highpri_tmr1_start();
 
 bool StepTicker::start()
 {
@@ -66,7 +69,15 @@ bool StepTicker::start()
         }
 
         // setup the unstep timer (does not start until needed)
-//       unstep_fd = initial_setup(UNSTEP_TICKER_DEVNAME, (void*)unstep_timer_handler, delay);
+        permod = highpri_tmr1_setup(delay, (void *)unstep_timer_handler);
+        if(permod <  0) {
+            printf("ERROR: tmr1 setup failed\n");
+            return false;
+        }
+        if(permod != 0) {
+            printf("Warning: stepticker unstep period is not accurate: %d\n", permod);
+            // TODO adjust unstep accordingly
+        }
 
         started = true;
     }
@@ -76,38 +87,18 @@ bool StepTicker::start()
     return true;
 }
 
-bool StepTicker::stop()
-{
-    // int ret = ioctl(step_fd, TCIOC_STOP, 0);
-    // if (ret < 0) {
-    //     printf("ERROR: Failed to stop the step timer: %d\n", errno);
-    // }
-
-    // ret = ioctl(unstep_fd, TCIOC_STOP, 0);
-    // if (ret < 0) {
-    //     printf("ERROR: Failed to stop the unstep timer: %d\n", errno);
-    // }
-
-    return false;
-}
-
 // Set the base stepping frequency
+// can only be set before it is started
 void StepTicker::set_frequency( float freq )
 {
+    if(started) {
+        printf("ERROR: cannot set stepticker frequency after it has been started\n");
+        return;
+    }
+
     this->frequency = freq;
     if(freq != this->frequency) {
         this->frequency = freq;
-        // if(started) {
-        //     stop();
-
-        //     // change frequency of timer callback
-        //     int ret = ioctl(step_fd, TCIOC_SETTIMEOUT, period);
-        //     if (ret < 0) {
-        //         printf("ERROR: Failed to reset the step ticker period to %d: %d\n", period, errno);
-        //     }
-
-        //     start();
-        // }
     }
 
 }
@@ -115,36 +106,24 @@ void StepTicker::set_frequency( float freq )
 // Set the reset delay, must be called initial_setup()
 void StepTicker::set_unstep_time( float microseconds )
 {
+    if(started) {
+        printf("ERROR: cannot set stepticker unstep delay after it has been started\n");
+        return;
+    }
+    // TODO check that the unstep time is less than the step period, if not slow down step ticker
+
     delay = floorf(microseconds);
 
-    // if(started) {
-    //     // set frequency of unstep  callback
-    //     int ret = ioctl(unstep_fd, TCIOC_SETTIMEOUT, delay);
-    //     if (ret < 0) {
-    //         printf("ERROR: Failed to set the unstep ticker delay to %d: %d\n", delay, errno);
-    //     }
-    // }
-
-    // TODO check that the unstep time is less than the step period, if not slow down step ticker
 }
 
-__ramfunc__  bool StepTicker::start_unstep_ticker()
+_ramfunc_  bool StepTicker::start_unstep_ticker()
 {
-    // int ret = ioctl(unstep_fd, TCIOC_START, 0);
-    // if (ret < 0) {
-    //     printf("ERROR: Failed to start the unstep timer: %d\n", errno);
-    //     //close(unstep_fd);
-    //     //unstep_fd = -1;
-    //     return false;
-    // }
-
-    // FIXME HACK!! so we can see the pulse on the LA
-    unstep_tick();
+    highpri_tmr1_start();
     return true;
 }
 
 // Reset step pins on any motor that was stepped
-__ramfunc__  void StepTicker::unstep_tick()
+_ramfunc_  void StepTicker::unstep_tick()
 {
     uint32_t bitmsk= 1;
     for (int i = 0; i < num_motors; i++) {
@@ -169,7 +148,7 @@ __ramfunc__  void StepTicker::unstep_tick()
 // }
 
 // step clock
-__ramfunc__  void StepTicker::step_tick (void)
+_ramfunc_  void StepTicker::step_tick (void)
 {
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
@@ -281,7 +260,7 @@ __ramfunc__  void StepTicker::step_tick (void)
 }
 
 // only called from the step tick ISR (single consumer)
-__ramfunc__ bool StepTicker::start_next_block()
+_ramfunc_ bool StepTicker::start_next_block()
 {
     if(current_block == nullptr) return false;
 

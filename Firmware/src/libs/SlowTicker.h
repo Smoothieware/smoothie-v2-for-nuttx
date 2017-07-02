@@ -11,7 +11,6 @@ class SlowTicker
         SlowTicker();
         ~SlowTicker() {};
 
-        void set_frequency( int frequency );
         bool start();
         bool stop();
 
@@ -21,6 +20,8 @@ class SlowTicker
 
     private:
         static SlowTicker *instance;
+
+        bool set_frequency( int frequency );
 
         using callback_t = std::tuple<int, uint32_t, std::function<void(void)>>;
         std::vector<callback_t> callbacks;

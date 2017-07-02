@@ -10,8 +10,10 @@
 
 // timers are specified in microseconds
 #define BASE_FREQUENCY 1000000L
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 SlowTicker *SlowTicker::instance;
+
 
 // This module uses a Timer to periodically call registered callbacks
 // Modules register with a function ( callback ) and a frequency, and we then call that function at the given frequency.
@@ -21,13 +23,13 @@ SlowTicker::SlowTicker()
     instance= this;
 }
 
-static bool timer_handler(uint32_t *next_interval_us)
+_ramfunc_ static bool timer_handler(uint32_t *next_interval_us)
 {
     SlowTicker::getInstance()->tick();
     return true;
 }
 
-#define TIMER_DEVNAME "/dev/timer1"
+#define TIMER_DEVNAME "/dev/timer2"
 bool SlowTicker::start()
 {
     int ret;
@@ -102,8 +104,11 @@ int SlowTicker::attach(uint32_t frequency, std::function<void(void)> cb)
 
     if( frequency > max_frequency ) {
         // reset frequency to a higher value
+        if(!set_frequency(frequency)) {
+            printf("WARNING: SlowTicker cannot be set to > 100Hz\n");
+            return -1;
+        }
         max_frequency = frequency;
-        set_frequency(frequency);
     }
 
     // TODO need to make this thread safe
@@ -124,8 +129,10 @@ void SlowTicker::detach(int n)
 }
 
 // Set the base frequency we use for all sub-frequencies
-void SlowTicker::set_frequency( int frequency )
+// NOTE this is a slow ticker so ticks fster than 100Hz are not allowed as this uses NUTTX timers running in slow SPIFI
+bool SlowTicker::set_frequency( int frequency )
 {
+    if(frequency > 1000) return false;
     this->interval = BASE_FREQUENCY / frequency; // Timer increments in a second
     if(started) {
         stop(); // must stop timer first
@@ -136,10 +143,11 @@ void SlowTicker::set_frequency( int frequency )
         }
         start(); // the restart it
     }
+    return true;
 }
 
 // This is an ISR
-void SlowTicker::tick()
+_ramfunc_ void SlowTicker::tick()
 {
     // Call all callbacks that need to be called
     for(auto& i : callbacks) {
@@ -158,6 +166,7 @@ void SlowTicker::tick()
 
 }
 
+// TODO handle leds for idle
 // #include "gpio.h"
 // extern GPIO leds[];
 // void SlowTicker::on_idle(void*)

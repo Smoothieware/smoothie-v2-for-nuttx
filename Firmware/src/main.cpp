@@ -493,7 +493,12 @@ static int smoothie_startup(int, char **)
 
     // create the StepTicker, don't start it yet
     StepTicker *step_ticker = new StepTicker();
+    #ifdef DEBUG
+    // when debug is enabled we cannot run stepticker at full speed
+    step_ticker->set_frequency(10000); // 10KHz
+    #else
     step_ticker->set_frequency(100000); // 100KHz
+    #endif
     step_ticker->set_unstep_time(2); // 2us step pulse by default
 
     // configure the Dispatcher

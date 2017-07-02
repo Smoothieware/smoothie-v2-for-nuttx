@@ -206,7 +206,8 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA tick
-        // TODO We should probably have one timer for all sigmadelta pins.
+        // TODO We should probably have one timer for all sigmadelta pins, and sigma delta should have its own fast timer
+        // or piggy back off of the StepTicker
         SlowTicker::getInstance()->attach(1000, std::bind(&SigmaDeltaPwm::on_tick, this->sigmadelta_pin));
     }
 

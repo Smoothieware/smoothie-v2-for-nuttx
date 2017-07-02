@@ -19,11 +19,10 @@
 #define PQUEUE (Planner::getInstance()->queue)
 
 // TODO move ramfunc define to a utils.h
-#define __ramfunc__ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 /*
  * The conveyor manages the planner queue, and starting the executing chain of blocks
- * TODO is this even required anymore?
  */
 Conveyor *Conveyor::instance;
 
@@ -121,7 +120,7 @@ void Conveyor::check_queue(bool force)
 
 // called from step ticker ISR
 // we only ever access or change the read/tail index of the queue so this is thread safe
-__ramfunc__ bool Conveyor::get_next_block(Block **block)
+_ramfunc_ bool Conveyor::get_next_block(Block **block)
 {
     // empty the entire queue
     if (flush){
@@ -155,7 +154,7 @@ __ramfunc__ bool Conveyor::get_next_block(Block **block)
 }
 
 // called from step ticker ISR when block is finished, do not do anything slow here
-__ramfunc__ void Conveyor::block_finished()
+_ramfunc_ void Conveyor::block_finished()
 {
     // release the tail
     PQUEUE->release_tail();

@@ -138,7 +138,10 @@ sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./n
 
 INCLUDE = (include_dirs).collect { |d| "-I#{d}" }.join(" ") + " " + (sys_include_dirs).collect { |d| "-isystem #{d}" }.join(" ")
 
-defines = %w(-DCLOCK_MONOTONIC -D__NuttX__ -D_DEBUG -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS)
+defines = %w(-DCLOCK_MONOTONIC -D__NuttX__  -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_EXCEPTIONS)
+if DEBUG
+  defines << "-DDEBUG"
+end
 
 DEFINES= defines.join(' ')
 
