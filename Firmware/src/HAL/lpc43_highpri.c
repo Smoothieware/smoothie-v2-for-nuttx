@@ -160,7 +160,7 @@ int highpri_tmr1_setup(uint32_t delay, void (*handler)())
     return clk_frequency % period;
 }
 
-//called from within TMR0 ISR so must be in SRAM
+// called from within TMR0 ISR so must be in SRAM
 _ramfunc_ void highpri_tmr1_start()
 {
   // Start timer1
