@@ -499,7 +499,7 @@ static int smoothie_startup(int, char **)
     #else
     step_ticker->set_frequency(100000); // 100KHz
     #endif
-    step_ticker->set_unstep_time(2); // 2us step pulse by default
+    step_ticker->set_unstep_time(1); // 1us step pulse by default
 
     // configure the Dispatcher
     new Dispatcher();

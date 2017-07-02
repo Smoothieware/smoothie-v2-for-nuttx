@@ -37,28 +37,27 @@ StepTicker::~StepTicker()
 }
 
 // ISR callbacks from timer
-_ramfunc_ static void step_timer_handler(void)
+_ramfunc_ void StepTicker::step_timer_handler(void)
 {
     StepTicker::getInstance()->step_tick();
 }
 
 // ISR callbacks from timer
-_ramfunc_ static void unstep_timer_handler(void)
+_ramfunc_ void StepTicker::unstep_timer_handler(void)
 {
     StepTicker::getInstance()->unstep_tick();
 }
 
 // these are defined in HAL/lpc43_highpri.c
-extern "C" int highpri_tmr0_setup(uint32_t frequency, void *handler);
-extern "C" int highpri_tmr1_setup(uint32_t delay, void *handler);
-extern "C" void highpri_tmr1_start();
+extern "C" int highpri_tmr0_setup(uint32_t frequency, uint32_t delay, void *mr0handler, void *mr1handler);
+extern "C" void highpri_tmr0_mr1_start();
 
 bool StepTicker::start()
 {
     if(!started) {
 
-        // setup the step timer
-        int permod = highpri_tmr0_setup(frequency, (void *)step_timer_handler);
+        // setup the step tick timer, which handles step tixks and one off unstep interrupts
+        int permod = highpri_tmr0_setup(frequency, delay, (void *)step_timer_handler, (void *)unstep_timer_handler);
         if(permod <  0) {
             printf("ERROR: tmr0 setup failed\n");
             return false;
@@ -66,17 +65,6 @@ bool StepTicker::start()
         if(permod != 0) {
             printf("Warning: stepticker is not accurate: %d\n", permod);
             // TODO adjust actual step frequency accordingly
-        }
-
-        // setup the unstep timer (does not start until needed)
-        permod = highpri_tmr1_setup(delay, (void *)unstep_timer_handler);
-        if(permod <  0) {
-            printf("ERROR: tmr1 setup failed\n");
-            return false;
-        }
-        if(permod != 0) {
-            printf("Warning: stepticker unstep period is not accurate: %d\n", permod);
-            // TODO adjust unstep accordingly
         }
 
         started = true;
@@ -96,29 +84,34 @@ void StepTicker::set_frequency( float freq )
         return;
     }
 
-    this->frequency = freq;
-    if(freq != this->frequency) {
-        this->frequency = freq;
-    }
-
+    this->frequency = floorf(freq);
 }
 
-// Set the reset delay, must be called initial_setup()
+// Set the reset delay, must be called before started
 void StepTicker::set_unstep_time( float microseconds )
 {
     if(started) {
         printf("ERROR: cannot set stepticker unstep delay after it has been started\n");
         return;
     }
-    // TODO check that the unstep time is less than the step period, if not slow down step ticker
 
-    delay = floorf(microseconds);
+    // check that the unstep time is less than the step period
+    uint32_t d= roundf(microseconds);
+    uint32_t period= floorf(1000000.0F/frequency);
+    if(d > period-1) { // within 1us of the period
+        printf("ERROR: cannot set stepticker unstep delay greater than or equal to step ticker period: %d, %d\n", delay, period);
+        return;
+    }
 
+    delay = d;
 }
 
 _ramfunc_  bool StepTicker::start_unstep_ticker()
 {
-    highpri_tmr1_start();
+    // enable the MR1 match register interrupt
+    // this works as we are in MR0 match which reset counter so we will get an interrupt 2us after this is enabled
+    // which we will use to unstep the step pin.
+    highpri_tmr0_mr1_start();
     return true;
 }
 
@@ -225,10 +218,9 @@ _ramfunc_  void StepTicker::step_tick (void)
     // do this after so we start at tick 0
     current_tick++; // count number of ticks
 
-    // We may have set a pin on in this tick, now we reset the timer to set it off
-    // Note there could be a race here if we run another tick before the unsteps have happened,
-    // right now it takes about 3-4us but if the unstep were near 10uS or greater it would be an issue
-    // also it takes at least 2us to get here so even when set to 1us pulse width it will still be about 3us
+    // We may have set a pin on in this tick, now we set the timer to set it off
+    // right now it takes about 1-2us to get here which will add to the pulse width from when it was on
+    // the pulse width will be 1us (or whatever it is set to) from this point on, so at least 2-3 us
     if( unstep != 0) {
         start_unstep_ticker();
     }

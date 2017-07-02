@@ -25,11 +25,8 @@ public:
     void set_unstep_time( float microseconds );
     int register_actuator(StepperMotor* motor);
     float get_frequency() const { return frequency; }
-    void unstep_tick();
     const Block *get_current_block() const { return current_block; }
 
-    void step_tick (void);
-    void handle_finish (void);
     bool start();
 
     // whatever setup the block should register this to know when it is done
@@ -39,15 +36,22 @@ public:
 
 private:
     static StepTicker *instance;
+    void handle_finish (void);
+    void unstep_tick();
+    void step_tick (void);
     bool start_unstep_ticker();
     int initial_setup(const char *dev, void *timer_handler, uint32_t per);
     bool start_next_block();
+
+    static void step_timer_handler(void);
+    static void unstep_timer_handler(void);
+
     std::array<StepperMotor*, k_max_actuators> motor;
     uint32_t unstep{0}; // bitset was inefficient
 
     Block *current_block{nullptr};
-    float frequency{0};
-    uint32_t delay{0};
+    uint32_t frequency{1000000};
+    uint32_t delay{1};
     uint32_t current_tick{0};
 
     int step_per{-1};
