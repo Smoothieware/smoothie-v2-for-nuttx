@@ -145,6 +145,13 @@ _ramfunc_  void StepTicker::step_tick (void)
 {
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
+    if(unstep != 0) {
+        // this is a failsafe, if we get here it means we missed the unstep from a previous tick
+        // so we need to unstep the pin now or it will remain high
+        unstep_tick();
+        missed_unsteps++; // keep trck for diagnostics
+    }
+
     // if nothing has been setup we ignore the ticks
     if(!running) {
         // check if anything new available

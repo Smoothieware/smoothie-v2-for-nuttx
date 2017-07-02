@@ -47,15 +47,16 @@ private:
     static void unstep_timer_handler(void);
 
     std::array<StepperMotor*, k_max_actuators> motor;
-    uint32_t unstep{0}; // bitset was inefficient
+
+    uint32_t unstep{0}; // one bit set per motor to indicayte step pin needs to be unstepped
+    uint32_t missed_unsteps{0};
 
     Block *current_block{nullptr};
-    uint32_t frequency{1000000};
-    uint32_t delay{1};
-    uint32_t current_tick{0};
 
-    int step_per{-1};
-    int unstep_per{-1};
+    uint32_t frequency{1000000}; // KHz
+    uint32_t delay{1}; //microseconds
+
+    uint32_t current_tick{0};
 
     uint8_t num_motors{0};
 
