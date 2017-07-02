@@ -10,6 +10,8 @@
 
 #include "stdio.h"
 
+#include <math.h>
+
 // TODO move ramfunc define to a utils.h
 #define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
@@ -122,10 +124,10 @@ int highpri_tmr1_setup(uint32_t delay, void (*handler)())
     printf("TIMER1 CLKIN=%d Hz, Frequency=%d Hz, prescaler=%d\n",
            BOARD_FCLKOUT_FREQUENCY, clk_frequency, prescaler);
 
-    uint32_t period = clk_frequency / (delay * 1000000); // delay is in us
+    uint32_t period = floorf(delay / (1000000.0F / clk_frequency)); // delay is in us
     LPC43_TMR_SETPERIOD(dev, period);
     printf("TMR1 period=%d cycles; pulse width=%d us\n",
-           period, clk_frequency / (period * 1000000));
+           period, delay);
 
     putreg32(period, LPC43_TIMER1_BASE + LPC43_TMR_MR0_OFFSET);
     putreg32(0, LPC43_TIMER1_BASE + LPC43_TMR_CCR_OFFSET); /* do not use capture */
