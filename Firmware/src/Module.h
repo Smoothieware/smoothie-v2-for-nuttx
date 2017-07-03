@@ -18,7 +18,9 @@ public:
     virtual bool configure(ConfigReader& cr){ return true; };
 
     // the system is entering or leaving halt/alarm mode flg == true if entering
+    // may be called in an ISR context
     virtual void on_halt(bool flg) {};
+
     // request public data from module instance, tpy eof data requested is in key,
     // and the address of an appropriate returned data type is provided by the caller
     virtual bool request(const char *key, void *value) { return false; }
@@ -38,6 +40,7 @@ public:
     using modrec_t = struct { instance_map_t *map; Module *module; };
 
     // sends the on_halt event to all modules, flg is true if halt, false if cleared
+    // may be called in an ISR context
     static void broadcast_halt(bool flg);
     static bool is_halted() { return halted; }
 
