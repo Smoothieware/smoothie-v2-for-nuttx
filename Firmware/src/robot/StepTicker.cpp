@@ -56,7 +56,7 @@ bool StepTicker::start()
 {
     if(!started) {
 
-        // setup the step tick timer, which handles step tixks and one off unstep interrupts
+        // setup the step tick timer, which handles step ticks and one off unstep interrupts
         int permod = highpri_tmr0_setup(frequency, delay, (void *)step_timer_handler, (void *)unstep_timer_handler);
         if(permod <  0) {
             printf("ERROR: tmr0 setup failed\n");
