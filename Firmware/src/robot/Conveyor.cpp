@@ -52,13 +52,13 @@ void Conveyor::start()
     running = true;
 }
 
-// FIXME this maybe called in ISR context so we cannot wait for queue to flush
+// this maybe called in ISR context so we cannot wait for queue to flush
 void Conveyor::on_halt(bool flg)
 {
     halted= flg;
 
     if(flg) {
-        flush_queue();
+        flush= true;
     }
 }
 
@@ -96,7 +96,7 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     // returning now means that everything has totally finished
 }
 
-// should be called when idle, si call it when the command loop runs
+// should be called when idle, it is called when the command loop runs
 void Conveyor::check_queue(bool force)
 {
     static systime_t last_time_check = clock_systimer();
@@ -128,6 +128,8 @@ _ramfunc_ bool Conveyor::get_next_block(Block **block)
         while (!PQUEUE->empty()) {
             PQUEUE->release_tail();
         }
+        flush= false;
+        return false;
     }
 
     // default the feerate to zero if there is no block available
