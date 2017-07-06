@@ -186,7 +186,7 @@ bool dispatch_line(OutputStream& os, const char *line)
             if(Module::is_halted()) {
                 Module::broadcast_halt(false);
                 os.puts("[Caution: Unlocked]\nok\n");
-            }else{
+            } else {
                 os.puts("ok\n");
             }
             return true;
@@ -493,12 +493,12 @@ static int smoothie_startup(int, char **)
 
     // create the StepTicker, don't start it yet
     StepTicker *step_ticker = new StepTicker();
-    #ifdef DEBUG
+#ifdef DEBUG
     // when debug is enabled we cannot run stepticker at full speed
     step_ticker->set_frequency(10000); // 10KHz
-    #else
+#else
     step_ticker->set_frequency(100000); // 100KHz
-    #endif
+#endif
     step_ticker->set_unstep_time(1); // 1us step pulse by default
 
     // configure the Dispatcher
@@ -552,17 +552,25 @@ static int smoothie_startup(int, char **)
 
         {
             // this creates any configured switches then we can remove it
-            Switch switches("loader");
+            Switch switches("switch loader");
             if(!switches.configure(cr)) {
                 printf("INFO: no switches loaded\n");
             }
         }
 
+        // {
+        //     // this creates any configured extruders then we can remove it
+        //     Extruder ex("extruder loader");
+        //     if(!ex.configure(cr)) {
+        //         printf("INFO: no Extruders loaded\n");
+        //     }
+        // }
+
         KillButton *kill_button = new KillButton();
         if(!kill_button->configure(cr)) {
             printf("INFO: No kill button enabled\n");
             delete kill_button;
-            kill_button= nullptr;
+            kill_button = nullptr;
         }
 
         // end of module creation and configuration

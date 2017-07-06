@@ -152,3 +152,22 @@ REGISTER_TEST(GCodeTest, Line_numbers_and_checksums) {
     TEST_ASSERT_TRUE(gcodes.empty());
 }
 
+REGISTER_TEST(GCodeTest,t_code)
+{
+    GCodeProcessor gp;
+    GCodeProcessor::GCodes_t gca;
+
+    // test that a T1 will be converted effectively to M6 T1
+    const char *g1("T1");
+    bool ok= gp.parse(g1, gca);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_INT(1, gca.size());
+    GCode gc1= gca[0];
+    TEST_ASSERT_FALSE(gc1.has_g());
+    TEST_ASSERT_TRUE(gc1.has_m());
+    TEST_ASSERT_EQUAL_INT(6, gc1.get_code());
+    TEST_ASSERT_EQUAL_INT(0, gc1.get_subcode());
+    TEST_ASSERT_EQUAL_INT(1, gc1.get_num_args());
+    TEST_ASSERT_TRUE(gc1.has_arg('T'));
+    TEST_ASSERT_EQUAL_INT(1, gc1.get_arg('T'));
+}

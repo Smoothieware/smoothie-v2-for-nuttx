@@ -23,8 +23,10 @@ public:
 	size_t get_num_args() const { return args.size(); }
 	bool has_g() const { return is_g; }
 	bool has_m() const { return is_m; }
+	bool has_t() const { return is_t; }
 	void set_g() { is_g= true; }
 	void set_m() { is_m= true; }
+	void set_t() { is_t= true; }
 	void set_error(const char *error) { is_error= true; error_message= error; }
 	bool has_error() const { return is_error; }
 	const char *get_error_message() const { return error_message; }

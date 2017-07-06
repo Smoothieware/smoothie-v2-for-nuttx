@@ -1377,11 +1377,18 @@ bool Robot::append_line(GCode& gcode, const float target[], float rate_mm_s, flo
         NOTE we need to do this before we segment the line (for deltas)
     */
     if(delta_e != 0 && gcode.has_g() && gcode.get_code() == 1) {
-        // TODO don't use isnan and implement e scaling, maybe move this to process_params
-        //float data[2] = {delta_e, rate_mm_s / millimeters_of_travel};
-        // if(PublicData::set_value(extruder_key, target_key, data)) {
-        //     rate_mm_s *= data[1]; // adjust the feedrate
-        // }
+        // TODO maybe move this to process_params
+        float data[2] = {delta_e, rate_mm_s / millimeters_of_travel};
+        // TODO we send this to each extruder which is a waste
+        auto mv = Module::lookup_group("extruder");
+        if(mv.size() > 0) {
+            for(auto m : mv) {
+                if(m->request("get_rate", data)) {
+                    rate_mm_s *= data[1]; // adjust the feedrate
+                    break; // only one can be active the rest will return false
+                }
+            }
+        }
     }
 
     // We cut the line into smaller segments. This is only needed on a cartesian robot for zgrid, but always necessary for robots with rotational axes like Deltas.

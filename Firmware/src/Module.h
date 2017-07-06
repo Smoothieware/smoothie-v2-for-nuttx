@@ -28,7 +28,7 @@ public:
     // sent in command thread context about every 200ms, or after every gcode processed
     virtual void in_command_ctx() {};
 
-    // module registry function, to look up an instance of a module or a group of modules
+    // module registry function, to look up an instance of a module
     // returns nullptr if not found, otherwise returns a pointer to the module
     static Module* lookup(const char *group, const char *instance= nullptr);
 
