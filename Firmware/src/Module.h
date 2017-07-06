@@ -15,7 +15,7 @@ public:
     virtual ~Module();
 
     // called to allow the module to read its configuration data
-    virtual bool configure(ConfigReader& cr){ return true; };
+    virtual bool configure(ConfigReader& cr){ return false; };
 
     // the system is entering or leaving halt/alarm mode flg == true if entering
     // may be called in an ISR context

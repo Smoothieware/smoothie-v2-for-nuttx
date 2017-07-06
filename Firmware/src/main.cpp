@@ -466,7 +466,7 @@ static void *commandthrd(void *)
 #include "Switch.h"
 #include "Planner.h"
 #include "Robot.h"
-
+#include "KillButton.h"
 
 #include <sys/mount.h>
 #include <fstream>
@@ -547,14 +547,26 @@ static int smoothie_startup(int, char **)
             break;
         }
 
-        // this creates any configured switches then we can remove it
+        ///////////////////////////////////////////////////////////
+        // configure other modules here
+
         {
-            printf("configure switches\n");
+            // this creates any configured switches then we can remove it
             Switch switches("loader");
             if(!switches.configure(cr)) {
                 printf("INFO: no switches loaded\n");
             }
         }
+
+        KillButton *kill_button = new KillButton();
+        if(!kill_button->configure(cr)) {
+            printf("INFO: No kill button enabled\n");
+            delete kill_button;
+            kill_button= nullptr;
+        }
+
+        // end of module creation and configuration
+        ////////////////////////////////////////////////////////////////
 
         // close the file stream
         //fs.close();

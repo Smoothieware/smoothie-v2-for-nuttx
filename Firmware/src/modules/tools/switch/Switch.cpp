@@ -53,7 +53,12 @@ bool Switch::load_switches(ConfigReader& cr)
         auto& m = i.second;
         if(cr.get_bool(m, "enable", false)) {
             Switch *sw = new Switch(name.c_str());
-            if(sw->configure(cr, m)) ++cnt;
+            if(sw->configure(cr, m)){
+                ++cnt;
+            }else{
+                printf("configure-switch: failed to configure switch %s\n", name.c_str());
+                delete sw;
+            }
         }
     }
 
