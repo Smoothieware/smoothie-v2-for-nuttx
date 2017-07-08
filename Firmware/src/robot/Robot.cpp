@@ -543,9 +543,10 @@ bool Robot::handle_G10(GCode& gcode, OutputStream& os)
             }
             wcs_offsets[n] = wcs_t(x, y, z);
         }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool Robot::handle_G92(GCode& gcode, OutputStream& os)

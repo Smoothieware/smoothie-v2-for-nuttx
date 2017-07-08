@@ -31,7 +31,7 @@
 #define x_offset_key                    "x_offset"
 #define y_offset_key                    "y_offset"
 #define z_offset_key                    "z_offset"
-#define id_key                          "id"
+#define tool_id_key                     "tool_id"
 
 #define retract_length_key              "retract_length"
 #define retract_feedrate_key            "retract_feedrate"
@@ -115,7 +115,7 @@ bool Extruder::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     float acceleration         = cr.get_float(m, acceleration_key, 1000);
 
     // multi extruder setup
-    this->tool_id        = cr.get_int(m, id_key, 0); // set to T0 by default, must be set to > 0 for subsequent extruders
+    this->tool_id             = cr.get_int(m, tool_id_key, 0); // set to T0 by default, must be set to > 0 for subsequent extruders
     this->tool_offset[X_AXIS] = cr.get_float(m, x_offset_key          , 0);
     this->tool_offset[Y_AXIS] = cr.get_float(m, y_offset_key          , 0);
     this->tool_offset[Z_AXIS] = cr.get_float(m, z_offset_key          , 0);
@@ -467,17 +467,20 @@ bool Extruder::handle_gcode(GCode & gcode, OutputStream & os)
             if(g92e0_detected) restore_position();
         }
 
+        return true;
 
     } else if( this->retracted && (gcode.get_code() == 0 || gcode.get_code() == 1) && gcode.has_arg('Z')) {
         // NOTE we cancel the zlift restore for the following G11 as we have moved to an absolute Z which we need to stay at
         this->cancel_zlift_restore = true;
+        return true;
 
     } else if( this->retracted && gcode.get_code() == 92 && gcode.has_arg('E')) {
         // old versions of slic3rs issued a G92 E0 after G10, handle that case
         this->g92e0_detected = true;
+        return true;
     }
 
 
     // TODO should return false if it reaches here
-    return true;
+    return false;
 }
