@@ -12,17 +12,17 @@
 
 #define UNDEFINED -1
 
-#define thermistor_key "thermistor"
-#define r0_key "r0"
-#define t0_key "t0"
-#define beta_key "beta"
-#define vadc_key "vadc"
-#define vcc_key "vcc"
-#define r1_key "r1"
-#define r2_key "r2"
+#define thermistor_key     "thermistor"
+#define r0_key             "r0"
+#define t0_key             "t0"
+#define beta_key           "beta"
+#define vadc_key           "vadc"
+#define vcc_key            "vcc"
+#define r1_key             "r1"
+#define r2_key             "r2"
 #define thermistor_pin_key "thermistor_pin"
-#define rt_curve_key "rt_curve"
-#define coefficients_key "coefficients"
+#define rt_curve_key       "rt_curve"
+#define coefficients_key   "coefficients"
 #define use_beta_table_key "use_beta_table"
 
 
@@ -111,7 +111,7 @@ bool Thermistor::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     // Thermistor pin for ADC readings
     this->thermistor_pin.from_string(cr.get_string(m, thermistor_pin_key, "nc"));
     if(!thermistor_pin.connected()) {
-        printf("config-thermistor: no thernistor pin defined\n");
+        printf("config-thermistor: no thermistor pin defined\n");
         return false;
     }
     // TODO how to do ADC?

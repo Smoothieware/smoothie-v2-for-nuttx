@@ -115,7 +115,7 @@ bool Robot::configure(ConfigReader& cr)
 {
     ConfigReader::section_map_t m;
     if(!cr.get_section("motion control", m)) {
-        printf("WARNING:configure-robot: no robot section found, defaults used\n");
+        printf("WARNING:configure-robot: no 'motion control' section found, defaults used\n");
     }
 
     // Arm solutions are used to convert machine positions in millimeters into actuator positions in millimeters.
