@@ -40,6 +40,7 @@ Adc::Adc()
 
 Adc::~Adc()
 {
+    Chip_ADC_Int_SetChannelCmd(_LPC_ADC_ID, CHANNEL_LUT[channel], DISABLE);
     Chip_ADC_EnableChannel(_LPC_ADC_ID, CHANNEL_LUT[channel], DISABLE);
     channel = -1;
     enabled = false;
@@ -84,6 +85,7 @@ bool Adc::start()
         return false;
     }
 
+
     return true;
 }
 
@@ -105,6 +107,7 @@ Adc* Adc::from_string(const char *name)
 
     const char *p = strcasestr(name, "adc");
     if (p == nullptr) return nullptr;
+    p += 3;
     if(*p++ != '0') return nullptr; // must be ADC0
     if(*p++ != '_') return nullptr; // must be _
     channel = strtol(p, nullptr, 10);
@@ -113,6 +116,8 @@ Adc* Adc::from_string(const char *name)
     memset(sample_buffer, 0, sizeof(sample_buffer));
     memset(ave_buf, 0, sizeof(ave_buf));
     Chip_ADC_EnableChannel(_LPC_ADC_ID, CHANNEL_LUT[channel], ENABLE);
+    Chip_ADC_Int_SetChannelCmd(_LPC_ADC_ID, CHANNEL_LUT[channel], ENABLE);
+
     enabled = true;
 
     return this;

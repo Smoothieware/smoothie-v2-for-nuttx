@@ -271,7 +271,7 @@ void Thermistor::get_raw(OutputStream& os)
 
 float Thermistor::adc_value_to_temperature(uint32_t adc_value)
 {
-    const uint32_t max_adc_value = 255; // TODO THEKERNEL->adc->get_max_value();
+    const uint32_t max_adc_value = Adc::get_max_value();
     if ((adc_value >= max_adc_value) || (adc_value == 0))
         return std::numeric_limits<float>::infinity();
 

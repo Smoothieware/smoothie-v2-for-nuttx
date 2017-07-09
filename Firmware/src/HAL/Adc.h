@@ -24,11 +24,11 @@ public:
     Adc* from_string(const char *name);
     uint32_t read();
 
-    // return the maximum ADC value, base is 12bits 4095.
+    // return the maximum ADC value, base is 10bits 1024.
 #ifdef OVERSAMPLE
-    static int get_max_value() { return 4095 << OVERSAMPLE;}
+    static int get_max_value() { return 1024 << OVERSAMPLE;}
 #else
-    static int get_max_value() { return 4095;}
+    static int get_max_value() { return 1024;}
 #endif
 
 private:
