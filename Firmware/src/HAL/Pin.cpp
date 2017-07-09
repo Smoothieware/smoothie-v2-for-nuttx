@@ -165,26 +165,6 @@ Pin* Pin::from_string(std::string value)
         // Pin name convert to GPIO
         if(!lookup_pin(x, y, port, pin)) return nullptr;
 
-    } else if(value.substr(0, 3) == "ADC") {
-        //initialize adc only vars
-        // adc_only = false;
-        // adc_channel = 0xff;
-
-        // //verify if it is an analog only pin
-        // std::size_t found = value.find("adc");
-        // if (found != std::string::npos) adc_only = true;
-
-        // if(adc_only) {
-        //     std::string channelStr = value.substr (4);
-        //     cs = channelStr.c_str();
-        //     adc_channel = strtol(cs, &cn, 10);
-
-        //     // PinName adc_pins[16] = {adc0_0, adc0_1, adc0_2, adc0_3, adc0_4, adc0_5, adc0_6, adc0_7, adc1_0, adc1_1, adc1_2, adc1_3, adc1_4, adc1_5, adc1_6, adc1_7};
-        //     // this->pinName = adc_pins[adc_channel];
-
-        //     return this;
-        // }
-
     } else {
         return nullptr;
     }

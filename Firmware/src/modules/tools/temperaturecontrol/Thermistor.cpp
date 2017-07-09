@@ -3,6 +3,7 @@
 #include "ConfigReader.h"
 #include "OutputStream.h"
 #include "StringUtils.h"
+#include "Adc.h"
 
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
@@ -37,6 +38,7 @@ Thermistor::Thermistor()
 
 Thermistor::~Thermistor()
 {
+    delete thermistor_pin;
 }
 
 // Get configuration from the config file
@@ -109,13 +111,12 @@ bool Thermistor::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     this->r2 = cr.get_float(m, r2_key, this->r2);
 
     // Thermistor pin for ADC readings
-    this->thermistor_pin.from_string(cr.get_string(m, thermistor_pin_key, "nc"));
-    if(!thermistor_pin.connected()) {
-        printf("config-thermistor: no thermistor pin defined\n");
+    thermistor_pin= new Adc(); // returns a sub instance of the Adc Singleton
+    // must be ADC0_n where n is the channel to use 0-7
+    if(this->thermistor_pin->from_string(cr.get_string(m, thermistor_pin_key, "nc")) == nullptr) {
+        printf("config-thermistor: no thermistor pin defined, or bad format\n");
         return false;
     }
-    // TODO how to do ADC?
-    //THEKERNEL->adc->enable_pin(&thermistor_pin);
 
     // specify the three Steinhart-Hart coefficients
     // specified as three comma separated floats, no spaces
@@ -239,7 +240,7 @@ float Thermistor::get_temperature()
 void Thermistor::get_raw(OutputStream& os)
 {
     int adc_value = new_thermistor_reading();
-    const uint32_t max_adc_value = 255; // TODO THEKERNEL->adc->get_max_value();
+    const uint32_t max_adc_value = Adc::get_max_value();
 
     // resistance of the thermistor in ohms
     float r = r2 / (((float)max_adc_value / adc_value) - 1.0F);
@@ -294,8 +295,8 @@ float Thermistor::adc_value_to_temperature(uint32_t adc_value)
 
 int Thermistor::new_thermistor_reading()
 {
-    // filtering now done in ADC
-    return 1; // TODO THEKERNEL->adc->read(&thermistor_pin);
+    // filtering done in Adc
+    return thermistor_pin->read();
 }
 
 bool Thermistor::set_optional(const sensor_options_t& options)

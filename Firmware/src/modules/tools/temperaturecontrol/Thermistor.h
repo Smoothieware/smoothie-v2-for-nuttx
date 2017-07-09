@@ -1,13 +1,13 @@
 #pragma once
 
 #include "TempSensor.h"
-#include "Pin.h"
 
 #include <tuple>
 
 #define QUEUE_LEN 32
 
 class OutputStream;
+class Adc;
 
 class Thermistor : public TempSensor
 {
@@ -51,7 +51,7 @@ class Thermistor : public TempSensor
             };
         };
 
-        Pin thermistor_pin;
+        Adc *thermistor_pin{nullptr};
 
         float min_temp, max_temp;
 
