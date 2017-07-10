@@ -77,7 +77,7 @@ private:
 
     enum RUNAWAY_TYPE {NOT_HEATING, HEATING_UP, COOLING_DOWN, TARGET_TEMPERATURE_REACHED};
 
-    uint8_t tool_id;
+    uint8_t tool_id{0};
 
     // pack these to save memory
     struct {

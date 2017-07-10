@@ -91,7 +91,7 @@ hotend.en_pin = p6.6             # Pin for extruder enable signal\n\
 \n\
 # Second extruder module configuration\n\
 hotend2.enable = false            # Whether to activate the extruder module at all. All configuration is ignored if false\n\
-hotend.tool_id = 1               # T1 will select\n\
+hotend2.tool_id = 1               # T1 will select\n\
 hotend2.steps_per_mm = 140       # Steps per mm for extruder stepper\n\
 hotend2.default_feed_rate = 600  # Default rate ( mm/minute ) for moves where only the extruder moves\n\
 hotend2.acceleration = 500       # Acceleration for the stepper motor, as of 0.6, arbitrary ratio\n\
@@ -125,6 +125,7 @@ hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
+bed.tool_id = 255                 # beds do not have tool ids but we need to set one anyway\n\
 bed.thermistor_pin = P7.4 # Pin for the thermistor to read\n\
 bed.heater_pin = P6.8 # Pin that controls the heater\n\
 bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\

@@ -99,7 +99,7 @@ bool TemperatureControl::load_controls(ConfigReader& cr)
             TemperatureControl *tc = new TemperatureControl(name.c_str());
             if(tc->configure(cr, m)) {
                 // make sure the first (or only) heater is selected
-                if(cnt == 0) tc->active = true;
+                if(tc->tool_id == 0) tc->active = true;
                 ++cnt;
             } else {
                 printf("configure-temperature control: failed to configure temperature control %s\n", name.c_str());
@@ -111,6 +111,9 @@ bool TemperatureControl::load_controls(ConfigReader& cr)
     // no need to create one of these if no heaters defined
     if(cnt > 0) {
 //        new PID_Autotuner();
+        printf("configure-temperature control: NOTE: %d TemperatureControl(s) configured and enabled\n", cnt);
+    }else{
+        printf("configure-temperature control: NOTE: no TemperatureControl(s) configured\n");
     }
 
     return cnt > 0;
@@ -202,7 +205,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
         this->heater_pin->max_pwm( cr.get_float(m, max_pwm_key, 255) );
         this->heater_pin->set(0);
         //set_low_on_debug(heater_pin->port_number, heater_pin->pin);
-        // TODO use single lowtimer for all sigma delta
+        // TODO use single slowtimer for all sigma delta
         SlowTicker::getInstance()->attach(cr.get_float(m, pwm_frequency_key, 2000), std::bind(&SigmaDeltaPwm::on_tick, this->heater_pin));
     }
 
@@ -315,7 +318,7 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                 }
 
             } else if(!gcode.has_arg('S')) {
-                os.printf("%s(S%d): using %s\n", this->designator.c_str(), this->tool_id, this->readonly ? "Readonly" : this->use_bangbang ? "Bangbang" : "PID");
+                os.printf("%s(S%d): using %s - active: %d\n", this->designator.c_str(), this->tool_id, this->readonly ? "Readonly" : this->use_bangbang ? "Bangbang" : "PID", active);
                 sensor->get_raw(os);
                 TempSensor::sensor_options_t options;
                 if(sensor->get_optional(options)) {

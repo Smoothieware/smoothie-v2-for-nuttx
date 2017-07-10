@@ -482,5 +482,5 @@ bool Extruder::handle_gcode(GCode & gcode, OutputStream & os)
 
 
     // TODO should return false if it reaches here
-    return false;
+    return true;
 }
