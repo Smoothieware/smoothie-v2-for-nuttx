@@ -51,13 +51,13 @@ gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
 fan.enable = false # Enable this module\n\
 fan.input_on_command = M106 # Command that will turn this switch on\n\
 fan.input_off_command = M107 # Command that will turn this switch off\n\
-fan.output_pin = 2.6 # Pin this module controls\n\
+fan.output_pin = p1.8 # Pin this module controls\n\
 fan.output_type = pwm # PWM output settable with S parameter in the input_on_comand\n\
 \n\
 misc.enable = false             # Enable this module\n\
 misc.input_on_command = M42              # Command that will turn this switch on\n\
 misc.input_off_command = M43              # Command that will turn this switch off\n\
-misc.output_pin = 2.4              # Pin this module controls\n\
+misc.output_pin = p6.1              # Pin this module controls\n\
 misc.output_type = digital          # Digital means this is just an on or off pin\n\
 \n\
 led1.enable            = true\n\
@@ -77,4 +77,58 @@ but1.input_pin          = gpio0_7!                 # button\n\
 but1.output_on_command  = M1                       # command to send\n\
 but1.output_off_command = M2                       # command to send\n\
 but1.input_pin_behavior = toggle\n\
-";
+\n\
+[extruder]\n\
+hotend.enable = true             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
+hotend.tool_id = 0               # T0 will select\n\
+hotend.steps_per_mm = 140        # Steps per mm for extruder stepper\n\
+hotend.default_feed_rate = 600   # Default rate ( mm/minute ) for moves where only the extruder moves\n\
+hotend.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
+hotend.max_speed = 50            # Maximum speed in mm/s\n\
+hotend.step_pin = p5_3            # Pin for extruder step signal\n\
+hotend.dir_pin = p9_6            # Pin for extruder dir signal ( add '!' to reverse direction )\n\
+hotend.en_pin = p6.6             # Pin for extruder enable signal\n\
+\n\
+# Second extruder module configuration\n\
+hotend2.enable = false            # Whether to activate the extruder module at all. All configuration is ignored if false\n\
+hotend.tool_id = 1               # T1 will select\n\
+hotend2.steps_per_mm = 140       # Steps per mm for extruder stepper\n\
+hotend2.default_feed_rate = 600  # Default rate ( mm/minute ) for moves where only the extruder moves\n\
+hotend2.acceleration = 500       # Acceleration for the stepper motor, as of 0.6, arbitrary ratio\n\
+hotend2.max_speed = 50           # mm/s\n\
+\n\
+hotend2.step_pin = 2.8           # Pin for extruder step signal\n\
+hotend2.dir_pin = 2.13           # Pin for extruder dir signal ( add '!' to reverse direction )\n\
+hotend2.en_pin = 4.29            # Pin for extruder enable signal\n\
+\n\
+hotend2.x_offset = 0             # x offset from origin in mm\n\
+hotend2.y_offset = 25.0          # y offset from origin in mm\n\
+hotend2.z_offset = 0             # z offset from origin in mm\n\
+\n\
+[temperature control]\n\
+hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend.tool_id = 0               # T0 will select\n\
+hotend.thermistor_pin = P7.5     # Pin for the thermistor to read\n\
+hotend.heater_pin = P6.7         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
+hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
+hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
+hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
+hotend.designator = T            # Designator letter for this module\n\
+\n\
+hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend2.tool_id = 1               # T1 will select\n\
+hotend2.thermistor_pin = P7.4     # Pin for the thermistor to read\n\
+hotend2.heater_pin = P6.8         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
+hotend2.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
+hotend2.set_m_code = 104          # M-code to set the temperature for this module\n\
+hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
+hotend2.designator = T            # Designator letter for this module\n\
+\n\
+bed.enable = true # Whether to activate this module at all.\n\
+bed.thermistor_pin = P7.4 # Pin for the thermistor to read\n\
+bed.heater_pin = P6.8 # Pin that controls the heater\n\
+bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\
+bed.set_m_code = 140 # M-code to set the temperature for this module\n\
+bed.set_and_wait_m_code = 190 # M-code to set-and-wait for this module\n\
+bed.designator = B # Designator letter for this module\n\
+\n";

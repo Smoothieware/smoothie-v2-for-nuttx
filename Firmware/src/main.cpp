@@ -467,7 +467,10 @@ static void *commandthrd(void *)
 #include "Planner.h"
 #include "Robot.h"
 #include "KillButton.h"
+#include "Extruder.h"
+#include "TemperatureControl.h"
 
+#include "main.h"
 #include <sys/mount.h>
 #include <fstream>
 
@@ -558,13 +561,21 @@ static int smoothie_startup(int, char **)
             }
         }
 
-        // {
-        //     // this creates any configured extruders then we can remove it
-        //     Extruder ex("extruder loader");
-        //     if(!ex.configure(cr)) {
-        //         printf("INFO: no Extruders loaded\n");
-        //     }
-        // }
+        {
+            // this creates any configured extruders then we can remove it
+            Extruder ex("extruder loader");
+            if(!ex.configure(cr)) {
+                printf("INFO: no Extruders loaded\n");
+            }
+        }
+
+        {
+            // this creates any configured temperature controls then we can remove it
+            TemperatureControl tc("temperature control loader");
+            if(!tc.configure(cr)) {
+                printf("INFO: no Temperature Controls loaded\n");
+            }
+        }
 
         KillButton *kill_button = new KillButton();
         if(!kill_button->configure(cr)) {

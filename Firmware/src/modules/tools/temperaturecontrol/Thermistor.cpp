@@ -112,9 +112,15 @@ bool Thermistor::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 
     // Thermistor pin for ADC readings
     thermistor_pin= new Adc(); // returns a sub instance of the Adc Singleton
-    // must be ADC0_n where n is the channel to use 0-7
+    // for the dedicated ADC pins use ADC0_n where n is channel to use 0-7
+    // or use a valid pin specification for an ADC dual function pin eg P7.5 for ADC0_3
     if(this->thermistor_pin->from_string(cr.get_string(m, thermistor_pin_key, "nc")) == nullptr) {
-        printf("config-thermistor: no thermistor pin defined, or bad format\n");
+        printf("config-thermistor: no thermistor pin defined, or invalid ADC pin or bad format\n");
+        return false;
+    }
+
+    if(!thermistor_pin->connected()) {
+        printf("config-thermistor: Thermistor pin not initialized\n");
         return false;
     }
 
