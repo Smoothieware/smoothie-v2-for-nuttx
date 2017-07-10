@@ -56,14 +56,17 @@ REGISTER_TEST(ADCTest, polling)
     Chip_ADC_DeInit(_LPC_ADC_ID);
 }
 
-REGISTER_TEST(ADCTest, Adc_class_interrupts)
+REGISTER_TEST(ADCTest, adc_class_interrupts)
 {
     TEST_ASSERT_TRUE(Adc::setup());
 
     Adc *adc = new Adc;
+    TEST_ASSERT_FALSE(adc->connected());
     TEST_ASSERT_FALSE(adc->from_string("nc") == adc);
-    TEST_ASSERT_TRUE(adc->from_string("ADC0_3") == adc);
-
+    TEST_ASSERT_FALSE(adc->connected());
+    TEST_ASSERT_TRUE(adc->from_string("P7.5") == adc); // ADC0_3
+    TEST_ASSERT_TRUE(adc->connected());
+    TEST_ASSERT_EQUAL_INT(3, adc->get_channel());
     TEST_ASSERT_TRUE(Adc::start());
 
     const uint32_t max_adc_value = Adc::get_max_value();
@@ -86,6 +89,48 @@ REGISTER_TEST(ADCTest, Adc_class_interrupts)
     }
 
     delete adc;
+
+    TEST_ASSERT_TRUE(Adc::stop());
+}
+
+REGISTER_TEST(ADCTest, two_adc_channels)
+{
+    TEST_ASSERT_TRUE(Adc::setup());
+
+    Adc *adc1 = new Adc;
+    TEST_ASSERT_TRUE(adc1->from_string("P7.5") == adc1); // ADC0_3
+    TEST_ASSERT_EQUAL_INT(3, adc1->get_channel());
+
+    Adc *adc2 = new Adc;
+    TEST_ASSERT_TRUE(adc2->from_string("P7.4") == adc2); // ADC0_4
+    TEST_ASSERT_EQUAL_INT(4, adc2->get_channel());
+
+    TEST_ASSERT_TRUE(Adc::start());
+
+    const uint32_t max_adc_value = Adc::get_max_value();
+    printf("Max ADC= %d\n", max_adc_value);
+
+    // give it time to accumulate the 32 samples
+    usleep(500000);
+    // fill up moving average buffer
+    for (int i = 0; i < 4; ++i) {
+        adc1->read();
+        adc2->read();
+    }
+
+    for (int i = 0; i < 10; ++i) {
+        uint16_t v= adc2->read();
+        float volts= 3.3F * (v / (float)max_adc_value);
+        printf("adc2= %04X, volts= %10.4f\n", v, volts);
+
+        v= adc1->read();
+        volts= 3.3F * (v / (float)max_adc_value);
+        printf("adc1= %04X, volts= %10.4f\n", v, volts);
+        usleep(50000);
+    }
+
+    delete adc1;
+    delete adc2;
 
     TEST_ASSERT_TRUE(Adc::stop());
 }

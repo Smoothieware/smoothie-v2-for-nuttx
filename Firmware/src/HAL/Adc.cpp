@@ -3,12 +3,15 @@
 #include "Adc.h"
 //#include "Median.h"
 
-#include "lpc_types.h"
-#include "adc_18xx_43xx.h"
-#include "chip-defs.h"
-
+#include <string>
 #include <cstring>
+#include <cctype>
 #include <algorithm>
+
+#include "lpc_types.h"
+#include "chip-defs.h"
+#include "adc_18xx_43xx.h"
+#include "scu_18xx_43xx.h"
 
 #include "nuttx/arch.h"
 
@@ -69,7 +72,7 @@ bool Adc::setup()
     // even though there maybe 32 samples we only need one new one within the polling time
     // Set sample rate to 4.5KHz (That is as slow as it will go)
     // TODO this is a lot of IRQ overhead so we may need to trigger it from a slow timer
-    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 1000);
+    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 4500);
 
     // init instances array
     for (int i = 0; i < num_channels; ++i) {
@@ -89,7 +92,6 @@ bool Adc::start()
         return false;
     }
 
-
     return true;
 }
 
@@ -105,17 +107,56 @@ bool Adc::stop()
 
 // TODO only ADC0_0 to ADC0_7 handled at the moment
 // figure out channel from name (ADC0_1, ADC0_4, ...)
+// or Pin P4_3
 Adc* Adc::from_string(const char *name)
 {
     if(enabled) return nullptr; // aready setup
 
     const char *p = strcasestr(name, "adc");
-    if (p == nullptr) return nullptr;
-    p += 3;
-    if(*p++ != '0') return nullptr; // must be ADC0
-    if(*p++ != '_') return nullptr; // must be _
-    channel = strtol(p, nullptr, 10);
-    if(channel < 0 || channel >= num_channels) return nullptr;
+    if (p != nullptr) {
+        // ADC specific pin
+        p += 3;
+        if(*p++ != '0') return nullptr; // must be ADC0
+        if(*p++ != '_') return nullptr; // must be _
+        channel = strtol(p, nullptr, 10);
+        if(channel < 0 || channel >= num_channels) return nullptr;
+
+    } else if(tolower(name[0]) == 'p') {
+        // pin specification
+        std::string str(name);
+        uint16_t port = strtol(str.substr(1).c_str(), nullptr, 16);
+        size_t pos = str.find_first_of("._", 1);
+        if(pos == std::string::npos) return nullptr;
+        uint16_t pin = strtol(str.substr(pos + 1).c_str(), nullptr, 10);
+
+        /* now map to an adc channel
+            P4_3 ADC0_0
+            P4_1 ADC0_1
+            PF_8 ADC0_2
+            P7_5 ADC0_3
+            P7_4 ADC0_4
+            PF_10 ADC0_5
+            PB_6 ADC0_6
+        */
+        if     (port ==  4 && pin ==  3) channel = 0;
+        else if(port ==  4 && pin ==  1) channel = 1;
+        else if(port == 15 && pin ==  8) channel = 2;
+        else if(port ==  7 && pin ==  5) channel = 3;
+        else if(port ==  7 && pin ==  4) channel = 4;
+        else if(port == 15 && pin == 10) channel = 5;
+        else if(port == 11 && pin ==  6) channel = 6;
+        else return nullptr; // not a valid ADC pin
+
+        // now need to set to input, disable receiver with EZI bit, disable pullup EPUN=1 and disable pulldown EPD=0
+        uint16_t modefunc = 1 << 4; // disable pullup,
+        Chip_SCU_PinMuxSet(port, pin, modefunc);
+
+    } else {
+        return nullptr;
+    }
+
+    // TODO do not hard code ADC0
+    Chip_SCU_ADC_Channel_Config(0, channel);
 
     memset(sample_buffer, 0, sizeof(sample_buffer));
     memset(ave_buf, 0, sizeof(ave_buf));

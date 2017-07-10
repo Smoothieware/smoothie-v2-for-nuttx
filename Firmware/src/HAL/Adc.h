@@ -23,6 +23,8 @@ public:
     // specific to each instance
     Adc* from_string(const char *name);
     uint32_t read();
+    int get_channel() const { return channel; }
+    bool connected() const { return enabled; }
 
     // return the maximum ADC value, base is 10bits 1024.
 #ifdef OVERSAMPLE
