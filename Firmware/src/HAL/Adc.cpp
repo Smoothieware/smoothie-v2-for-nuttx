@@ -27,6 +27,9 @@ const ADC_CHANNEL_T CHANNEL_LUT[] = {
 Adc *Adc::instances[Adc::num_channels] = {nullptr};
 int Adc::ninstances = 0;
 
+// TODO move ramfunc define to a utils.h
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+
 static ADC_CLOCK_SETUP_T ADCSetup;
 
 // warning we cannot create these once ADC is running
@@ -59,13 +62,14 @@ bool Adc::setup()
     // ADC Init
     Chip_ADC_Init(_LPC_ADC_ID, &ADCSetup);
 
-    // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
-    // even though there maybe 32 samples we only need one new one within the polling time
-    // Set sample rate to 1KHz
-    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 1000);
-
     // Select using burst mode
     Chip_ADC_SetBurstCmd(_LPC_ADC_ID, ENABLE);
+
+    // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
+    // even though there maybe 32 samples we only need one new one within the polling time
+    // Set sample rate to 4.5KHz (That is as slow as it will go)
+    // TODO this is a lot of IRQ overhead so we may need to trigger it from a slow timer
+    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 1000);
 
     // init instances array
     for (int i = 0; i < num_channels; ++i) {
@@ -124,7 +128,7 @@ Adc* Adc::from_string(const char *name)
 }
 
 // NUTTX isr call
-int Adc::sample_isr(int irq, void *context, FAR void *arg)
+_ramfunc_ int Adc::sample_isr(int irq, void *context, FAR void *arg)
 {
     for (int i = 0; i < ninstances; ++i) {
         Adc *adc = Adc::getInstance(i);

@@ -23,13 +23,15 @@ REGISTER_TEST(ADCTest, polling)
     uint16_t dataADC;
 
     // Set sample rate to 1KHz
-    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 1000);
+    Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 4500);
 
-    /* Select using burst mode or not */
+    // Select using burst mode
     Chip_ADC_SetBurstCmd(_LPC_ADC_ID, ENABLE);
 
+    float acc= 0;
+    uint32_t n= 0;
     systime_t st = clock_systimer();
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 10000; ++i) {
         /* Start A/D conversion if not using burst mode */
         //    Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
 
@@ -38,13 +40,16 @@ REGISTER_TEST(ADCTest, polling)
 
         /* Read ADC value */
         if(Chip_ADC_ReadValue(_LPC_ADC_ID, _ADC_CHANNEL, &dataADC) == SUCCESS) {
-            printf("adc= %04X, v= %10.4f\n", dataADC, 3.3F * dataADC/1024.0F);
+            acc += dataADC;
+            ++n;
         } else {
             printf("Failed to read adc\n");
         }
     }
     systime_t en = clock_systimer();
-    printf("elapsed time: %dus, %dust/sample\n", TICK2USEC(en-st), TICK2USEC(en-st)/100);
+
+    printf("average adc= %04X, v= %10.4f\n", (int)(acc/n), 3.3F * (acc/n)/1024.0F);
+    printf("elapsed time: %dus, %10.2f us/sample\n", TICK2USEC(en-st), (float)TICK2USEC(en-st)/n);
 
     Chip_ADC_SetBurstCmd(_LPC_ADC_ID, DISABLE);
     Chip_ADC_EnableChannel(_LPC_ADC_ID, _ADC_CHANNEL, DISABLE);
@@ -66,6 +71,12 @@ REGISTER_TEST(ADCTest, Adc_class_interrupts)
 
     // give it time to accumalte the 32 samples
     usleep(500000);
+    // fill up moving average buffer
+    adc->read();
+    adc->read();
+    adc->read();
+    adc->read();
+
     for (int i = 0; i < 10; ++i) {
         uint16_t v= adc->read();
         float volts= 3.3F * (v / (float)max_adc_value);

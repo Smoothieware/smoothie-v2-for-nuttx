@@ -44,6 +44,9 @@
 #include "scu_18xx_43xx.h"
 #include "clock_18xx_43xx.h"
 
+// TODO move ramfunc define to a utils.h
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
+
 /* Get the number of clock for a full conversion */
 STATIC INLINE uint8_t getFullConvClk(void)
 {
@@ -57,8 +60,7 @@ STATIC CHIP_CCU_CLK_T Chip_ADC_GetClockIndex(LPC_ADC_T *pADC)
 
 	if (pADC == LPC_ADC1) {
 		clkADC = CLK_APB3_ADC1;
-	}
-	else {
+	} else {
 		clkADC = CLK_APB3_ADC0;
 	}
 
@@ -81,8 +83,7 @@ STATIC uint8_t getClkDiv(LPC_ADC_T *pADC, bool burstMode, uint32_t adcRate, uint
 	adcBlockFreq = Chip_Clock_GetRate(Chip_ADC_GetClockIndex(pADC));
 	if (burstMode) {
 		fullAdcRate = adcRate * clks;
-	}
-	else {
+	} else {
 		fullAdcRate = adcRate * getFullConvClk();
 	}
 
@@ -100,7 +101,7 @@ void setStartMode(LPC_ADC_T *pADC, uint8_t start_mode)
 }
 
 /* Get the ADC value */
-Status readAdcVal(LPC_ADC_T *pADC, uint8_t channel, uint16_t *data)
+_ramfunc_ Status readAdcVal(LPC_ADC_T *pADC, uint8_t channel, uint16_t *data)
 {
 	uint32_t temp;
 	temp = pADC->DR[channel];
@@ -132,8 +133,8 @@ void Chip_ADC_Init(LPC_ADC_T *pADC, ADC_CLOCK_SETUP_T *ADCSetup)
 	ADCSetup->adcRate = ADC_MAX_SAMPLE_RATE;
 	ADCSetup->bitsAccuracy = ADC_10BITS;
 	clk = 11;
-	ADCSetup->burstMode = false;
-	div = getClkDiv(pADC, false, ADCSetup->adcRate, clk);
+	ADCSetup->burstMode = true;
+	div = getClkDiv(pADC, true, ADCSetup->adcRate, clk);
 	cr |= ADC_CR_CLKDIV(div);
 	cr |= ADC_CR_BITACC(ADCSetup->bitsAccuracy);
 	pADC->CR = cr;
@@ -148,27 +149,27 @@ void Chip_ADC_DeInit(LPC_ADC_T *pADC)
 }
 
 /* Get the ADC value */
-Status Chip_ADC_ReadValue(LPC_ADC_T *pADC, uint8_t channel, uint16_t *data)
+_ramfunc_ Status Chip_ADC_ReadValue(LPC_ADC_T *pADC, uint8_t channel, uint16_t *data)
 {
 	return readAdcVal(pADC, channel, data);
 }
 
 /* Get ADC Channel status from ADC data register */
-FlagStatus Chip_ADC_ReadStatus(LPC_ADC_T *pADC, uint8_t channel, uint32_t StatusType)
+_ramfunc_ FlagStatus Chip_ADC_ReadStatus(LPC_ADC_T *pADC, uint8_t channel, uint32_t StatusType)
 {
 	switch (StatusType) {
-	case ADC_DR_DONE_STAT:
-		return (pADC->STAT & (1UL << channel)) ? SET : RESET;
+		case ADC_DR_DONE_STAT:
+			return (pADC->STAT & (1UL << channel)) ? SET : RESET;
 
-	case ADC_DR_OVERRUN_STAT:
-		channel += 8;
-		return (pADC->STAT & (1UL << channel)) ? SET : RESET;
+		case ADC_DR_OVERRUN_STAT:
+			channel += 8;
+			return (pADC->STAT & (1UL << channel)) ? SET : RESET;
 
-	case ADC_DR_ADINT_STAT:
-		return pADC->STAT >> 16 ? SET : RESET;
+		case ADC_DR_ADINT_STAT:
+			return pADC->STAT >> 16 ? SET : RESET;
 
-	default:
-		break;
+		default:
+			break;
 	}
 	return RESET;
 }
@@ -178,8 +179,7 @@ void Chip_ADC_Int_SetChannelCmd(LPC_ADC_T *pADC, uint8_t channel, FunctionalStat
 {
 	if (NewState == ENABLE) {
 		pADC->INTEN |= (1UL << channel);
-	}
-	else {
+	} else {
 		pADC->INTEN &= (~(1UL << channel));
 	}
 }
@@ -190,8 +190,7 @@ void Chip_ADC_SetStartMode(LPC_ADC_T *pADC, ADC_START_MODE_T mode, ADC_EDGE_CFG_
 	if ((mode != ADC_START_NOW) && (mode != ADC_NO_START)) {
 		if (EdgeOption) {
 			pADC->CR |= ADC_CR_EDGE;
-		}
-		else {
+		} else {
 			pADC->CR &= ~ADC_CR_EDGE;
 		}
 	}
@@ -224,8 +223,7 @@ void Chip_ADC_EnableChannel(LPC_ADC_T *pADC, ADC_CHANNEL_T channel, FunctionalSt
 {
 	if (NewState == ENABLE) {
 		pADC->CR |= ADC_CR_CH_SEL(channel);
-	}
-	else {
+	} else {
 		pADC->CR &= ~ADC_CR_START_MASK;
 		pADC->CR &= ~ADC_CR_CH_SEL(channel);
 	}
@@ -236,18 +234,19 @@ void Chip_ADC_SetBurstCmd(LPC_ADC_T *pADC, FunctionalState NewState)
 {
 	setStartMode(pADC, ADC_NO_START);
 
-    if (NewState == DISABLE) {
+	if (NewState == DISABLE) {
 		pADC->CR &= ~ADC_CR_BURST;
-	}
-	else {
+		//ADCSetup->burstMode = false;
+	} else {
 		pADC->CR |= ADC_CR_BURST;
+		//ADCSetup->burstMode = true;
 	}
 }
 
 /* Read the ADC value and convert it to 8bits value */
 Status Chip_ADC_ReadByte(LPC_ADC_T *pADC, ADC_CHANNEL_T channel, uint8_t *data)
 {
-	uint16_t temp= 0;
+	uint16_t temp = 0;
 	Status rt;
 
 	rt = readAdcVal(pADC, channel, &temp);

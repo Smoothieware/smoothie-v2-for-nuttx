@@ -51,8 +51,6 @@ extern "C" {
  * @{
  */
 
-#define ADC_ACC_10BITS
-
 #define ADC_MAX_SAMPLE_RATE 400000
 
 /**
