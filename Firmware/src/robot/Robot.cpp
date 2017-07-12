@@ -173,7 +173,7 @@ bool Robot::configure(ConfigReader& cr)
         std::vector<float> t = stringutils::parse_number_list(g92);
         if(t.size() == 3) {
             g92_offset = wcs_t(t[0], t[1], t[2]);
-        }else{
+        } else {
             printf("Warning:configure-robot: g92_offset config is bad\n");
         }
     }
@@ -190,10 +190,10 @@ bool Robot::configure(ConfigReader& cr)
 
     // make each motor
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-        auto s= ssm.find(actuator_keys[a]);
+        auto s = ssm.find(actuator_keys[a]);
         if(s == ssm.end()) break; //actuator not found and they must be in contiguous order
 
-        auto& mm= s->second; // map of actuator config values for this actuator
+        auto& mm = s->second; // map of actuator config values for this actuator
         Pin step_pin(cr.get_string(mm, step_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin dir_pin( cr.get_string(mm, dir_pin_key,  "nc"), Pin::AS_OUTPUT);
         Pin en_pin(  cr.get_string(mm, en_pin_key,   "nc"), Pin::AS_OUTPUT);
@@ -296,8 +296,8 @@ bool Robot::configure(ConfigReader& cr)
 
     THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 400, std::bind(&Robot::handle_mcodes, this, _1, _2));
 
-    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&Robot::handle_mcodes, this, _1, _2));
-    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&Robot::handle_mcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&Robot::handle_M500, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&Robot::handle_M500, this, _1, _2));
 
     THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 665, std::bind(&Robot::handle_M665, this, _1, _2));
 
@@ -695,7 +695,7 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
                 }
                 break;
             }
-            // else fall through to turn all off
+        // else fall through to turn all off
         case 84:
             Conveyor::getInstance()->wait_for_idle();
             enable_all_motors(false); // turn all enable pins off
@@ -835,76 +835,77 @@ bool Robot::handle_mcodes(GCode& gcode, OutputStream& os)
             Conveyor::getInstance()->wait_for_idle();
             break;
 
-        case 500: // M500 saves some volatile settings to config override file
-        case 503: { // M503 just prints the settings
-            os.printf(";Steps per unit:\nM92 ");
-            for (int i = 0; i < n_motors; ++i) {
-                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
-                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                os.printf("%c%1.5f ", axis, actuators[i]->get_steps_per_mm());
-            }
-            os.printf("\n");
-
-            // only print if not 0
-            os.printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
-            for (int i = 0; i < n_motors; ++i) {
-                if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
-                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                if(actuators[i]->get_acceleration() > 0) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
-            }
-            os.printf("\n");
-
-            os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
-
-            os.printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-
-            os.printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
-            for (int i = 0; i < n_motors; ++i) {
-                if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
-                char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
-                os.printf("%c%1.5f ", axis, actuators[i]->get_max_rate());
-            }
-            os.printf("\n");
-
-            // get or save any arm solution specific optional values
-            BaseSolution::arm_options_t options;
-            if(arm_solution->get_optional(options) && !options.empty()) {
-                os.printf(";Optional arm solution specific settings:\nM665");
-                for(auto &i : options) {
-                    os.printf(" %c%1.4f", i.first, i.second);
-                }
-                os.printf("\n");
-            }
-
-            // save wcs_offsets and current_wcs
-            // TODO this may need to be done whenever they change to be compliant
-            os.printf(";WCS settings\n");
-            os.printf("%s\n", stringutils::wcs2gcode(current_wcs).c_str());
-            int n = 1;
-            for(auto &i : wcs_offsets) {
-                if(i != wcs_t(0, 0, 0)) {
-                    float x, y, z;
-                    std::tie(x, y, z) = i;
-                    os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, stringutils::wcs2gcode(n - 1).c_str());
-                }
-                ++n;
-            }
-            if(save_g92) {
-                // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
-                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
-                if(g92_offset != wcs_t(0, 0, 0)) {
-                    float x, y, z;
-                    std::tie(x, y, z) = g92_offset;
-                    os.printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
-                }
-            }
-        }
-        break;
-
         default: handled = false; break;
     }
 
     return handled;
+}
+
+bool Robot::handle_M500(GCode& gcode, OutputStream& os)
+{
+    os.printf(";Steps per unit:\nM92 ");
+    for (int i = 0; i < n_motors; ++i) {
+        if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+        char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+        os.printf("%c%1.5f ", axis, actuators[i]->get_steps_per_mm());
+    }
+    os.printf("\n");
+
+    // only print if not 0
+    os.printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
+    for (int i = 0; i < n_motors; ++i) {
+        if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+        char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+        if(actuators[i]->get_acceleration() > 0) os.printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
+    }
+    os.printf("\n");
+
+    os.printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", Planner::getInstance()->xy_junction_deviation, Planner::getInstance()->z_junction_deviation, Planner::getInstance()->minimum_planner_speed);
+
+    os.printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+
+    os.printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
+    for (int i = 0; i < n_motors; ++i) {
+        if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+        char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+        os.printf("%c%1.5f ", axis, actuators[i]->get_max_rate());
+    }
+    os.printf("\n");
+
+    // get or save any arm solution specific optional values
+    BaseSolution::arm_options_t options;
+    if(arm_solution->get_optional(options) && !options.empty()) {
+        os.printf(";Optional arm solution specific settings:\nM665");
+        for(auto &i : options) {
+            os.printf(" %c%1.4f", i.first, i.second);
+        }
+        os.printf("\n");
+    }
+
+    // save wcs_offsets and current_wcs
+    // TODO this may need to be done whenever they change to be compliant
+    os.printf(";WCS settings\n");
+    os.printf("%s\n", stringutils::wcs2gcode(current_wcs).c_str());
+    int n = 1;
+    for(auto &i : wcs_offsets) {
+        if(i != wcs_t(0, 0, 0)) {
+            float x, y, z;
+            std::tie(x, y, z) = i;
+            os.printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, stringutils::wcs2gcode(n - 1).c_str());
+        }
+        ++n;
+    }
+    if(save_g92) {
+        // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
+        // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
+        if(g92_offset != wcs_t(0, 0, 0)) {
+            float x, y, z;
+            std::tie(x, y, z) = g92_offset;
+            os.printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
+        }
+    }
+
+    return true;
 }
 
 
@@ -964,7 +965,7 @@ void Robot::process_move(GCode& gcode, enum MOTION_MODE_T motion_mode)
         char letter = 'X' + i;
         if( gcode.has_arg(letter) ) {
             param[i] = this->to_millimeters(gcode.get_arg(letter));
-            is_param[i]= true;
+            is_param[i] = true;
         }
     }
 
@@ -1640,15 +1641,15 @@ float Robot::get_feed_rate() const
 // return a GRBL-like query string for ? command
 void Robot::get_query_string(std::string& str)
 {
-    bool homing= false;
+    bool homing = false;
     bool running = false;
-    bool feed_hold= false;
+    bool feed_hold = false;
 
     // see if we are homing
-    Module *m= Module::lookup("homing");
+    Module *m = Module::lookup("homing");
     if(m != nullptr) {
         int state;
-        bool ok= m->request("status", &state);
+        bool ok = m->request("status", &state);
         if(ok && state == 1) homing = true;
     }
 
@@ -1689,7 +1690,7 @@ void Robot::get_query_string(std::string& str)
             }
 #endif
 
-        }else{
+        } else {
             str.append(",MPos:").append(buf, n);
         }
 
@@ -1700,10 +1701,10 @@ void Robot::get_query_string(std::string& str)
         if(new_status_format) {
             str.append("|WPos:").append(buf, n);
             // current feedrate
-            float fr= from_millimeters(Conveyor::getInstance()->get_current_feedrate()*60.0F);
+            float fr = from_millimeters(Conveyor::getInstance()->get_current_feedrate() * 60.0F);
             n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
             str.append(buf, n);
-            float sr= get_s_value();
+            float sr = get_s_value();
             n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
             str.append(buf, n);
 
@@ -1717,7 +1718,7 @@ void Robot::get_query_string(std::string& str)
             //     }
             // #endif
 
-        }else{
+        } else {
             str.append(",WPos:").append(buf, n);
         }
 
@@ -1740,7 +1741,7 @@ void Robot::get_query_string(std::string& str)
             }
 #endif
 
-        }else{
+        } else {
             str.append(",MPos:").append(buf, n);
         }
 
@@ -1749,12 +1750,12 @@ void Robot::get_query_string(std::string& str)
         n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
         if(new_status_format) {
             str.append("|WPos:").append(buf, n);
-        }else{
+        } else {
             str.append(",WPos:").append(buf, n);
         }
 
         if(new_status_format) {
-            float fr= from_millimeters(get_feed_rate());
+            float fr = from_millimeters(get_feed_rate());
             n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
             str.append(buf, n);
         }

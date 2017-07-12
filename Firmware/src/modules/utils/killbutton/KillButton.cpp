@@ -3,9 +3,9 @@
 #include "ConfigReader.h"
 #include "SlowTicker.h"
 
-#define kill_button_enable_key "kill_button_enable"
-#define kill_button_pin_key "kill_button_pin"
-#define toggle_key "kill_button_toggle_enable"
+#define kill_button_enable_key "enable"
+#define kill_button_pin_key "pin"
+#define toggle_key "toggle_enable"
 #define unkill_key "unkill_enable"
 
 KillButton::KillButton() : Module("killbutton")

@@ -100,6 +100,11 @@ bool TemperatureControl::load_controls(ConfigReader& cr)
             if(tc->configure(cr, m)) {
                 // make sure the first (or only) heater is selected
                 if(tc->tool_id == 0) tc->active = true;
+                if(tc->tool_id == 255) {
+                    // config did not set a toold id but we need a unique one so...
+                    tc->tool_id = 255 - cnt;
+                    tc->active = true; // and they are always active
+                }
                 ++cnt;
             } else {
                 printf("configure-temperature control: failed to configure temperature control %s\n", name.c_str());
@@ -108,11 +113,9 @@ bool TemperatureControl::load_controls(ConfigReader& cr)
         }
     }
 
-    // no need to create one of these if no heaters defined
     if(cnt > 0) {
-//        new PID_Autotuner();
         printf("configure-temperature control: NOTE: %d TemperatureControl(s) configured and enabled\n", cnt);
-    }else{
+    } else {
         printf("configure-temperature control: NOTE: no TemperatureControl(s) configured\n");
     }
 
@@ -131,7 +134,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
     this->get_m_code          = cr.get_int(m, get_m_code_key, 105);
     this->readings_per_second = cr.get_int(m, readings_per_second_key, 20);
     this->designator          = cr.get_string(m, designator_key, "T");
-    this->tool_id             = cr.get_int(m, tool_id_key, 0); // set to T0 by default, must be set to > 0 for subsequent extruders
+    this->tool_id             = cr.get_int(m, tool_id_key, 255); // set to 255 by default whichis a bad and not controlled by Tx, other extruders should be 0 or 1 etc
 
     // Runaway parameters
     uint32_t n = cr.get_int(m, runaway_range_key, 20);
@@ -242,6 +245,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
     if(!this->readonly) {
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 143, std::bind(&TemperatureControl::handle_gcode, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 301, std::bind(&TemperatureControl::handle_gcode, this, _1, _2));
+        //Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 303, std::bind(&TemperatureControl::handle_autopid, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&TemperatureControl::handle_gcode, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&TemperatureControl::handle_gcode, this, _1, _2));
 
@@ -278,6 +282,7 @@ bool TemperatureControl::handle_M6(GCode& gcode, OutputStream& os)
 {
     // this replaces what toolmanager used to do
     if(gcode.has_t()) {
+        if(this->tool_id >= 250) return true; // special ids of 250 to 255 means ignore tool change (ie a bed)
         this->active = (gcode.get_int_arg('T') == this->tool_id);
 
     } else {
@@ -288,7 +293,25 @@ bool TemperatureControl::handle_M6(GCode& gcode, OutputStream& os)
     return true;
 }
 
-bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
+#if 0
+// we no longer have abort auto pid so control X will abort it or kill button
+// Also the parameter to select the tool is P not E
+// if this is unacceptible then we will have to run autopid in a thread and it will get a lot more complex
+bool TemperatureControl::handle_autopid(GCode& gcode, OutputStream& os)
+{
+    if (gcode.get_code() == 303 && gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id) {
+        AutoPID *autopid= new AutoPID();
+        // will not return until complete
+        autopid->start(gcode, os, this);
+        delete autopid;
+        return true;
+    }
+
+    return false;
+}
+#endif
+
+bool TemperatureControl::handle_gcode(GCode & gcode, OutputStream & os)
 {
     if (gcode.has_m()) {
 
@@ -317,6 +340,8 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                     this->sensor_settings = false;
                 }
 
+                return true;
+
             } else if(!gcode.has_arg('S')) {
                 os.printf("%s(S%d): using %s - active: %d\n", this->designator.c_str(), this->tool_id, this->readonly ? "Readonly" : this->use_bangbang ? "Bangbang" : "PID", active);
                 sensor->get_raw(os);
@@ -327,9 +352,11 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                         os.printf("%s(S%d): %c %1.18f\n", this->designator.c_str(), this->tool_id, i.first, i.second);
                     }
                 }
+
+                return true;
             }
 
-            return true;
+            return false;
         }
 
         // readonly sensors don't handle the rest
@@ -348,6 +375,8 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                 os.printf("Maximum temperature for %s(%d) is %f°C\n", this->designator.c_str(), this->tool_id, max_temp);
             }
 
+            return true;
+
         } else if (gcode.get_code() == 301) {
             if (gcode.has_arg('S') && (gcode.get_int_arg('S') == this->tool_id)) {
                 if (gcode.has_arg('P'))
@@ -364,6 +393,8 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
             } else if(!gcode.has_arg('S')) {
                 os.printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->tool_id, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin->max_pwm(), o);
             }
+
+            return true;
 
         } else if (gcode.get_code() == 500 || gcode.get_code() == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             os.printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->tool_id, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin->max_pwm());
@@ -382,11 +413,15 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                 }
             }
 
+            return true;
+
         } else if( ( gcode.get_code() == this->set_m_code || gcode.get_code() == this->set_and_wait_m_code ) && gcode.has_arg('S')) {
+            // if there is a Tn argument then we use that and ignore if we are active or not
             bool is_selected = gcode.has_arg('T') && gcode.get_int_arg('T') == this->tool_id;
 
+            if(this->tool_id >= 250) this->active = true; // special tool ids are always active (eg bed)
+
             if( (this->active && !gcode.has_arg('T')) || is_selected) {
-                // if there is a Tn argument then we use that and ignore if we are active or not
 
                 // required so temp change happens in order
                 Conveyor::getInstance()->wait_for_idle();
@@ -423,14 +458,15 @@ bool TemperatureControl::handle_gcode(GCode& gcode, OutputStream& os)
                         }
                     }
                 }
+
+                return true;
             }
 
-        } else {
-            return false;
         }
     }
 
-    return true;
+    // should return false if we get here
+    return false;
 }
 
 bool TemperatureControl::request(const char *key, void *value)

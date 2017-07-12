@@ -315,6 +315,7 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
             os.puts(buf);
         }
 
+        return true;
 
     } else if (gcode.get_code() == 92 && ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id) ) ) {
         float spm = stepper_motor->get_steps_per_mm();
@@ -325,6 +326,7 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
 
         os.set_append_nl();
         os.printf("E:%f ", spm);
+        return true;
 
     } else if (gcode.get_code() == 200 && ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id)) ) {
         if (gcode.has_arg('D')) {
@@ -350,6 +352,8 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
             }
         }
 
+        return true;
+
     } else if (gcode.get_code() == 203 && ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id)) ) {
         // M203 Exxx Vyyy Set maximum feedrates xxx mm/sec and/or yyy mm³/sec
         if(gcode.get_num_args() == 0) {
@@ -365,10 +369,13 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
             }
         }
 
+        return true;
+
     } else if (gcode.get_code() == 204 && gcode.has_arg('E') &&
                ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id)) ) {
         // extruder acceleration M204 Ennn mm/sec^2 (Pnnn sets the specific extruder for M500)
         stepper_motor->set_acceleration(gcode.get_arg('E'));
+        return true;
 
     } else if (gcode.get_code() == 207 && ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id)) ) {
         // M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop] Q[zlift feedrate mm/min]
@@ -376,11 +383,13 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
         if(gcode.has_arg('F')) retract_feedrate = gcode.get_arg('F') / 60.0F; // specified in mm/min converted to mm/sec
         if(gcode.has_arg('Z')) retract_zlift_length = gcode.get_arg('Z'); // specified in mm
         if(gcode.has_arg('Q')) retract_zlift_feedrate = gcode.get_arg('Q') / 60.0F; // specified in mm/min converted to mm/sec
+        return true;
 
     } else if (gcode.get_code() == 208 && ( (this->selected && !gcode.has_arg('P')) || (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id)) ) {
         // M208 - set retract recover length S[positive mm surplus to the M207 S*] F[feedrate mm/min]
         if(gcode.has_arg('S')) retract_recover_length = gcode.get_arg('S');
         if(gcode.has_arg('F')) retract_recover_feedrate = gcode.get_arg('F') / 60.0F; // specified in mm/min converted to mm/sec
+        return true;
 
     } else if (gcode.get_code() == 221 && this->selected) { // M221 S100 change flow rate by percentage
         if(gcode.has_arg('S')) {
@@ -396,6 +405,7 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
         } else {
             os.printf("Flow rate at %6.2f %%\n", this->extruder_multiplier * 100.0F);
         }
+        return true;
 
     } else if (gcode.get_code() == 500 || gcode.get_code() == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
         os.printf(";E Steps per mm:\nM92 E%1.4f P%d\n", stepper_motor->get_steps_per_mm(), this->tool_id);
@@ -407,9 +417,11 @@ bool Extruder::handle_mcode(GCode& gcode, OutputStream& os)
         if(this->max_volumetric_rate > 0) {
             os.printf(";E max volumetric rate mm³/sec:\nM203 V%1.4f P%d\n", this->max_volumetric_rate, this->tool_id);
         }
+        return true;
     }
 
-    return true;
+    // if we get here one of the above did not handle the gcode
+    return false;
 }
 
 bool Extruder::handle_gcode(GCode & gcode, OutputStream & os)
@@ -481,6 +493,6 @@ bool Extruder::handle_gcode(GCode & gcode, OutputStream & os)
     }
 
 
-    // TODO should return false if it reaches here
-    return true;
+    // should return false if it reaches here
+    return false;
 }

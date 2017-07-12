@@ -112,6 +112,7 @@ class Robot : public Module {
         bool handle_dwell(GCode& gcode, OutputStream& os);
         bool handle_G10(GCode&, OutputStream&);
         bool handle_G92(GCode&, OutputStream&);
+        bool handle_M500(GCode&, OutputStream&);
         bool handle_M665(GCode&, OutputStream&);
 
         bool append_milestone(const float target[], float rate_mm_s);

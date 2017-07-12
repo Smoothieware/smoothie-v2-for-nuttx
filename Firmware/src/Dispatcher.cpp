@@ -12,8 +12,8 @@
 
 using namespace std;
 
-#define DEBUG_WARNING printf
-//#define DEBUG_WARNING(...)
+//#define DEBUG_WARNING printf
+#define DEBUG_WARNING(...)
 
 Dispatcher *Dispatcher::instance;
 
@@ -75,6 +75,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 		if(it->second(gc, os)) {
 			ret = true;
 		} else {
+			// not really useful as many handlers will onlt process if certain params are set, so not an error unless no handler deals with it.
 			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G' : 'M', gc.get_code());
 		}
 	}

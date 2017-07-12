@@ -1,12 +1,4 @@
 static const char *string_config= "\
-[general]\n\
-second_usb_serial_enable = false # This enables a second USB serial port\n\
-kill_button_enable = true # Set to true to enable a kill button\n\
-kill_button_pin = 2.12 # Kill button pin. default is same as pause button 2.12 (2.11 is another good choice)\n\
-uart0.baud_rate = 115200 # Baud rate for the default hardware ( UART ) serial port\n\
-leds_disable = true             # Disable using leds after config loaded\n\
-play_led_disable = true             # Disable the play led\n\
-\n\
 [motion control]\n\
 default_feed_rate = 4000 # Default speed (mm/minute) for G1/G2/G3 moves\n\
 default_seek_rate = 4000 # Default speed (mm/minute) for G0 moves\n\
@@ -125,11 +117,17 @@ hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
-bed.tool_id = 255                 # beds do not have tool ids but we need to set one anyway\n\
+bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
 bed.thermistor_pin = P7.4 # Pin for the thermistor to read\n\
 bed.heater_pin = P6.8 # Pin that controls the heater\n\
 bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\
 bed.set_m_code = 140 # M-code to set the temperature for this module\n\
 bed.set_and_wait_m_code = 190 # M-code to set-and-wait for this module\n\
 bed.designator = B # Designator letter for this module\n\
+\n\
+[kill button]\n\
+enable = true          # Set to true to enable a kill button\n\
+pin = p2.7             # Kill button pin.\n\
+toggle_enable = false  # set to true to make it a toggle button (like an estop)\n\
+unkill_enable = true   # enable kill button hold for 2 seconds does unkill\n\
 \n";

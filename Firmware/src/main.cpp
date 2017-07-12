@@ -222,8 +222,8 @@ bool dispatch_line(OutputStream& os, const char *line)
     // dispatch gcodes
     for(auto& i : gcodes) {
         if(!THEDISPATCHER->dispatch(i, os)) {
-            // no handler for this gcode, return ok - nohandler
-            os.puts("ok - nohandler\n");
+            // no handler processed this gcode, return ok - ignored
+            os.puts("ok - ignored\n");
         }
     }
 
