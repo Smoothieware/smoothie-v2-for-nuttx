@@ -67,14 +67,14 @@
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
-Robot *Robot::instance;
+Robot *Robot::instance= nullptr;
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
 Robot::Robot() : Module("robot")
 {
-    instance = this;
+    if(instance == nullptr) instance= this;
 
     this->inch_mode = false;
     this->absolute_mode = true;

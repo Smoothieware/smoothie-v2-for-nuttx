@@ -21,6 +21,12 @@ class StepTicker
 public:
     StepTicker();
     ~StepTicker();
+    // delete copy and move constructors and assign operators
+    StepTicker(StepTicker const&) = delete;             // Copy construct
+    StepTicker(StepTicker&&) = delete;                  // Move construct
+    StepTicker& operator=(StepTicker const&) = delete;  // Copy assign
+    StepTicker& operator=(StepTicker &&) = delete;      // Move assign
+
     void set_frequency( float frequency );
     void set_unstep_time( float microseconds );
     int register_actuator(StepperMotor* motor);

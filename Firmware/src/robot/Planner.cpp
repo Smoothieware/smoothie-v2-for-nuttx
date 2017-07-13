@@ -17,7 +17,7 @@
 #define minimum_planner_speed_key "minimum_planner_speed"
 #define planner_queue_size_key    "planner_queue_size"
 
-Planner *Planner::instance;
+Planner *Planner::instance= nullptr;
 
 // The Planner does the acceleration math for the queue of Blocks ( movements ).
 // It makes sure the speed stays within the configured constraints ( acceleration, junction_deviation, etc )
@@ -25,7 +25,7 @@ Planner *Planner::instance;
 
 Planner::Planner()
 {
-    instance= this;
+    if(instance == nullptr) instance= this;
     memset(this->previous_unit_vec, 0, sizeof this->previous_unit_vec);
     fp_scale = (double)STEPTICKER_FPSCALE / pow((double)STEP_TICKER_FREQUENCY, 2.0); // we scale up by fixed point offset first to avoid tiny values
 }

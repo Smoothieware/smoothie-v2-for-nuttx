@@ -19,6 +19,12 @@ public:
     static Conveyor *getInstance() { return instance; }
 
     Conveyor();
+    // delete copy and move constructors and assign operators
+    Conveyor(Conveyor const&) = delete;             // Copy construct
+    Conveyor(Conveyor&&) = delete;                  // Move construct
+    Conveyor& operator=(Conveyor const&) = delete;  // Copy assign
+    Conveyor& operator=(Conveyor &&) = delete;      // Move assign
+
     bool configure(ConfigReader& cr);
     void start();
 

@@ -24,6 +24,12 @@ class Planner
 public:
     static Planner *getInstance() { return instance; }
     Planner();
+    // delete copy and move constructors and assign operators
+    Planner(Planner const&) = delete;             // Copy construct
+    Planner(Planner&&) = delete;                  // Move construct
+    Planner& operator=(Planner const&) = delete;  // Copy assign
+    Planner& operator=(Planner &&) = delete;      // Move assign
+
     bool configure(ConfigReader& cr);
     bool initialize(uint8_t n);
 

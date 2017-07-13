@@ -24,11 +24,11 @@
 /*
  * The conveyor manages the planner queue, and starting the executing chain of blocks
  */
-Conveyor *Conveyor::instance;
+Conveyor *Conveyor::instance= nullptr;
 
 Conveyor::Conveyor() : Module("conveyor")
 {
-    instance= this;
+    if(instance == nullptr) instance= this;
     running = false;
     allow_fetch = false;
     flush= false;

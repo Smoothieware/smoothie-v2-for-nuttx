@@ -25,11 +25,11 @@ Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_OUTPUT);
 // TODO move ramfunc define to a utils.h
 #define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
-StepTicker *StepTicker::instance;
+StepTicker *StepTicker::instance= nullptr;
 
 StepTicker::StepTicker()
 {
-    instance = this; // setup the Singleton instance of the stepticker
+    if(instance == nullptr) instance= this;
 }
 
 StepTicker::~StepTicker()

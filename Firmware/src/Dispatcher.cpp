@@ -15,11 +15,11 @@ using namespace std;
 //#define DEBUG_WARNING printf
 #define DEBUG_WARNING(...)
 
-Dispatcher *Dispatcher::instance;
+Dispatcher *Dispatcher::instance= nullptr;
 
 Dispatcher::Dispatcher()
 {
-	instance = this;
+    if(instance == nullptr) instance= this;
 }
 
 std::set<std::string> Dispatcher::get_commands() const

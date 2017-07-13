@@ -17,6 +17,11 @@ public:
     // setup the Singleton instance
     static Dispatcher *getInstance() { return instance; }
     Dispatcher();
+    // delete copy and move constructors and assign operators
+    Dispatcher(Dispatcher const&) = delete;             // Copy construct
+    Dispatcher(Dispatcher&&) = delete;                  // Move construct
+    Dispatcher& operator=(Dispatcher const&) = delete;  // Copy assign
+    Dispatcher& operator=(Dispatcher &&) = delete;      // Move assign
 
     using Handler_t = std::function<bool(GCode&, OutputStream&)>;
     using Handlers_t = std::multimap<uint16_t, Handler_t>;
@@ -37,8 +42,7 @@ public:
 
 private:
     static Dispatcher *instance;
-    Dispatcher(Dispatcher const &) = delete;
-    void operator=(Dispatcher const &) = delete;
+
     bool handle_configuration_commands(GCode& gc, OutputStream& os) const;
     bool write_configuration(OutputStream& output_stream) const;
     bool load_configuration(OutputStream& output_stream) const;
