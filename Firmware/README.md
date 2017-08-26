@@ -11,4 +11,5 @@ https://gist.github.com/8996097730ba1f17413e3aad1c98eaaf
 
 Currently the config.ini is builtin and defined in string-config.h
 
-Currently Robot is ported and should allow XYZ motors to work as expected at 100Khz max step rate.
+Currently Enough is ported to be able to run a 3D Printer using a Bambino board and external drivers.
+XYZ and an extruder and temperture controls should work, but needs extensive testing.
