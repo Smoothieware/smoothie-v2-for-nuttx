@@ -142,6 +142,7 @@ defines = %w(-DCLOCK_MONOTONIC -D__NuttX__  -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_
 if DEBUG
   defines << "-DDEBUG"
 end
+defines << "-D#{TARGET}"
 
 DEFINES= defines.join(' ')
 

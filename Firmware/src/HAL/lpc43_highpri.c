@@ -6,7 +6,11 @@
 #include "arch/common/up_internal.h"
 #include "arch/armv7-m/ram_vectors.h"
 #include "lpc43_timer.h"
+#ifdef Bambino
 #include "arch/board/bambino-200e.h"
+#elif defined(Minialpha)
+#include "arch/board/smoothie-v2minialpha.h"
+#endif
 
 #include "stdio.h"
 
