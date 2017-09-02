@@ -6,7 +6,12 @@ verbose(ENV['verbose'] == '1')
 TESTING = ENV['testing'].nil? ? false : ENV['testing'] == '1'
 
 PROG = 'smoothiev2'
-TARGET = ENV['target'].nil? ? "Bambino" : ENV['target']
+if ENV['target'].nil?
+  puts "ERROR: Must specify target=[Bambino|Minialpha]"
+  exit 0
+end
+
+TARGET = ENV['target']
 
 DEBUG = ENV['debug'] == '1'
 
@@ -131,8 +136,10 @@ SRC.each do |s|
   FileUtils.mkdir_p(d) unless Dir.exists?(d)
 end
 
-include_dirs = ["./nuttx-export", "./nuttx-export/include", "./nuttx-export/arch/common"] + [Dir.glob(['./src/**/'])].flatten # ,'./staging/**/'
-sys_include_dirs = ["./nuttx-export/include", "./nuttx-export/include/cxx", "./nuttx-export/include/libcxx", "./nuttx-export/arch/chip"]
+NUTTX_EXPORT = "nuttx-export.#{TARGET}"
+
+include_dirs = ["./#{NUTTX_EXPORT}", "./#{NUTTX_EXPORT}/include", "./#{NUTTX_EXPORT}/arch/common"] + [Dir.glob(['./src/**/'])].flatten # ,'./staging/**/'
+sys_include_dirs = ["./#{NUTTX_EXPORT}/include", "./#{NUTTX_EXPORT}/include/cxx", "./#{NUTTX_EXPORT}/include/libcxx", "./#{NUTTX_EXPORT}/arch/chip"]
 
 # [Dir.glob([PROG + '/**/Inc/**', './mri/**/'])].flatten
 
@@ -152,11 +159,11 @@ CFLAGS = DEPFLAGS + " -Wall -Wshadow -Wundef  -mcpu=cortex-m4 -mthumb -mfloat-ab
 CPPFLAGS = CFLAGS + ' -nostdinc++ -fno-exceptions -fno-rtti -std=gnu++11 -fno-builtin-printf -fno-builtin-isnan -ffast-math'
 
 # Linker script to be used.
-LSCRIPT = TARGET == 'LPC4337' ? "./v2pro4337.ld"  : "./nuttx-export/build/spificonfig.ld"
+LSCRIPT = TARGET == 'LPC4337' ? "./v2pro4337.ld"  : "./#{NUTTX_EXPORT}/build/spificonfig.ld"
 
 # TODO need to figure this out from tool path
 LIBGCC = "#{LIBSDIR}/gcc/arm-none-eabi/#{ARMVERSION}/thumb/v7e-m/fpv4-sp/hard/libgcc.a "
-LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./nuttx-export/libs",
+LOPTIONS = ["--entry=__start", "-nostartfiles", "-nodefaultlibs", "-L./#{NUTTX_EXPORT}/libs",
    "--start-group", "-lnuttx", "-lapps", LIBGCC, "--end-group"]
 
 LDFLAGS = "-Map=#{OBJDIR}/#{PROG}.map -T#{LSCRIPT} " + LOPTIONS.join(" ")

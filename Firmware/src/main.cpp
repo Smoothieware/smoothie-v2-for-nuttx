@@ -401,6 +401,7 @@ static void uart_comms()
 
 #include "Conveyor.h"
 #include "Robot.h"
+#include "Pin.h"
 
 /*
  * All commands must be executed in the context of this thread. It is equivalent to the main_loop in v1.
@@ -424,6 +425,10 @@ static void *commandthrd(void *)
     // get the message queue
     mqd_t mqfd = get_message_queue(true);
 
+    // Define the activity/idle indicator led
+    // TODO may need to be read from config
+    Pin led3("GPIO6_13", Pin::AS_OUTPUT);
+
     for(;;) {
         const char *line;
         OutputStream *os;
@@ -435,6 +440,9 @@ static void *commandthrd(void *)
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
         } else {
             // timed out or other error
+
+            // toggle led to show we are alive, but idle
+            led3.set(!led3.get());
         }
 
         // set in comms thread, and executed here to avoid thread clashes
