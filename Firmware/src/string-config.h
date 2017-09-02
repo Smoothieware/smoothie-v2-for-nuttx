@@ -18,23 +18,23 @@ planner_queue_size = 32\n\
 \n\
 [actuator]\n\
 alpha.steps_per_mm = 80 # Steps per mm for alpha ( X ) stepper\n\
-alpha.step_pin = p2_9 # Pin for alpha stepper step signal\n\
-alpha.dir_pin = P3_2 # Pin for alpha stepper direction, add '!' to reverse direction\n\
-alpha.en_pin = nc # Pin for alpha enable pin\n\
+alpha.step_pin = gpio7_12 # Pin for alpha stepper step signal\n\
+alpha.dir_pin = gpio7_9 # Pin for alpha stepper direction, add '!' to reverse direction\n\
+alpha.en_pin = gpio3_10 # Pin for alpha enable pin\n\
 alpha.max_rate = 30000.0 # Maximum rate in mm/min\n\
 x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 beta.steps_per_mm = 80 # Steps per mm for beta ( Y ) stepper\n\
-beta.step_pin = p3_1 # Pin for beta stepper step signal\n\
-beta.dir_pin = p2_12 # Pin for beta stepper direction, add '!' to reverse direction\n\
-beta.en_pin = nc # Pin for beta enable\n\
+beta.step_pin = gpio3_6 # Pin for beta stepper step signal\n\
+beta.dir_pin = gpio5_15 # Pin for beta stepper direction, add '!' to reverse direction\n\
+beta.en_pin = gpio1_12 # Pin for beta enable\n\
 beta.max_rate = 30000.0 # Maxmimum rate in mm/min\n\
 y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 gamma.steps_per_mm = 1600 # Steps per mm for gamma ( Z ) stepper\n\
-gamma.step_pin = p2_13 # Pin for gamma stepper step signal\n\
-gamma.dir_pin = p7_1 # Pin for gamma stepper direction, add '!' to reverse direction\n\
-gamma.en_pin = nc # Pin for gamma enable\n\
+gamma.step_pin = gpio0_5 # Pin for gamma stepper step signal\n\
+gamma.dir_pin = gpio7_2 # Pin for gamma stepper direction, add '!' to reverse direction\n\
+gamma.en_pin = gpio7_3 # Pin for gamma enable\n\
 gamma.max_rate = 300.0 # Maximum rate in mm/min\n\
 z.axis_max_speed = 300 # Maximum speed in mm/min\n\
 gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
@@ -55,13 +55,13 @@ misc.output_type = digital          # Digital means this is just an on or off pi
 led1.enable            = true\n\
 led1.input_on_command  = M1\n\
 led1.input_off_command = M2\n\
-led1.output_pin        = gpio1_0\n\
+led1.output_pin        = gpio1_1\n\
 led1.output_type       = digital\n\
 \n\
 led2.enable            = true\n\
 led2.input_on_command  = M3\n\
 led2.input_off_command = M4\n\
-led2.output_pin        = gpio3_3\n\
+led2.output_pin        = gpio2_7\n\
 led2.output_type       = sigmadeltapwm\n\
 \n\
 but1.enable             = true                     # Enable this module\n\
@@ -77,9 +77,9 @@ hotend.steps_per_mm = 140        # Steps per mm for extruder stepper\n\
 hotend.default_feed_rate = 600   # Default rate ( mm/minute ) for moves where only the extruder moves\n\
 hotend.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
 hotend.max_speed = 50            # Maximum speed in mm/s\n\
-hotend.step_pin = p5_3            # Pin for extruder step signal\n\
-hotend.dir_pin = p9_6            # Pin for extruder dir signal ( add '!' to reverse direction )\n\
-hotend.en_pin = p6.6             # Pin for extruder enable signal\n\
+hotend.step_pin = gpio3_0            # Pin for extruder step signal\n\
+hotend.dir_pin = gpio3_3        # Pin for extruder dir signal ( add '!' to reverse direction )\n\
+hotend.en_pin = gpio7_6             # Pin for extruder enable signal\n\
 \n\
 # Second extruder module configuration\n\
 hotend2.enable = false            # Whether to activate the extruder module at all. All configuration is ignored if false\n\
@@ -100,8 +100,8 @@ hotend2.z_offset = 0             # z offset from origin in mm\n\
 [temperature control]\n\
 hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend.tool_id = 0               # T0 will select\n\
-hotend.thermistor_pin = P7.5     # Pin for the thermistor to read\n\
-hotend.heater_pin = P6.7         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
+hotend.thermistor_pin = ADC1     # Pin for the thermistor to read\n\
+hotend.heater_pin = P7.1         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
 hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
 hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
 hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
@@ -118,8 +118,8 @@ hotend2.designator = T            # Designator letter for this module\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
 bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
-bed.thermistor_pin = P7.4 # Pin for the thermistor to read\n\
-bed.heater_pin = P6.8 # Pin that controls the heater\n\
+bed.thermistor_pin = ADC2 # Pin for the thermistor to read\n\
+bed.heater_pin = P7.5     # Pin that controls the heater\n\
 bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\
 bed.set_m_code = 140 # M-code to set the temperature for this module\n\
 bed.set_and_wait_m_code = 190 # M-code to set-and-wait for this module\n\
