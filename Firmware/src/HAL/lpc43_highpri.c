@@ -6,7 +6,7 @@
 #include "arch/common/up_internal.h"
 #include "arch/armv7-m/ram_vectors.h"
 #include "lpc43_timer.h"
-#include "arch/board/bambino-200e.h"
+#include "arch/board/smoothie-v2minialpha.h"
 
 #include "stdio.h"
 
