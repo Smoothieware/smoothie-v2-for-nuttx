@@ -6,7 +6,7 @@ verbose(ENV['verbose'] == '1')
 TESTING = ENV['testing'].nil? ? false : ENV['testing'] == '1'
 
 PROG = 'smoothiev2'
-if ENV['target'].nil?
+if ENV['target'].nil? || (ENV['target'] != 'Bambino' && ENV['target'] != 'Minialpha')
   puts "ERROR: Must specify target=[Bambino|Minialpha]"
   exit 0
 end
@@ -149,7 +149,14 @@ defines = %w(-DCLOCK_MONOTONIC -D__NuttX__  -D_LIBCPP_BUILD_STATIC -D_LIBCPP_NO_
 if DEBUG
   defines << "-DDEBUG"
 end
-defines << "-D#{TARGET}"
+
+# Target specifid #defines
+defines << "-DBUILD_TARGET=#{TARGET}"
+if TARGET == 'Bambino'
+defines << '-DARCH_BOARD_H=\"arch/board/bambino-200e.h\"'
+elsif TARGET == 'Minialpha'
+defines << '-DARCH_BOARD_H=\"arch/board/smoothie-v2minialpha.h\"'
+end
 
 DEFINES= defines.join(' ')
 

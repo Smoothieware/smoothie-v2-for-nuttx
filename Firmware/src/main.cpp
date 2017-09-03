@@ -491,13 +491,16 @@ float get_pll1_clk();
 static std::string str(string_config);
 static std::stringstream ss(str);
 
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+
 static int smoothie_startup(int, char **)
 {
     // do C++ initialization for static constructors first
     // FIXME this is really NOT where this should be done
     up_cxxinitialize();
 
-    printf("Smoothie V2.0alpha starting up\n");
+    printf("Smoothie V2.0alpha Build for %s - starting up\n", STRINGIZE_VALUE_OF(BUILD_TARGET));
     get_pll1_clk();
 
     // create the SlowTicker here as it us used by some modules
