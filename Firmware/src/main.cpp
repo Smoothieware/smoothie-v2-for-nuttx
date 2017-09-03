@@ -487,9 +487,6 @@ static void *commandthrd(void *)
 void configureSPIFI();
 float get_pll1_clk();
 
-#define STRINGIZE(x) #x
-#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
-
 #include STRING_CONFIG_H
 static std::string str(string_config);
 static std::stringstream ss(str);
@@ -501,7 +498,7 @@ static int smoothie_startup(int, char **)
     // FIXME this is really NOT where this should be done
     up_cxxinitialize();
 
-    printf("Smoothie V2.0alpha Build for %s - starting up\n", STRINGIZE_VALUE_OF(BUILD_TARGET));
+    printf("Smoothie V2.0alpha Build for %s - starting up\n", BUILD_TARGET);
     get_pll1_clk();
 
     // create the SlowTicker here as it us used by some modules
