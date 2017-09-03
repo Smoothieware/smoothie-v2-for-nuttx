@@ -100,7 +100,7 @@ hotend2.z_offset = 0             # z offset from origin in mm\n\
 [temperature control]\n\
 hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend.tool_id = 0               # T0 will select\n\
-hotend.thermistor_pin = ADC1     # Pin for the thermistor to read\n\
+hotend.thermistor_pin = ADC0_1     # Pin for the thermistor to read\n\
 hotend.heater_pin = P7.1         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
 hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
 hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
@@ -118,7 +118,7 @@ hotend2.designator = T            # Designator letter for this module\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
 bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
-bed.thermistor_pin = ADC2 # Pin for the thermistor to read\n\
+bed.thermistor_pin = ADC0_2 # Pin for the thermistor to read\n\
 bed.heater_pin = P7.5     # Pin that controls the heater\n\
 bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\
 bed.set_m_code = 140 # M-code to set the temperature for this module\n\
