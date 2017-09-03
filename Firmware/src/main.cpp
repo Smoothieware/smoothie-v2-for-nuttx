@@ -403,6 +403,9 @@ static void uart_comms()
 #include "Robot.h"
 #include "Pin.h"
 
+// Define the activity/idle indicator led
+static Pin *idle_led= nullptr;
+
 /*
  * All commands must be executed in the context of this thread. It is equivalent to the main_loop in v1.
  * Commands are sent to this thread via the message queue from things that can block (like I/O)
@@ -425,10 +428,6 @@ static void *commandthrd(void *)
     // get the message queue
     mqd_t mqfd = get_message_queue(true);
 
-    // Define the activity/idle indicator led
-    // TODO may need to be read from config
-    Pin led3("GPIO6_13", Pin::AS_OUTPUT);
-
     for(;;) {
         const char *line;
         OutputStream *os;
@@ -441,8 +440,10 @@ static void *commandthrd(void *)
         } else {
             // timed out or other error
 
-            // toggle led to show we are alive, but idle
-            led3.set(!led3.get());
+            if(idle_led != nullptr) {
+                // toggle led to show we are alive, but idle
+                idle_led->set(!idle_led->get());
+            }
         }
 
         // set in comms thread, and executed here to avoid thread clashes
@@ -486,13 +487,13 @@ static void *commandthrd(void *)
 void configureSPIFI();
 float get_pll1_clk();
 
-// in memory config as sdcard is so slow
-#include "string-config.h"
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+
+#include STRING_CONFIG_H
 static std::string str(string_config);
 static std::stringstream ss(str);
 
-#define STRINGIZE(x) #x
-#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
 static int smoothie_startup(int, char **)
 {
@@ -603,6 +604,20 @@ static int smoothie_startup(int, char **)
             delete kill_button;
             kill_button = nullptr;
         }
+
+        {
+            // configure system leds (if any)
+            ConfigReader::section_map_t m;
+            if(cr.get_section("system leds", m)) {
+                std::string p= cr.get_string(m, "idle_led", "nc");
+                idle_led= new Pin(p.c_str(), Pin::AS_OUTPUT);
+                if(!idle_led->connected()) {
+                    delete idle_led;
+                    idle_led= nullptr;
+                }
+            }
+        }
+
 
         // end of module creation and configuration
         ////////////////////////////////////////////////////////////////

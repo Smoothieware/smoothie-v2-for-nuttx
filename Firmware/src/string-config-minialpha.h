@@ -130,4 +130,7 @@ enable = true          # Set to true to enable a kill button\n\
 pin = p2.7             # Kill button pin.\n\
 toggle_enable = false  # set to true to make it a toggle button (like an estop)\n\
 unkill_enable = true   # enable kill button hold for 2 seconds does unkill\n\
+\n\
+[system leds]\n\
+idle_led = gpio6_13    # flashes when running but idle\n\
 \n";

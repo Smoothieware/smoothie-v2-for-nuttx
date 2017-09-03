@@ -150,12 +150,14 @@ if DEBUG
   defines << "-DDEBUG"
 end
 
-# Target specifid #defines
+# Target specified #defines
 defines << "-DBUILD_TARGET=#{TARGET}"
 if TARGET == 'Bambino'
 defines << '-DARCH_BOARD_H=\"arch/board/bambino-200e.h\"'
+defines << '-DSTRING_CONFIG_H=\"string-config-bambino.h\"'
 elsif TARGET == 'Minialpha'
 defines << '-DARCH_BOARD_H=\"arch/board/smoothie-v2minialpha.h\"'
+defines << '-DSTRING_CONFIG_H=\"string-config-minialpha.h\"'
 end
 
 DEFINES= defines.join(' ')
