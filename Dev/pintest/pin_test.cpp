@@ -1,39 +1,4 @@
 //***************************************************************************
-// examples/helloxx/helloxx_main.cxx
-//
-//   Copyright (C) 2009, 2011-2013 Gregory Nutt. All rights reserved.
-//   Author: Gregory Nutt <gnutt@nuttx.org>
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in
-//    the documentation and/or other materials provided with the
-//    distribution.
-// 3. Neither the name NuttX nor the names of its contributors may be
-//    used to endorse or promote products derived from this software
-//    without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-//***************************************************************************
-
-//***************************************************************************
 // Included Files
 //***************************************************************************
 
@@ -114,9 +79,10 @@ extern "C" int smoothie_main(int argc, char *argv[])
 		printf("float = %10.8f\n", x); // this works
 */
 		//test_sstream();
-		
+
         int cnt = 0;
         printf("defining pins...\n");
+        #if 0
         Pin myleds[]= {
             Pin("GPIO1[0]"),
             Pin("GPIO3[3]"),
@@ -126,6 +92,14 @@ extern "C" int smoothie_main(int argc, char *argv[])
             Pin("GPIO5[13]"),
             Pin("P4_10") // Pin("GPIO5[14]")
         };
+        #else
+        Pin myleds[]= {
+            //Pin("GPIO2[10]"),
+            //Pin("GPIO2[9]"),
+            Pin("GPIO6[13]"),
+            Pin("GPIO6[12]")
+        };
+        #endif
 
         Pin button("GPIO0_7!");
         button.as_input();
@@ -152,14 +126,14 @@ extern "C" int smoothie_main(int argc, char *argv[])
             for(auto& p : myleds) {
                 p.set(cnt & m);
                 m <<= 1;
-                cnt++;
             }
-            usleep(50000);
+            cnt++;
+            usleep(500000);
         }
         printf("Done\n");
 
 		//do_crash();
-		
+
         return 0;
     }
 
