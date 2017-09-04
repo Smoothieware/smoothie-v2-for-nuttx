@@ -6,7 +6,7 @@ To make the Firmware do ```rake target=Bambino```
 Firmware currently runs on UART at 115200 baud and on USB serial at ttyACM0.
 On USB Serial you need to hit Enter to get it to start.
 
-The config file will be config.ini an example is shown here... 
+The config file will be config.ini an example is shown here...
 https://gist.github.com/8996097730ba1f17413e3aad1c98eaaf
 
 Currently the config.ini is builtin and defined in string-config-bambino.h
@@ -22,3 +22,4 @@ string-config-minialpha.h
 
 The Mini Alpha is not currently working very well.
 
+Make sure you follow the ../README.md file for creating the nuttx-export-Bambino (or nuttx-export-Minialpha)
