@@ -11,7 +11,7 @@ gcc version 6.3.1 20170215 (release) [ARM/embedded-6-branch revision 245512] (GN
 (or any 6.x.x will probably work).
 
 First you need to clone and build the smoothie-nuttx with "make export".
-Then unzip the nuttx-export.zip in Firmware/nuttx-export-Bambino (or nuttx-export-Minialpha)
+Then unzip the nuttx-export.zip in Firmware/nuttx-export.Bambino (or nuttx-export.Minialpha)
 
 documented here https://github.com/Smoothieware/smoothie-nuttx/blob/master/README.md
 
