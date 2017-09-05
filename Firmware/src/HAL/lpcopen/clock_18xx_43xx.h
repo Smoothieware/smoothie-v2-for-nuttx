@@ -38,6 +38,10 @@
 extern "C" {
 #endif
 
+#define __STATIC_INLINE static inline
+#define STATIC static
+#define INLINE inline
+
 /** @defgroup CLOCK_18XX_43XX CHIP: LPC18xx/43xx Clock Driver
  * @ingroup CHIP_18XX_43XX_Drivers
  * @{
