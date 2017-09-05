@@ -172,7 +172,7 @@ Pin* Pin::from_string(std::string value)
     if(port >= NUM_GPIO_PORTS || pin >= NUM_GPIO_PINS) return nullptr;
 
     if(!set_allocated(port, pin)) {
-        printf("WARNING: GPIO%d[%d] has already been allocated\n");
+        printf("WARNING: GPIO%d[%d] has already been allocated\n", port, pin);
     }
 
     // convert port and pin to a GPIO and setup as a GPIO
@@ -255,12 +255,6 @@ Pin* Pin::as_input()
 }
 
 #if 0
-// If available on this pin, return mbed hardware pwm class for this pin
-mbed::PwmOut* Pin::hardware_pwm()
-{
-    return nullptr;
-}
-
 mbed::InterruptIn* Pin::interrupt_pin()
 {
     if(!this->valid) return nullptr;
