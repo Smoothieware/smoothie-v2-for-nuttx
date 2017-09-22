@@ -200,9 +200,9 @@ task :clean do
   FileUtils.rm_rf(OBJDIR)
 end
 
-task :default => [:build]
+task :default => [:build] #, :size]
 
-task :build => ["#{PROG}.bin", :size]
+task :build => ["#{PROG}.bin"]
 
 task :size do
   sh "#{SIZE} #{OBJDIR}/#{PROG}.elf"

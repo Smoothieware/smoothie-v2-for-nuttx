@@ -20,9 +20,6 @@
 #define SCT_PWM_LED        2        /* Index of LED PWM */
 #define SCT_PWM_RATE   10000        /* PWM frequency 10 KHz */
 
-/* Systick timer tick rate, to change duty cycle */
-#define TICKRATE_HZ     1000        /* 1 ms Tick rate */
-
 
 REGISTER_TEST(PWMTest, basic)
 {
@@ -41,10 +38,11 @@ REGISTER_TEST(PWMTest, basic)
 
     /* Start with 50% duty cycle */
     Chip_SCTPWM_SetDutyCycle(SCT_PWM, SCT_PWM_OUT, Chip_SCTPWM_PercentageToTicks(SCT_PWM, 50));
-    Chip_SCTPWM_SetDutyCycle(SCT_PWM, SCT_PWM_LED, 50);
+    Chip_SCTPWM_SetDutyCycle(SCT_PWM, SCT_PWM_LED, Chip_SCTPWM_PercentageToTicks(SCT_PWM, 25));
     Chip_SCTPWM_Start(SCT_PWM);
 }
 
+#if 1
 #include <string>
 #include <cstring>
 #include <cctype>
@@ -127,7 +125,8 @@ static bool lookup_pin(uint8_t port, uint8_t pin, uint8_t& ctout, uint8_t& func)
     return false;
 }
 
-static bool map_pin_to_pwm(const char *name)
+static int pwm_index= 1;
+static int map_pin_to_pwm(const char *name)
 {
     // specify pin name P1.6 and check it is mappable to a PWM channel
     if(tolower(name[0]) == 'p') {
@@ -135,13 +134,13 @@ static bool map_pin_to_pwm(const char *name)
         std::string str(name);
         uint16_t port = strtol(str.substr(1).c_str(), nullptr, 16);
         size_t pos = str.find_first_of("._", 1);
-        if(pos == std::string::npos) return false;
+        if(pos == std::string::npos) return 0;
         uint16_t pin = strtol(str.substr(pos + 1).c_str(), nullptr, 10);
 
         // now map to a PWM output
         uint8_t ctout, func;
         if(!lookup_pin(port, pin, ctout, func)) {
-            return false;
+            return 0;
         }
 
         // check if ctoun is already in use
@@ -150,10 +149,13 @@ static bool map_pin_to_pwm(const char *name)
         // setup pin for the PWM function
         Chip_SCU_PinMuxSet(port, pin, func);
 
-        return true;
+        // TODO index is incremented for each pin
+        Chip_SCTPWM_SetOutPin(SCT_PWM, pwm_index, ctout);
+
+        return pwm_index++;
     }
 
-    return false;
+    return 0;
 }
 
 REGISTER_TEST(PWMTest, map_pin)
@@ -164,7 +166,36 @@ REGISTER_TEST(PWMTest, map_pin)
     TEST_ASSERT_EQUAL_INT(func, 1);
 
     TEST_ASSERT_FALSE(lookup_pin(2, 13, ctout, func));
-    TEST_ASSERT_FALSE(map_pin_to_pwm("X1.2"));
-    TEST_ASSERT_TRUE(map_pin_to_pwm("P2.12"));
+    TEST_ASSERT_EQUAL_INT(map_pin_to_pwm("X1.2"), 0);
+    TEST_ASSERT_EQUAL_INT(map_pin_to_pwm("P2.12"), 1);
 }
 
+
+// current = dutycycle * 2.0625
+REGISTER_TEST(PWMTest, set_current)
+{
+    // set X driver to 400mA
+    // set Y driver to 1amp
+    // set Z driver to 1.5amp
+    int xind= map_pin_to_pwm("P7.4"); // X
+    TEST_ASSERT_TRUE(xind > 0);
+    // dutycycle= current/2.0625
+    // TODO we need to calculate ticks ourselves as uint8 percentage is not very accurate
+    uint8_t dcp= floorf((0.4F*100)/2.0625F);
+    Chip_SCTPWM_SetDutyCycle(SCT_PWM, xind, Chip_SCTPWM_PercentageToTicks(SCT_PWM, dcp));
+
+    int yind= map_pin_to_pwm("PB.2"); // Y
+    TEST_ASSERT_TRUE(yind > xind);
+
+    // dutycycle= current/2.0625
+    dcp= floorf((1.0F*100)/2.0625F);
+    Chip_SCTPWM_SetDutyCycle(SCT_PWM, yind, Chip_SCTPWM_PercentageToTicks(SCT_PWM, dcp));
+
+    int zind= map_pin_to_pwm("PB.3"); // Z
+    TEST_ASSERT_TRUE(zind > yind);
+    // dutycycle= current/2.0625
+    dcp= floorf((1.5F*100)/2.0625F);
+    Chip_SCTPWM_SetDutyCycle(SCT_PWM, zind, Chip_SCTPWM_PercentageToTicks(SCT_PWM, dcp));
+
+}
+#endif
