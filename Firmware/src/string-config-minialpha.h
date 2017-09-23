@@ -49,7 +49,7 @@ gamma.max_rate = 300.0 # Maximum rate in mm/min\n\
 z.axis_max_speed = 300 # Maximum speed in mm/min\n\
 gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
 \n\
-# Delta is first extruder, we set common stuff here instead of in extruder section
+# Delta is first extruder, we set common stuff here instead of in extruder section\n\
 delta.steps_per_mm = 140        # Steps per mm for extruder stepper\n\
 delta.step_pin = gpio3_0        # Pin for extruder step signal\n\
 delta.dir_pin = gpio3_3         # Pin for extruder dir signal ( add '!' to reverse direction )\n\
@@ -59,10 +59,10 @@ delta.ms2_pin = gpio3_2         # Pin for delta micro stepping\n\
 delta.ms3_pin = gpio3_4         # Pin for delta micro stepping\n\
 delta.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
 delta.max_rate = 50.0           # Maximum rate in mm/min\n\
-
+\n\
 [current control]\n\
-alpha_control = pwm  # type of control (pwm is default for v2 mini)
-#alpha_control = spi  # type of control (spi is used for v2 pro)
+alpha_control = pwm  # type of control (pwm is default for v2 mini)\n\
+#alpha_control = spi  # type of control (spi is used for v2 pro)\n\
 alpha  = 0.4 # X stepper motor current Amps\n\
 beta   = 1.0 # Y stepper motor current\n\
 gamma  = 1.5 # Z stepper motor current\n\
@@ -108,14 +108,7 @@ hotend.max_speed = 50            # Maximum speed in mm/s\n\
 # Second extruder module configuration\n\
 hotend2.enable = false            # Whether to activate the extruder module at all. All configuration is ignored if false\n\
 hotend2.tool_id = 1               # T1 will select\n\
-hotend2.steps_per_mm = 140       # Steps per mm for extruder stepper\n\
 hotend2.default_feed_rate = 600  # Default rate ( mm/minute ) for moves where only the extruder moves\n\
-hotend2.acceleration = 500       # Acceleration for the stepper motor, as of 0.6, arbitrary ratio\n\
-hotend2.max_speed = 50           # mm/s\n\
-\n\
-hotend2.step_pin = 2.8           # Pin for extruder step signal\n\
-hotend2.dir_pin = 2.13           # Pin for extruder dir signal ( add '!' to reverse direction )\n\
-hotend2.en_pin = 4.29            # Pin for extruder enable signal\n\
 \n\
 hotend2.x_offset = 0             # x offset from origin in mm\n\
 hotend2.y_offset = 25.0          # y offset from origin in mm\n\
