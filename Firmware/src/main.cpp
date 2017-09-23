@@ -604,8 +604,16 @@ static int smoothie_startup(int, char **)
             kill_button = nullptr;
         }
 
-        // Pwm needs to be initialized
-        Pwm::setup();
+        {
+            // Pwm needs to be initialized, there can only be one frequency
+            float freq= 10000; // default is 10KHz
+            ConfigReader::section_map_t m;
+            if(cr.get_section("pwm", m)) {
+                freq= cr.get_float(m, "frequency", 10000);
+            }
+            Pwm::setup(freq);
+            printf("INFO: PWM frequency set to %f Hz", freq);
+        }
 
         printf("configure current control\n");
         CurrentControl *current_control = new CurrentControl();

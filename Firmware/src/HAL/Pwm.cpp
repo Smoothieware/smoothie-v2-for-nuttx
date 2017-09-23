@@ -137,11 +137,11 @@ Pwm::Pwm(const char *pin)
 }
 
 // static
-bool Pwm::setup()
+bool Pwm::setup(float freq)
 {
     /* Initialize the SCT as PWM and set frequency */
     Chip_SCTPWM_Init(LPC_SCT);
-    Chip_SCTPWM_SetRate(LPC_SCT, 10000); // 10KHz
+    Chip_SCTPWM_SetRate(LPC_SCT, freq); // 10KHz
 	Chip_SCTPWM_Start(LPC_SCT);
 	return true;
 }

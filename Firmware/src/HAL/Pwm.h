@@ -13,7 +13,7 @@ public:
 	// set duty cycle 0-1
 	void set(float v);
 
-	static bool setup();
+	static bool setup(float freq);
 
 private:
 	bool lookup_pin(uint8_t port, uint8_t pin, uint8_t& ctout, uint8_t& func);
