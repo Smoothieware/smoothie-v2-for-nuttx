@@ -226,7 +226,7 @@ bool Robot::configure(ConfigReader& cr)
             return false;
         }
 
-        // set microstepping if enabled, use default if not specified but pins exist
+        // set microstepping if enabled, use default x32 if not specified but pins exist
         Pin ms1_pin(cr.get_string(mm, ms1_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms2_pin(cr.get_string(mm, ms2_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms3_pin(cr.get_string(mm, ms3_pin_key, "nc"), Pin::AS_OUTPUT);
@@ -236,7 +236,7 @@ bool Robot::configure(ConfigReader& cr)
                 // set default
                 ms1_pin.set(true);
                 ms2_pin.set(true);
-                ms3_pin.set(true);
+                ms3_pin.set(false);
 
             } else {
                 std::vector<float> v = stringutils::parse_number_list(ms.c_str());
@@ -248,7 +248,7 @@ bool Robot::configure(ConfigReader& cr)
                     printf("WARNING: %s.microstepping settings needs three numbers 1,1,1 - SET to default\n", s->first.c_str());
                     ms1_pin.set(true);
                     ms2_pin.set(true);
-                    ms3_pin.set(true);
+                    ms3_pin.set(false);
                 }
             }
             printf("DEBUG: microstepping for %s set to %d,%d,%d\n",
@@ -501,7 +501,7 @@ Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 void Robot::check_max_actuator_speeds()
 {
     for (size_t i = 0; i < n_motors; i++) {
-        if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
+        //if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
 
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > StepTicker::getInstance()->get_frequency()) {

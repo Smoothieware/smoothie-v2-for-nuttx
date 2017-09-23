@@ -136,6 +136,16 @@ Pwm::Pwm(const char *pin)
 	from_string(pin);
 }
 
+// static
+bool Pwm::setup()
+{
+    /* Initialize the SCT as PWM and set frequency */
+    Chip_SCTPWM_Init(LPC_SCT);
+    Chip_SCTPWM_SetRate(LPC_SCT, 10000); // 10KHz
+	Chip_SCTPWM_Start(LPC_SCT);
+	return true;
+}
+
 bool Pwm::from_string(const char *pin)
 {
 	int xind= map_pin_to_pwm(pin);

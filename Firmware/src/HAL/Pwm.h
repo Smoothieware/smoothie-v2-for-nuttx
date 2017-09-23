@@ -13,6 +13,8 @@ public:
 	// set duty cycle 0-1
 	void set(float v);
 
+	static bool setup();
+
 private:
 	bool lookup_pin(uint8_t port, uint8_t pin, uint8_t& ctout, uint8_t& func);
 	int map_pin_to_pwm(const char *name);

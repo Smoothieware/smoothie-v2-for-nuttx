@@ -479,6 +479,8 @@ static void *commandthrd(void *)
 #include "Extruder.h"
 #include "TemperatureControl.h"
 #include "Adc.h"
+#include "Pwm.h"
+#include "CurrentControl.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -600,6 +602,17 @@ static int smoothie_startup(int, char **)
             printf("INFO: No kill button enabled\n");
             delete kill_button;
             kill_button = nullptr;
+        }
+
+        // Pwm needs to be initialized
+        Pwm::setup();
+
+        printf("configure current control\n");
+        CurrentControl *current_control = new CurrentControl();
+        if(!current_control->configure(cr)) {
+            printf("INFO: No current controls configured\n");
+            delete current_control;
+            current_control = nullptr;
         }
 
         {

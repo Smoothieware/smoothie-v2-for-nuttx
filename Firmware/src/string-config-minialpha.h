@@ -24,7 +24,7 @@ alpha.en_pin = gpio3_10 # Pin for alpha enable pin\n\
 alpha.ms1_pin = gpio1_13 # Pin for alpha micro stepping\n\
 alpha.ms2_pin = gpio7_14 # Pin for alpha micro stepping\n\
 alpha.ms3_pin = gpio7_11 # Pin for alpha micro stepping\n\
-alpha.microstepping = 1,1,1 # settings for alpha micro stepping pins ms1,ms2,ms3\n\
+alpha.microstepping = 1,1,0 # settings for alpha micro stepping pins ms1,ms2,ms3 default 1/32\n\
 alpha.max_rate = 30000.0 # Maximum rate in mm/min\n\
 x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
@@ -57,16 +57,21 @@ delta.en_pin = gpio7_6          # Pin for extruder enable signal\n\
 delta.ms1_pin = gpio7_5         # Pin for delta micro stepping\n\
 delta.ms2_pin = gpio3_2         # Pin for delta micro stepping\n\
 delta.ms3_pin = gpio3_4         # Pin for delta micro stepping\n\
+alpha.microstepping = 0,1,0     # settings for delta micro stepping pins x16\n\
 delta.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
 delta.max_rate = 50.0           # Maximum rate in mm/min\n\
 \n\
 [current control]\n\
-alpha_control = pwm  # type of control (pwm is default for v2 mini)\n\
-#alpha_control = spi  # type of control (spi is used for v2 pro)\n\
-alpha  = 0.4 # X stepper motor current Amps\n\
-beta   = 1.0 # Y stepper motor current\n\
-gamma  = 1.5 # Z stepper motor current\n\
-delta  = 2.0 # First extruder stepper motor current\n\
+alpha.control  = pwm    # type of control (pwm is default for v2 mini)\n\
+#alpha.control = spi    # type of control (spi is used for v2 pro)\n\
+alpha.current  = 0.4    # X stepper motor current Amps\n\
+alpha.pin      = P7.4   # PWM pin for alpha channel\n\
+beta.current   = 1.0    # Y stepper motor current\n\
+beta.pin       = PB.2   # PWM pin for beta channel\n\
+gamma.current  = 1.5    # Z stepper motor current\n\
+gamma.pin      = PB.3   # PWM pin for gamma channel\n\
+delta.current  = 2.0    # First extruder stepper motor current\n\
+delta.pin      = PB.1   # PWM pin for delta channel\n\
 \n\
 [switch]\n\
 fan.enable = false # Enable this module\n\
