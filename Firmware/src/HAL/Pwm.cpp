@@ -169,4 +169,6 @@ void Pwm::set(float v)
 
 	uint32_t ticks= floorf(Chip_SCTPWM_GetTicksPerCycle(LPC_SCT) * v);
 	Chip_SCTPWM_SetDutyCycle(LPC_SCT, index, ticks);
+
+	value= v;
 }

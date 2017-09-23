@@ -12,6 +12,7 @@ public:
 	bool is_valid() const { return valid; }
 	// set duty cycle 0-1
 	void set(float v);
+	float get() const { return value; }
 
 	static bool setup(float freq);
 
@@ -20,6 +21,7 @@ private:
 	int map_pin_to_pwm(const char *name);
 
 	static int pwm_index;
+	float value;
 	bool valid{false};
 	uint8_t index;
 

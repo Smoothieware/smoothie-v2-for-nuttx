@@ -3,6 +3,7 @@
 #include "Module.h"
 
 #include <stdint.h>
+#include <string>
 
 class Pin;
 class Pwm;
@@ -26,8 +27,10 @@ class Laser : public Module
 
     private:
         void on_halt(bool flg);
-        bool handle_gcodes(GCode& gcode, OutputStream& os);
-        uint32_t set_proportional_power(uint32_t dummy);
+        bool handle_M221(GCode& gcode, OutputStream& os);
+        bool handle_fire_cmd( std::string& params, OutputStream& os );
+
+        void set_proportional_power(void);
         bool get_laser_power(float& power) const;
         float current_speed_ratio(const Block *block) const;
 
