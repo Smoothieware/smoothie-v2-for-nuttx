@@ -75,7 +75,7 @@ public:
 
     BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
-    // gets accessed by Panel, Endstops, ZProbe
+    // gets accessed by Panel, Endstops, ZProbe, Extruder
     std::vector<StepperMotor*> actuators;
 
     // set by a leveling strategy to transform the target of a move according to the current plan

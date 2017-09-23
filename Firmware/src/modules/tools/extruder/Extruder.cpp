@@ -21,13 +21,7 @@
 #include <math.h>
 
 #define default_feed_rate_key           "default_feed_rate"
-#define steps_per_mm_key                "steps_per_mm"
 #define filament_diameter_key           "filament_diameter"
-#define acceleration_key                "acceleration"
-#define step_pin_key                    "step_pin"
-#define dir_pin_key                     "dir_pin"
-#define en_pin_key                      "en_pin"
-#define max_speed_key                   "max_speed"
 #define x_offset_key                    "x_offset"
 #define y_offset_key                    "y_offset"
 #define z_offset_key                    "z_offset"
@@ -106,13 +100,7 @@ bool Extruder::configure(ConfigReader& cr)
 // Get config
 bool Extruder::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 {
-    Pin step_pin, dir_pin, en_pin;
-    step_pin.from_string( cr.get_string(m, step_pin_key          , "nc" ))->as_output();
-    dir_pin.from_string(  cr.get_string(m, dir_pin_key           , "nc" ))->as_output();
-    en_pin.from_string(   cr.get_string(m, en_pin_key            , "nc" ))->as_output();
-
-    float steps_per_millimeter = cr.get_float(m, steps_per_mm_key, 1);
-    float acceleration         = cr.get_float(m, acceleration_key, 1000);
+    // pins and speeds and acceleration are set in Robot for delta, epsilon etc
 
     // multi extruder setup
     this->tool_id             = cr.get_int(m, tool_id_key, 0); // set to T0 by default, must be set to > 0 for subsequent extruders
@@ -133,17 +121,20 @@ bool Extruder::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
     }
 
-    // Stepper motor object for the extruder
-    stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
-    motor_id = Robot::getInstance()->register_actuator(stepper_motor);
+    // Stepper motor object for the extruder, get from robot it will be actuator index 3+tool_id
+    if(Robot::getInstance()->actuators.size() <= (size_t)(A_AXIS+tool_id)) {
+        printf("ERROR: Extruder motor has not been defined in Robot (delta and/or epsilon)\n");
+        return false;
+    }
+
+    // we keep a copy for convenience
+    stepper_motor = Robot::getInstance()->actuators[A_AXIS+tool_id];
+    motor_id = stepper_motor->get_motor_id();
     if(motor_id < A_AXIS || motor_id == 255) {
         // error registering, maybe too many
         return false;
     }
 
-    stepper_motor->set_max_rate(cr.get_float(m, max_speed_key, 1000));
-    stepper_motor->set_acceleration(acceleration);
-    stepper_motor->change_steps_per_mm(steps_per_millimeter);
     stepper_motor->set_selected(false); // not selected by default
     stepper_motor->set_extruder(true);  // indicates it is an extruder
 

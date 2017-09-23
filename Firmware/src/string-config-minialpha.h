@@ -21,6 +21,10 @@ alpha.steps_per_mm = 80 # Steps per mm for alpha ( X ) stepper\n\
 alpha.step_pin = gpio7_12 # Pin for alpha stepper step signal\n\
 alpha.dir_pin = gpio7_9 # Pin for alpha stepper direction, add '!' to reverse direction\n\
 alpha.en_pin = gpio3_10 # Pin for alpha enable pin\n\
+alpha.ms1_pin = gpio1_13 # Pin for alpha micro stepping\n\
+alpha.ms2_pin = gpio7_14 # Pin for alpha micro stepping\n\
+alpha.ms3_pin = gpio7_11 # Pin for alpha micro stepping\n\
+alpha.microstepping = 1,1,1 # settings for alpha micro stepping pins ms1,ms2,ms3\n\
 alpha.max_rate = 30000.0 # Maximum rate in mm/min\n\
 x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
@@ -28,6 +32,9 @@ beta.steps_per_mm = 80 # Steps per mm for beta ( Y ) stepper\n\
 beta.step_pin = gpio3_6 # Pin for beta stepper step signal\n\
 beta.dir_pin = gpio5_15 # Pin for beta stepper direction, add '!' to reverse direction\n\
 beta.en_pin = gpio1_12 # Pin for beta enable\n\
+beta.ms1_pin = gpio1_11 # Pin for beta micro stepping\n\
+beta.ms2_pin = gpio7_7 # Pin for beta micro stepping\n\
+beta.ms3_pin = gpio2_8 # Pin for beta micro stepping\n\
 beta.max_rate = 30000.0 # Maxmimum rate in mm/min\n\
 y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
@@ -35,9 +42,31 @@ gamma.steps_per_mm = 1600 # Steps per mm for gamma ( Z ) stepper\n\
 gamma.step_pin = gpio0_5 # Pin for gamma stepper step signal\n\
 gamma.dir_pin = gpio7_2 # Pin for gamma stepper direction, add '!' to reverse direction\n\
 gamma.en_pin = gpio7_3 # Pin for gamma enable\n\
+gamma.ms1_pin = gpio7_4 # Pin for gamma micro stepping\n\
+gamma.ms2_pin = gpio5_6 # Pin for gamma micro stepping\n\
+gamma.ms3_pin = gpio3_1 # Pin for gamma micro stepping\n\
 gamma.max_rate = 300.0 # Maximum rate in mm/min\n\
 z.axis_max_speed = 300 # Maximum speed in mm/min\n\
 gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
+\n\
+# Delta is first extruder, we set common stuff here instead of in extruder section
+delta.steps_per_mm = 140        # Steps per mm for extruder stepper\n\
+delta.step_pin = gpio3_0        # Pin for extruder step signal\n\
+delta.dir_pin = gpio3_3         # Pin for extruder dir signal ( add '!' to reverse direction )\n\
+delta.en_pin = gpio7_6          # Pin for extruder enable signal\n\
+delta.ms1_pin = gpio7_5         # Pin for delta micro stepping\n\
+delta.ms2_pin = gpio3_2         # Pin for delta micro stepping\n\
+delta.ms3_pin = gpio3_4         # Pin for delta micro stepping\n\
+delta.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
+delta.max_rate = 50.0           # Maximum rate in mm/min\n\
+
+[current control]\n\
+alpha_control = pwm  # type of control (pwm is default for v2 mini)
+#alpha_control = spi  # type of control (spi is used for v2 pro)
+alpha  = 0.4 # X stepper motor current Amps\n\
+beta   = 1.0 # Y stepper motor current\n\
+gamma  = 1.5 # Z stepper motor current\n\
+delta  = 2.0 # First extruder stepper motor current\n\
 \n\
 [switch]\n\
 fan.enable = false # Enable this module\n\
@@ -73,13 +102,8 @@ but1.input_pin_behavior = toggle\n\
 [extruder]\n\
 hotend.enable = true             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
 hotend.tool_id = 0               # T0 will select\n\
-hotend.steps_per_mm = 140        # Steps per mm for extruder stepper\n\
 hotend.default_feed_rate = 600   # Default rate ( mm/minute ) for moves where only the extruder moves\n\
-hotend.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
 hotend.max_speed = 50            # Maximum speed in mm/s\n\
-hotend.step_pin = gpio3_0            # Pin for extruder step signal\n\
-hotend.dir_pin = gpio3_3        # Pin for extruder dir signal ( add '!' to reverse direction )\n\
-hotend.en_pin = gpio7_6             # Pin for extruder enable signal\n\
 \n\
 # Second extruder module configuration\n\
 hotend2.enable = false            # Whether to activate the extruder module at all. All configuration is ignored if false\n\

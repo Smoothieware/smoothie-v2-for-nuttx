@@ -49,6 +49,12 @@
 #define max_rate_key                    "max_rate"
 #define acceleration_key                "acceleration"
 
+// optional pins for microstepping used on v2mini
+#define ms1_pin_key                     "ms1_pin"
+#define ms2_pin_key                     "ms2_pin"
+#define ms3_pin_key                     "ms3_pin"
+#define ms_key                          "microstepping"
+
 // arm solutions
 #define  arm_solution_key               "arm_solution"
 #define  cartesian_key                  "cartesian"
@@ -218,6 +224,35 @@ bool Robot::configure(ConfigReader& cr)
             // this is a fatal error as they must be contiguous
             printf("FATAL: motor %d does not match index %d\n", n, a);
             return false;
+        }
+
+        // set microstepping if enabled, use default if not specified but pins exist
+        Pin ms1_pin(cr.get_string(mm, ms1_pin_key, "nc"), Pin::AS_OUTPUT);
+        Pin ms2_pin(cr.get_string(mm, ms2_pin_key, "nc"), Pin::AS_OUTPUT);
+        Pin ms3_pin(cr.get_string(mm, ms3_pin_key, "nc"), Pin::AS_OUTPUT);
+        if(ms1_pin.connected() && ms2_pin.connected() && ms3_pin.connected()) {
+            std::string ms= cr.get_string(mm, ms_key, "");
+            if(ms.empty()) {
+                // set default
+                ms1_pin.set(true);
+                ms2_pin.set(true);
+                ms3_pin.set(true);
+
+            } else {
+                std::vector<float> v = stringutils::parse_number_list(ms.c_str());
+                if(v.size() == 3) {
+                    ms1_pin.set(v[0] > 0.00001F);
+                    ms2_pin.set(v[1] > 0.00001F);
+                    ms3_pin.set(v[2] > 0.00001F);
+                }else{
+                    printf("WARNING: %s.microstepping settings needs three numbers 1,1,1 - SET to default\n", s->first.c_str());
+                    ms1_pin.set(true);
+                    ms2_pin.set(true);
+                    ms3_pin.set(true);
+                }
+            }
+            printf("DEBUG: microstepping for %s set to %d,%d,%d\n",
+                    s->first.c_str(), ms1_pin.get(), ms2_pin.get(), ms3_pin.get());
         }
 
         actuators[a]->change_steps_per_mm(cr.get_float(mm, steps_per_mm_key, a == Z_AXIS ? 2560.0F : 80.0F));
