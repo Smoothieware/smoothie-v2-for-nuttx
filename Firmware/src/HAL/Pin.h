@@ -51,12 +51,11 @@ public:
 
     inline uint16_t get_gpiocfg() const { return gpiocfg; }
 
-    // mbed::PwmOut *hardware_pwm();
+    bool is_inverting() const { return inverting; }
+    void set_inverting(bool f) { inverting = f; }
 
     // mbed::InterruptIn *interrupt_pin();
 
-    // bool is_inverting() const { return inverting; }
-    // void set_inverting(bool f) { inverting = f; }
 
 private:
     static bool set_allocated(uint8_t, uint8_t, bool set= true);
