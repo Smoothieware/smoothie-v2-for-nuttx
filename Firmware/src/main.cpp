@@ -481,6 +481,7 @@ static void *commandthrd(void *)
 #include "Adc.h"
 #include "Pwm.h"
 #include "CurrentControl.h"
+#include "Laser.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -621,6 +622,14 @@ static int smoothie_startup(int, char **)
             printf("INFO: No current controls configured\n");
             delete current_control;
             current_control = nullptr;
+        }
+
+        printf("configure laser\n");
+        Laser *laser = new Laser();
+        if(!laser->configure(cr)) {
+            printf("INFO: No laser configured\n");
+            delete laser;
+            laser = nullptr;
         }
 
         {
