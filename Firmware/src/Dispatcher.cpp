@@ -43,10 +43,10 @@ static bool is_allowed_mcode(int m) {
 // Must be called from the command thread context
 bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 {
-	if(gc.has_m() && gc.get_code() == 503) {
-		// alias M503 to M500.3
-		gc.set_command('M', 500, 3);
-	}
+	// if(gc.has_m() && gc.get_code() == 503) {
+	// 	// alias M503 to M500.3
+	// 	gc.set_command('M', 500, 3);
+	// }
 
 	if(Module::is_halted()) {
 		// If we are halted then we reject most g/m codes unless in exception list

@@ -100,7 +100,7 @@ int Pwm::map_pin_to_pwm(const char *name)
         // pin specification
         std::string str(name);
         uint16_t port = strtol(str.substr(1).c_str(), nullptr, 16);
-        size_t pos = 0; //str.find_first_of("._", 1);
+        size_t pos = str.find_first_of("._", 1);
         if(pos == std::string::npos) return 0;
         uint16_t pin = strtol(str.substr(pos + 1).c_str(), nullptr, 10);
 

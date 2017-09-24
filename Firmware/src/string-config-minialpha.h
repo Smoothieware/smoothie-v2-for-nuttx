@@ -157,4 +157,13 @@ idle_led = gpio6_13    # flashes when running but idle\n\
 \n\
 [pwm]\n\
 frequency=10000        # PWM frequency\n\
+[laser]\n\
+enable = false # Whether to activate the laser module at all\n\
+pwm_pin = P2.5 # This pin will be PWMed to control the laser.\n\
+#inverted_pwm = false # set to true to invert the pwm\n\
+#ttl_pin = P1.30  # This pin turns on when the laser turns on, and off when the laser turns off.\n\
+#maximum_power = 1.0 # This is the maximum duty cycle that will be applied to the laser\n\
+#minimum_power = 0.0 # This is a value just below the minimum duty cycle that keeps the laser active without actually burning.\n\
+#default_power = 0.8 # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between the maximum and minimum power levels specified above\n\
+\n\
 \n";

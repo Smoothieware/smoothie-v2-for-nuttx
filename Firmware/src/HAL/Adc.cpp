@@ -188,7 +188,7 @@ _ramfunc_ int Adc::sample_isr(int irq, void *context, FAR void *arg)
 
 // Keeps the last 8 values for each channel
 // This is called in an ISR, so sample_buffer needs to be accessed atomically
-void Adc::new_sample(uint32_t value)
+_ramfunc_ void Adc::new_sample(uint32_t value)
 {
     // Shuffle down and add new value to the end
     memmove(&sample_buffer[0], &sample_buffer[1], sizeof(sample_buffer) - sizeof(sample_buffer[0]));

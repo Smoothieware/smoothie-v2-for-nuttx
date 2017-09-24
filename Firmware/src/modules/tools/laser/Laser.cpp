@@ -22,6 +22,7 @@
 #define maximum_power_key "maximum_power"
 #define minimum_power_key "minimum_power"
 #define maximum_s_value_key "maximum_s_value"
+#define default_power_key "default_power"
 
 #define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
@@ -71,11 +72,13 @@ bool Laser::configure(ConfigReader& cr)
     //this->pwm_pin->period_us(period);
 
     this->pwm_pin->set(this->pwm_inverting ? 1 : 0);
-    this->laser_maximum_power = cr.get_float(m, maximum_power_key, 1.0f) ;
-    this->laser_minimum_power = cr.get_float(m, minimum_power_key, 0) ;
+    this->laser_maximum_power = cr.get_float(m, maximum_power_key, 1.0f);
+    this->laser_minimum_power = cr.get_float(m, minimum_power_key, 0);
 
     // S value that represents maximum (default 1)
-    this->laser_maximum_s_value = cr.get_float(m, maximum_s_value_key, 1.0f) ;
+    this->laser_maximum_s_value = cr.get_float(m, maximum_s_value_key, 1.0f);
+    // default s value for laser
+    Robot::getInstance()->set_s_value(cr.get_float(m, default_power_key, 0.8F));
 
     set_laser_power(0);
 

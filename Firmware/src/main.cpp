@@ -612,7 +612,7 @@ static int smoothie_startup(int, char **)
                 freq= cr.get_float(m, "frequency", 10000);
             }
             Pwm::setup(freq);
-            printf("INFO: PWM frequency set to %f Hz", freq);
+            printf("INFO: PWM frequency set to %f Hz\n", freq);
         }
 
         printf("configure current control\n");
@@ -674,9 +674,10 @@ static int smoothie_startup(int, char **)
             printf("Error: failed to start StepTicker\n");
         }
 
-        if(!Adc::start()) {
-            printf("Error: failed to start ADC\n");
-        }
+        // FIXME this crashes the system now, probably interrupts are too fast
+        // if(!Adc::start()) {
+        //     printf("Error: failed to start ADC\n");
+        // }
     }
 
     // launch the command thread that executes all incoming commands

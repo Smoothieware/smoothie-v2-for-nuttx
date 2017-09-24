@@ -184,9 +184,6 @@ bool Robot::configure(ConfigReader& cr)
         }
     }
 
-    // default s value for laser
-    //this->s_value             = cr.get_float(m, laser_module_default_power_key, 0.8F)->as_number();
-
     // configure the actuators
     ConfigReader::sub_section_map_t ssm;
     if(!cr.get_sub_sections("actuator", ssm)) {

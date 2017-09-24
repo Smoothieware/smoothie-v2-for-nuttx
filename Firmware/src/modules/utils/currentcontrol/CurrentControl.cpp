@@ -86,6 +86,13 @@ bool CurrentControl::configure(ConfigReader& cr)
 bool CurrentControl::handle_gcode(GCode& gcode, OutputStream& os)
 {
     if(gcode.get_code() == 907) {
+        if(gcode.has_no_args()) {
+            for (auto i : currents) {
+                os.printf("%s: %1.5f\n", i.first.c_str(), i.second);
+            }
+            return true;
+        }
+
         // XYZ are the first 3 channels and ABCD are the next channels
         for (int i = 0; i < 7; i++) {
             char axis= i < 3 ? 'X'+i : 'A'+i-3;
