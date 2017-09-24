@@ -34,6 +34,7 @@ beta.en_pin = gpio1_12 # Pin for beta enable\n\
 beta.ms1_pin = gpio1_11 # Pin for beta micro stepping\n\
 beta.ms2_pin = gpio7_7 # Pin for beta micro stepping\n\
 beta.ms3_pin = gpio2_8 # Pin for beta micro stepping\n\
+beta.microstepping = 1,1,0 # settings for beta micro stepping pins ms1,ms2,ms3 default 1/32\n\
 beta.max_rate = 30000.0 # Maxmimum rate in mm/min\n\
 y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
@@ -44,6 +45,7 @@ gamma.en_pin = gpio7_3 # Pin for gamma enable\n\
 gamma.ms1_pin = gpio7_4 # Pin for gamma micro stepping\n\
 gamma.ms2_pin = gpio5_6 # Pin for gamma micro stepping\n\
 gamma.ms3_pin = gpio3_1 # Pin for gamma micro stepping\n\
+gamma.microstepping = 1,1,0 # settings for gamma micro stepping pins ms1,ms2,ms3 default 1/32\n\
 gamma.max_rate = 1800 # Maximum rate in mm/min\n\
 z.axis_max_speed = 1800 # Maximum speed in mm/min\n\
 gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
@@ -56,7 +58,7 @@ delta.en_pin = gpio7_6          # Pin for extruder enable signal\n\
 delta.ms1_pin = gpio7_5         # Pin for delta micro stepping\n\
 delta.ms2_pin = gpio3_2         # Pin for delta micro stepping\n\
 delta.ms3_pin = gpio3_4         # Pin for delta micro stepping\n\
-alpha.microstepping = 0,1,0     # settings for delta micro stepping pins x16\n\
+delta.microstepping = 0,1,0     # settings for delta micro stepping pins 1/16\n\
 delta.acceleration = 500        # Acceleration for the stepper motor mm/sec²\n\
 delta.max_rate = 50.0           # Maximum rate in mm/min\n\
 \n\
