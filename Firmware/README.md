@@ -18,8 +18,8 @@ NOTE for the smooothiev2 mini alpha replace Bambino above with Minialpha...
 
 ```rake target=Minialpha```
 
-string-config-minialpha.h
+config is in string-config-minialpha.h
 
 The Mini Alpha is not currently working very well.
 
-Make sure you follow the ../README.md file for creating the nuttx-export-Bambino (or nuttx-export-Minialpha)
+Make sure you follow the ../README.md file for creating the nuttx-export.Bambino (or nuttx-export.Minialpha)

@@ -31,3 +31,5 @@ To compile with debug symbols:
 rake target=Bambino testing=1 test=streams debug=1
 
 You need to install ruby (and rake)
+
+Note for a mini alpha build you need to build the appropriate version of nuttx and export to nuttx-export.Minialpha, and build with ```rake target=Minialpha```
