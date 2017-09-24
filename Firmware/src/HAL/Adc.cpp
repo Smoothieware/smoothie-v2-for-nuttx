@@ -1,7 +1,7 @@
 // Uses the lpcopen ADC driver instead of the NuttX one whioch doessn't really do what we want.
 
 #include "Adc.h"
-//#include "Median.h"
+#include "SlowTicker.h"
 
 #include <string>
 #include <cstring>
@@ -14,6 +14,7 @@
 #include "scu_18xx_43xx.h"
 
 #include "nuttx/arch.h"
+
 
 #define _LPC_ADC_ID LPC_ADC0
 const ADC_CHANNEL_T CHANNEL_LUT[] = {
@@ -29,6 +30,7 @@ const ADC_CHANNEL_T CHANNEL_LUT[] = {
 
 Adc *Adc::instances[Adc::num_channels] = {nullptr};
 int Adc::ninstances = 0;
+bool Adc::running= false;
 
 // TODO move ramfunc define to a utils.h
 #define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
@@ -65,13 +67,13 @@ bool Adc::setup()
     // ADC Init
     Chip_ADC_Init(_LPC_ADC_ID, &ADCSetup);
 
-    // Select using burst mode
-    Chip_ADC_SetBurstCmd(_LPC_ADC_ID, ENABLE);
+    // We can't use burst mode as the minimum rate is 4.5Khz which is too fast for nuttx interrupts
+    Chip_ADC_SetBurstCmd(_LPC_ADC_ID, DISABLE);
 
     // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
     // even though there maybe 32 samples we only need one new one within the polling time
     // Set sample rate to 4.5KHz (That is as slow as it will go)
-    // TODO this is a lot of IRQ overhead so we may need to trigger it from a slow timer
+    // As this is a lot of IRQ overhead so we need to trigger it from a slow timer instead
     Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 4500);
 
     // init instances array
@@ -81,24 +83,50 @@ bool Adc::setup()
     return true;
 }
 
+// As nuttx broke ADC interrupts we need to work around it
+#define NO_ADC_INTERRUPTS
 bool Adc::start()
 {
+#ifndef NO_ADC_INTERRUPTS
     // setup to interrupt
     int ret = irq_attach(LPC43M4_IRQ_ADC0, Adc::sample_isr, NULL);
     if (ret == OK) {
         up_enable_irq(LPC43M4_IRQ_ADC0);
-
     } else {
         return false;
     }
-
+#else
+    // kick start it
+    Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+    running= true;
+    // start conversion every 10ms
+    SlowTicker::getInstance()->attach(100, Adc::on_tick);
+#endif
     return true;
+}
+
+void Adc::on_tick()
+{
+#ifndef NO_ADC_INTERRUPTS
+    if(running){
+        Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+    }
+#else
+    // we need to run the sampling irq and setoff another sample
+    if(running) {
+        sample_isr(0, 0, 0);
+        Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+    }
+#endif
 }
 
 bool Adc::stop()
 {
+    running= false;
+    #ifndef NO_ADC_INTERRUPTS
     up_disable_irq(LPC43M4_IRQ_ADC0);
     irq_attach(LPC43M4_IRQ_ADC0, nullptr, nullptr);
+    #endif
     Chip_ADC_SetBurstCmd(_LPC_ADC_ID, DISABLE);
     Chip_ADC_DeInit(_LPC_ADC_ID);
 
@@ -161,8 +189,9 @@ Adc* Adc::from_string(const char *name)
     memset(sample_buffer, 0, sizeof(sample_buffer));
     memset(ave_buf, 0, sizeof(ave_buf));
     Chip_ADC_EnableChannel(_LPC_ADC_ID, CHANNEL_LUT[channel], ENABLE);
+    #ifndef NO_ADC_INTERRUPTS
     Chip_ADC_Int_SetChannelCmd(_LPC_ADC_ID, CHANNEL_LUT[channel], ENABLE);
-
+    #endif
     enabled = true;
 
     return this;
@@ -186,7 +215,7 @@ _ramfunc_ int Adc::sample_isr(int irq, void *context, FAR void *arg)
     return OK;
 }
 
-// Keeps the last 8 values for each channel
+// Keeps the last 32 values for each channel
 // This is called in an ISR, so sample_buffer needs to be accessed atomically
 _ramfunc_ void Adc::new_sample(uint32_t value)
 {

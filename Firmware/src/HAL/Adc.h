@@ -19,6 +19,7 @@ public:
     static bool setup();
     static bool start();
     static bool stop();
+    static void on_tick(void);
 
     // specific to each instance
     Adc* from_string(const char *name);
@@ -50,6 +51,7 @@ private:
     void new_sample(uint32_t value);
 
     bool enabled{false};
+    static bool running;
     int channel;
     int instance_idx{-1};
     // buffer storing the last num_samples readings for each channel instance

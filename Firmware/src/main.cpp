@@ -684,10 +684,9 @@ static int smoothie_startup(int, char **)
             printf("Error: failed to start StepTicker\n");
         }
 
-        // FIXME this crashes the system now, probably interrupts are too fast
-        // if(!Adc::start()) {
-        //     printf("Error: failed to start ADC\n");
-        // }
+        if(!Adc::start()) {
+            printf("Error: failed to start ADC\n");
+        }
     }
 
     // launch the command thread that executes all incoming commands
