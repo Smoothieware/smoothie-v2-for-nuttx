@@ -23,6 +23,7 @@
 #define minimum_power_key "minimum_power"
 #define maximum_s_value_key "maximum_s_value"
 
+#define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
 Laser::Laser() : Module("laser")
 {
@@ -169,7 +170,7 @@ float Laser::current_speed_ratio(const Block *block) const
 }
 
 // get laser power for the currently executing block, returns false if nothing running or a G0
-bool Laser::get_laser_power(float& power) const
+_ramfunc_ bool Laser::get_laser_power(float& power) const
 {
     const Block *block = StepTicker::getInstance()->get_current_block();
 
@@ -187,7 +188,7 @@ bool Laser::get_laser_power(float& power) const
 }
 
 // called every millisecond from timer ISR
-void Laser::set_proportional_power(void)
+_ramfunc_ void Laser::set_proportional_power(void)
 {
     if(manual_fire) return;
 
@@ -204,7 +205,7 @@ void Laser::set_proportional_power(void)
     return;
 }
 
-bool Laser::set_laser_power(float power)
+_ramfunc_ bool Laser::set_laser_power(float power)
 {
     // Ensure power is >=0 and <= 1
     if(power < 0) power= 0;

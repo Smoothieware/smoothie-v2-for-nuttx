@@ -1668,7 +1668,7 @@ void Robot::setToolOffset(const float offset[3])
 
 float Robot::get_feed_rate() const
 {
-    // TODO
+    // TODO modal is currently in gcode processor which is a static in main.cpp
     // return THEKERNEL->gcode_dispatch->get_modal_command() == 0 ? seek_rate : feed_rate;
     return feed_rate;
 }
