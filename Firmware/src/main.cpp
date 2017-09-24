@@ -504,7 +504,7 @@ static int smoothie_startup(int, char **)
     printf("Smoothie V2.0alpha Build for %s - starting up\n", BUILD_TARGET);
     get_pll1_clk();
 
-    // create the SlowTicker here as it us used by some modules
+    // create the SlowTicker here as it is used by some modules
     SlowTicker *slow_ticker = new SlowTicker();
 
     // create the StepTicker, don't start it yet
@@ -542,11 +542,12 @@ static int smoothie_startup(int, char **)
 
 
         ConfigReader cr(fs);
+        printf("Starting configuration of modules from sdcard...\n");
 #else
         ConfigReader cr(ss);
+        printf("Starting configuration of modules from memory...\n");
 #endif
 
-        printf("Starting configuration of modules...\n");
 
         printf("configure the planner\n");
         Planner *planner = new Planner();
