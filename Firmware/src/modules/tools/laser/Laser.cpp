@@ -47,6 +47,7 @@ bool Laser::configure(ConfigReader& cr)
     if(!pwm_pin->is_valid()) {
         printf("Error: laser-config: Specified pin is not a valid PWM pin.\n");
         delete pwm_pin;
+        pwm_pin= nullptr;
         return false;
     }
 
@@ -126,8 +127,8 @@ bool Laser::handle_fire_cmd( std::string& params, OutputStream& os )
 // returns instance
 bool Laser::request(const char *key, void *value)
 {
-    if(strcmp(key, "get_instance") == 0) {
-        *((Laser**)value)= this;
+    if(strcmp(key, "get_current_power") == 0) {
+        *((float*)value)= get_current_power();
         return true;
     }
 
@@ -233,6 +234,7 @@ void Laser::on_halt(bool flg)
 
 float Laser::get_current_power() const
 {
+    if(pwm_pin == nullptr) return 0;
 	float p= pwm_pin->get();
     return (this->pwm_inverting ? 1 - p : p) * 100;
 }

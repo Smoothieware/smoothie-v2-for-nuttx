@@ -1743,15 +1743,16 @@ void Robot::get_query_string(std::string& str)
             n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
             str.append(buf, n);
 
-            // // current Laser power
-            // #ifndef NO_TOOLS_LASER
-            //     Laser *plaser= nullptr;
-            //     if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
-            //        float lp= plaser->get_current_power();
-            //         n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
-            //         str.append(buf, n);
-            //     }
-            // #endif
+            // current Laser power
+            m = Module::lookup("laser");
+            if(m != nullptr) {
+                float lp;
+                bool ok = m->request("get_current_power", &lp);
+                if(ok) {
+                    n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
+                    str.append(buf, n);
+                }
+            }
 
         } else {
             str.append(",WPos:").append(buf, n);
