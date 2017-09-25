@@ -84,7 +84,7 @@ bool Adc::setup()
 }
 
 // As nuttx broke ADC interrupts we need to work around it
-#define NO_ADC_INTERRUPTS
+//#define NO_ADC_INTERRUPTS
 bool Adc::start()
 {
 #ifndef NO_ADC_INTERRUPTS
@@ -92,6 +92,11 @@ bool Adc::start()
     int ret = irq_attach(LPC43M4_IRQ_ADC0, Adc::sample_isr, NULL);
     if (ret == OK) {
         up_enable_irq(LPC43M4_IRQ_ADC0);
+        // kick start it
+        Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+        running= true;
+        // start conversion every 10ms
+        SlowTicker::getInstance()->attach(100, Adc::on_tick);
     } else {
         return false;
     }

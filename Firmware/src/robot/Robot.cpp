@@ -228,6 +228,7 @@ bool Robot::configure(ConfigReader& cr)
         }
 
         // set microstepping if enabled, use default x32 if not specified but pins exist
+        // TODO make these pins persistent and add gcode to set microstepping
         Pin ms1_pin(cr.get_string(mm, ms1_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms2_pin(cr.get_string(mm, ms2_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms3_pin(cr.get_string(mm, ms3_pin_key, "nc"), Pin::AS_OUTPUT);
@@ -257,8 +258,8 @@ bool Robot::configure(ConfigReader& cr)
         }
 
         actuators[a]->change_steps_per_mm(cr.get_float(mm, steps_per_mm_key, a == Z_AXIS ? 2560.0F : 80.0F));
-        actuators[a]->set_max_rate(       cr.get_float(mm, max_rate_key,     30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(   cr.get_float(mm, acceleration_key, -1)); // mm/secs² if -1 it uses the default acceleration
+        actuators[a]->set_max_rate(cr.get_float(mm, max_rate_key, 30000.0F) / 60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(cr.get_float(mm, acceleration_key, -1)); // mm/secs² if -1 it uses the default acceleration
     }
 
     check_max_actuator_speeds(); // check the configs are sane
