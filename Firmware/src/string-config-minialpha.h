@@ -16,6 +16,8 @@ minimum_planner_speed = 0\n\
 planner_queue_size = 32\n\
 \n\
 [actuator]\n\
+common.motor_reset_pin = GPIO3_5 # reset pin for all drivers\n\
+\n\
 alpha.steps_per_mm = 800 # Steps per mm for alpha ( X ) stepper\n\
 alpha.step_pin = gpio7_12 # Pin for alpha stepper step signal\n\
 alpha.dir_pin = gpio7_9 # Pin for alpha stepper direction, add '!' to reverse direction\n\

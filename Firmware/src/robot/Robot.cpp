@@ -55,6 +55,10 @@
 #define ms3_pin_key                     "ms3_pin"
 #define ms_key                          "microstepping"
 
+// only one of these for all the drivers
+#define common_key                      "common"
+#define motor_reset_pin_key             "motor_reset_pin"
+
 // arm solutions
 #define  arm_solution_key               "arm_solution"
 #define  cartesian_key                  "cartesian"
@@ -258,6 +262,18 @@ bool Robot::configure(ConfigReader& cr)
     }
 
     check_max_actuator_speeds(); // check the configs are sane
+
+    // common settings for all drivers/actuators
+    auto s = ssm.find(common_key);
+    if(s != ssm.end()) {
+        auto& mm = s->second; // map of general actuator config settings
+        // driver reset pin, mini alpha is GPIO3_5
+        Pin motor_reset_pin(cr.get_string(mm, motor_reset_pin_key, "nc"), Pin::AS_OUTPUT);
+        if(motor_reset_pin.connected()) {
+            // set high, leaves it high
+            motor_reset_pin.set(true);
+        }
+    }
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
