@@ -205,11 +205,11 @@ bool Robot::configure(ConfigReader& cr)
         Pin dir_pin( cr.get_string(mm, dir_pin_key,  "nc"), Pin::AS_OUTPUT);
         Pin en_pin(  cr.get_string(mm, en_pin_key,   "nc"), Pin::AS_OUTPUT);
 
-        printf("DEBUG: for actuator %s pins: %s, %s, %s\n", s->first.c_str(), step_pin.to_string().c_str(), dir_pin.to_string().c_str(), en_pin.to_string().c_str());
+        printf("DEBUG:configure-robot: for actuator %s pins: %s, %s, %s\n", s->first.c_str(), step_pin.to_string().c_str(), dir_pin.to_string().c_str(), en_pin.to_string().c_str());
 
         if(!step_pin.connected() || !dir_pin.connected()) { // step and dir must be defined, but enable is optional
             if(a <= Z_AXIS) {
-                printf("FATAL: motor %c - %s is not defined in config\n", 'X' + a, s->first.c_str());
+                printf("FATAL:configure-robot: motor %c - %s is not defined in config\n", 'X' + a, s->first.c_str());
                 n_motors = a; // we only have this number of motors
                 return false;
             }
@@ -223,16 +223,41 @@ bool Robot::configure(ConfigReader& cr)
         uint8_t n = register_actuator(sm);
         if(n != a) {
             // this is a fatal error as they must be contiguous
-            printf("FATAL: motor %d does not match index %d\n", n, a);
+            printf("FATAL:configure-robot: motor %d does not match index %d\n", n, a);
             return false;
         }
 
-        // set microstepping if enabled, use default x32 if not specified but pins exist
+        // set microstepping if enabled, use default x16 if not specified but pins exist
         // TODO make these pins persistent and add gcode to set microstepping
         Pin ms1_pin(cr.get_string(mm, ms1_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms2_pin(cr.get_string(mm, ms2_pin_key, "nc"), Pin::AS_OUTPUT);
         Pin ms3_pin(cr.get_string(mm, ms3_pin_key, "nc"), Pin::AS_OUTPUT);
-        if(ms1_pin.connected() && ms2_pin.connected() && ms3_pin.connected()) {
+        if(ms1_pin.connected() && ms2_pin.connected() && !ms3_pin.connected()) {
+            // A4982
+            printf("DEBUG:configure-robot: for actuator %s ms-pins: %s, %s\n", s->first.c_str(), ms1_pin.to_string().c_str(), ms2_pin.to_string().c_str());
+            std::string ms= cr.get_string(mm, ms_key, "");
+            if(ms.empty()) {
+                // set default
+                ms1_pin.set(true);
+                ms2_pin.set(true);
+
+            } else {
+                std::vector<float> v = stringutils::parse_number_list(ms.c_str());
+                if(v.size() == 2) {
+                    ms1_pin.set(v[0] > 0.001F);
+                    ms2_pin.set(v[1] > 0.001F);
+                }else{
+                    printf("WARNING:configure-robot: %s.microstepping settings needs two numbers 1,1 - SET to default\n", s->first.c_str());
+                    ms1_pin.set(true);
+                    ms2_pin.set(true);
+                }
+            }
+            printf("DEBUG:configure-robot: microstepping for %s set to %d,%d\n",
+                    s->first.c_str(), ms1_pin.get(), ms2_pin.get());
+
+        } else if(ms1_pin.connected() && ms2_pin.connected() && ms3_pin.connected()) {
+            // A5984 1/32 default
+            printf("DEBUG:configure-robot: for actuator %s ms-pins: %s, %s, %s\n", s->first.c_str(), ms1_pin.to_string().c_str(), ms2_pin.to_string().c_str(), ms3_pin.to_string().c_str());
             std::string ms= cr.get_string(mm, ms_key, "");
             if(ms.empty()) {
                 // set default
@@ -243,17 +268,17 @@ bool Robot::configure(ConfigReader& cr)
             } else {
                 std::vector<float> v = stringutils::parse_number_list(ms.c_str());
                 if(v.size() == 3) {
-                    ms1_pin.set(v[0] > 0.00001F);
-                    ms2_pin.set(v[1] > 0.00001F);
-                    ms3_pin.set(v[2] > 0.00001F);
+                    ms1_pin.set(v[0] > 0.001F);
+                    ms2_pin.set(v[1] > 0.001F);
+                    ms3_pin.set(v[2] > 0.001F);
                 }else{
-                    printf("WARNING: %s.microstepping settings needs three numbers 1,1,1 - SET to default\n", s->first.c_str());
+                    printf("WARNING:configure-robot: %s.microstepping settings needs three numbers 1,1,1 - SET to default\n", s->first.c_str());
                     ms1_pin.set(true);
                     ms2_pin.set(true);
                     ms3_pin.set(false);
                 }
             }
-            printf("DEBUG: microstepping for %s set to %d,%d,%d\n",
+            printf("DEBUG:configure-robot: microstepping for %s set to %d,%d,%d\n",
                     s->first.c_str(), ms1_pin.get(), ms2_pin.get(), ms3_pin.get());
         }
 

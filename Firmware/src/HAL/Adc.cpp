@@ -84,7 +84,7 @@ bool Adc::setup()
 }
 
 // As nuttx broke ADC interrupts we need to work around it
-//#define NO_ADC_INTERRUPTS
+#define NO_ADC_INTERRUPTS
 bool Adc::start()
 {
 #ifndef NO_ADC_INTERRUPTS

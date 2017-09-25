@@ -69,7 +69,7 @@ bool CurrentControl::configure(ConfigReader& cr)
         pins[name]= pwm;
 
         pwm->set(current_to_pwm(c));
-        printf("configure-current-control: %s set to %f amps\n", name.c_str(), c);
+        printf("configure-current-control: %s set to %1.5f amps\n", name.c_str(), c);
     }
 
     // register gcodes and mcodes

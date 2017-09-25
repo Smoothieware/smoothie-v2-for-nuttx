@@ -38,7 +38,8 @@ public:
     {
         if (!this->valid) return false;
         //return this->inverting ^ lpc43_gpio_read(gpiocfg);
-        return (getreg8(LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT))) & GPIO_B) != 0;
+        uint8_t v = getreg8(LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT))) & GPIO_B;
+        return this->inverting ^ (v != 0);
     }
 
     // we need to do this inline without calling lpc43_gpio_write due to ISR being in SRAM not FLASH
@@ -46,7 +47,8 @@ public:
     {
         if (!this->valid) return;
         //lpc43_gpio_write(gpiocfg, this->inverting ^ value);
-        putreg8((uint8_t)value, LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT)));
+        uint8_t v= (this->inverting ^ value) ? 1 : 0;
+        putreg8(v, LPC43_GPIO_B(((gpiocfg & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT), ((gpiocfg & GPIO_PIN_MASK) >> GPIO_PIN_SHIFT)));
     }
 
     inline uint16_t get_gpiocfg() const { return gpiocfg; }
