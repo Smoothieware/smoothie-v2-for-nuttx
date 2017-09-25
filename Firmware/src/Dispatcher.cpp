@@ -134,8 +134,9 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 }
 
 // convenience to dispatch a one off command
-// Usage: dispatch(os, 'M', 123, [subcode,] 'X', 456, 'Y', 789, ..., 0); // must terminate with 0
+// Usage: dispatch(os, 'M', 123, [subcode,] 'X', 456.0F, 'Y', 789.0F, ..., 0); // must terminate with 0
 // dispatch(os, 'M', 123, 0);
+// NOTE parameters must be floats
 // Must be called from the command thread context
 bool Dispatcher::dispatch(OutputStream& os, char cmd, uint16_t code, ...) const
 {

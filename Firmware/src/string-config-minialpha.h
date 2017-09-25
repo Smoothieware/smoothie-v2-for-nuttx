@@ -18,7 +18,7 @@ planner_queue_size = 32\n\
 [actuator]\n\
 common.motor_reset_pin = GPIO3_5 # reset pin for all drivers\n\
 \n\
-alpha.steps_per_mm = 800 # Steps per mm for alpha ( X ) stepper\n\
+alpha.steps_per_mm = 400 # Steps per mm for alpha ( X ) stepper\n\
 alpha.step_pin = gpio7_12 # Pin for alpha stepper step signal\n\
 alpha.dir_pin = gpio7_9 # Pin for alpha stepper direction, add '!' to reverse direction\n\
 alpha.en_pin = gpio3_10 # Pin for alpha enable pin\n\
@@ -29,7 +29,7 @@ alpha.microstepping = 1,1 # settings for alpha micro stepping pins ms1,ms2 defau
 alpha.max_rate = 30000.0 # Maximum rate in mm/min\n\
 x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
-beta.steps_per_mm = 800 # Steps per mm for beta ( Y ) stepper\n\
+beta.steps_per_mm = 400 # Steps per mm for beta ( Y ) stepper\n\
 beta.step_pin = gpio3_6 # Pin for beta stepper step signal\n\
 beta.dir_pin = gpio5_15 # Pin for beta stepper direction, add '!' to reverse direction\n\
 beta.en_pin = gpio1_12 # Pin for beta enable\n\
@@ -40,7 +40,7 @@ beta.microstepping = 1,1 # settings for beta micro stepping pins ms1,ms2 default
 beta.max_rate = 30000.0 # Maxmimum rate in mm/min\n\
 y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
-gamma.steps_per_mm = 800 # Steps per mm for gamma ( Z ) stepper\n\
+gamma.steps_per_mm = 400 # Steps per mm for gamma ( Z ) stepper\n\
 gamma.step_pin = gpio0_5 # Pin for gamma stepper step signal\n\
 gamma.dir_pin = gpio7_2 # Pin for gamma stepper direction, add '!' to reverse direction\n\
 gamma.en_pin = gpio7_3 # Pin for gamma enable\n\

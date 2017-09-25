@@ -4,6 +4,7 @@
 #include "Module.h"
 #include "StringUtils.h"
 #include "Robot.h"
+#include "AutoPushPop.h"
 
 #include <functional>
 #include <set>
@@ -38,6 +39,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "get", std::bind( &CommandShell::get_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "$#", std::bind( &CommandShell::grblDP_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
 
     return true;
 }
@@ -528,3 +530,145 @@ bool CommandShell::grblDP_cmd(std::string& params, OutputStream& os)
     return true;
 }
 
+// runs several types of test on the mechanisms
+// TODO this will block the command thread, and queries will stop,
+// may want to run the long running commands in a thread
+bool CommandShell::test_cmd(std::string& params, OutputStream& os)
+{
+    HELP("test [jog|circle|square|raw]");
+
+    AutoPushPop app; // this will save the state and restore it on exit
+    std::string what = stringutils::shift_parameter( params );
+    OutputStream nullos;
+    if (what == "jog") {
+        // jogs back and forth usage: axis distance iterations [feedrate]
+        std::string axis = stringutils::shift_parameter( params );
+        std::string dist = stringutils::shift_parameter( params );
+        std::string iters = stringutils::shift_parameter( params );
+        std::string speed = stringutils::shift_parameter( params );
+        if(axis.empty() || dist.empty() || iters.empty()) {
+            os.printf("error: Need axis distance iterations\n");
+            return true;
+        }
+        float d= strtof(dist.c_str(), NULL);
+        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+
+        bool toggle= false;
+        for (uint32_t i = 0; i < n; ++i) {
+            Robot::getInstance()->absolute_mode= false;
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'F', f, axis[0], toggle?-d:d, 0);
+            if(Robot::getInstance()->is_halted()) break;
+            toggle= !toggle;
+        }
+        os.printf("done\n");
+
+    }else if (what == "circle") {
+        // draws a circle around origin. usage: radius iterations [feedrate]
+        std::string radius = stringutils::shift_parameter( params );
+        std::string iters = stringutils::shift_parameter( params );
+        std::string speed = stringutils::shift_parameter( params );
+         if(radius.empty() || iters.empty()) {
+            os.printf("error: Need radius iterations\n");
+            return true;
+        }
+
+        float r= strtof(radius.c_str(), NULL);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+
+        Robot::getInstance()->absolute_mode= false;
+        THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', -r, 'F', f, 0);
+        Robot::getInstance()->absolute_mode= true;
+
+        for (uint32_t i = 0; i < n; ++i) {
+            if(Robot::getInstance()->is_halted()) break;
+            THEDISPATCHER->dispatch(nullos, 'G', 2, 'I', r, 'J', 0.0F, 'F', f, 0);
+        }
+
+        // leave it where it started
+        if(!Robot::getInstance()->is_halted()) {
+            Robot::getInstance()->absolute_mode= false;
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', r, 'F', f, 0);
+            Robot::getInstance()->absolute_mode= true;
+        }
+
+        os.printf("done\n");
+
+    }else if (what == "square") {
+        // draws a square usage: size iterations [feedrate]
+        std::string size = stringutils::shift_parameter( params );
+        std::string iters = stringutils::shift_parameter( params );
+        std::string speed = stringutils::shift_parameter( params );
+        if(size.empty() || iters.empty()) {
+            os.printf("error: Need size iterations\n");
+            return true;
+        }
+        float d= strtof(size.c_str(), NULL);
+        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+
+        Robot::getInstance()->absolute_mode= false;
+
+        for (uint32_t i = 0; i < n; ++i) {
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', d, 'F', f, 0);
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'Y', d, 0);
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', -d, 0);
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'Y', -d, 0);
+            if(Robot::getInstance()->is_halted()) break;
+        }
+        os.printf("done\n");
+
+    }else if (what == "raw") {
+        #if 0
+        // issues raw steps to the specified axis usage: axis steps steps/sec
+        std::string axis = stringutils::shift_parameter( params );
+        std::string stepstr = stringutils::shift_parameter( params );
+        std::string stepspersec = stringutils::shift_parameter( params );
+        if(axis.empty() || stepstr.empty() || stepspersec.empty()) {
+            os.printf("error: Need axis steps steps/sec\n");
+            return;
+        }
+
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
+        int steps= strtol(stepstr.c_str(), NULL, 10);
+        bool dir= steps >= 0;
+        steps= std::abs(steps);
+
+        if(a > C_AXIS) {
+            os.printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= Robot::getInstance()->get_number_registered_motors()) {
+            os.printf("error: axis is out of range\n");
+            return;
+        }
+
+        uint32_t sps= strtol(stepspersec.c_str(), NULL, 10);
+        sps= std::max(sps, 1UL);
+
+        uint32_t delayus= 1000000.0F / sps;
+        for(int s= 0;s<steps;s++) {
+            if(Robot::getInstance()->is_halted()) break;
+            Robot::getInstance()->actuators[a]->manual_step(dir);
+            // delay but call on_idle
+            safe_delay_us(delayus);
+        }
+
+        // reset the position based on current actuator position
+        Robot::getInstance()->reset_position_from_current_actuator_position();
+
+        os.printf("done\n");
+        #endif
+
+    }else {
+        os.printf("usage:\n test jog axis distance iterations [feedrate]\n");
+        os.printf(" test square size iterations [feedrate]\n");
+        os.printf(" test circle radius iterations [feedrate]\n");
+        os.printf(" test raw axis steps steps/sec\n");
+    }
+
+    return true;
+}

@@ -24,8 +24,8 @@
 // static std::condition_variable cv;
 
 //set in uart thread to signal command_thread to print a query response
-static bool do_query = false;
-static OutputStream *query_os = nullptr;
+// static bool do_query = false;
+// static OutputStream *query_os = nullptr;
 
 static int setup_CDC()
 {
@@ -168,6 +168,7 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
+#include "Robot.h"
 
 // TODO maybe move to Dispatcher
 static GCodeProcessor gp;
@@ -282,8 +283,11 @@ static void usb_comms()
                 cnt = 0;
 
             } else if(line[cnt] == '?') {
-                do_query = true;
-                query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
+                std::string r;
+                Robot::getInstance()->get_query_string(r);
+                os.puts(r.c_str());
+                // do_query = true;
+                // query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
 
             } else if(discard) {
                 // we discard long lines until we get the newline
@@ -351,8 +355,12 @@ static void uart_comms()
                 cnt = 0;
 
             } else if(line[cnt] == '?') {
-                do_query = true;
-                query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
+                std::string r;
+                Robot::getInstance()->get_query_string(r);
+                os.puts(r.c_str());
+
+                // do_query = true;
+                // query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
 
                 // } else if(line[cnt] == '!') {
                 //     do_feed_hold(true);
@@ -400,7 +408,6 @@ static void uart_comms()
 }
 
 #include "Conveyor.h"
-#include "Robot.h"
 #include "Pin.h"
 
 // Define the activity/idle indicator led
@@ -447,15 +454,15 @@ static void *commandthrd(void *)
         }
 
         // set in comms thread, and executed here to avoid thread clashes
-        if(do_query) {
-            do_query = false;
-            std::string r;
-            Robot::getInstance()->get_query_string(r);
-            if(query_os != nullptr) {
-                query_os->puts(r.c_str());
-                query_os = nullptr;
-            }
-        }
+        // if(do_query) {
+        //     do_query = false;
+        //     std::string r;
+        //     Robot::getInstance()->get_query_string(r);
+        //     if(query_os != nullptr) {
+        //         query_os->puts(r.c_str());
+        //         query_os = nullptr;
+        //     }
+        // }
 
         // call in_command_ctx for all modules that want it
         Module::broadcast_in_commmand_ctx();

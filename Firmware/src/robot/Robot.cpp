@@ -1387,6 +1387,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // }
 
     // make sure the motors are enabled
+    enable_all_motors(true);
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
