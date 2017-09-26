@@ -20,6 +20,14 @@ NOTE for the smooothiev2 mini alpha replace Bambino above with Minialpha...
 
 config is in string-config-minialpha.h
 
-The Mini Alpha is not currently working very well.
+The Mini Alpha is currently working quite well.
 
 Make sure you follow the ../README.md file for creating the nuttx-export.Bambino (or nuttx-export.Minialpha)
+
+on the Mini Alpha there are 4 leds..
+
+led1 - nuttx system led, on when nuttx is running ok
+led2 - nuttx syste led, flashes when there is interrupt activity, hard on when there is a crash.
+led3 - smoothie led, flashes slowly when idle, does not flash when busy
+led4 - smoothie led, TBD
+
