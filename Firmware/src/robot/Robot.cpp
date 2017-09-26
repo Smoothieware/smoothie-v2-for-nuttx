@@ -381,10 +381,12 @@ bool Robot::configure(ConfigReader& cr)
 void Robot::on_halt(bool flg)
 {
     halted = flg;
-    for(auto a : actuators) {
-        // TODO how to handle the SPI motor drivers?
-        a->enable(false);
-        a->stop_moving();
+    if(flg) {
+        for(auto a : actuators) {
+            // TODO how to handle the SPI motor drivers?
+            a->enable(false);
+            a->stop_moving();
+        }
     }
 }
 

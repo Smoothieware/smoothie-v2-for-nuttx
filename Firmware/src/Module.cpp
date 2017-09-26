@@ -1,4 +1,5 @@
 #include "Module.h"
+#include "Robot.h"
 
 // static
 std::map<const std::string, Module::modrec_t> Module::registry;
@@ -94,7 +95,13 @@ void Module::broadcast_halt(bool flg)
         }
     }
 
-    // TODO if was not idle then fixup positions maybe do this in Robot
+    if(halted) {
+        // if was not idle then fixup positions.
+        // if we interrupted a move we need to resync the coordinates systems with the actuator position
+        // TODO we may need to wait a bit to allow everything to stop
+        // TODO we may need to only do this if we were not idle when we halted
+        Robot::getInstance()->reset_position_from_current_actuator_position();
+    }
 }
 
 void Module::broadcast_in_commmand_ctx()
