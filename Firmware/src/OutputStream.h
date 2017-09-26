@@ -25,7 +25,7 @@ public:
 	int write(const char *buffer, size_t size);
 	int printf(const char *format, ...);
 	int puts(const char *str);
-	void set_append_nl() { append_nl = true; }
+	void set_append_nl(bool flg = true) { append_nl = flg; }
 	void set_prepend_ok(bool flg = true) { prepend_ok = flg; }
 	bool is_append_nl() const { return append_nl; }
 	bool is_prepend_ok() const { return prepend_ok; }

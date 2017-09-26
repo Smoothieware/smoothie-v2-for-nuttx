@@ -120,6 +120,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 
 		if(os.is_append_nl()) {
 			// append newline
+			os.set_append_nl(false); // clear the flag
 			os.printf("\n");
 		}
 

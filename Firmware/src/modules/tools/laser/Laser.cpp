@@ -91,7 +91,7 @@ bool Laser::configure(ConfigReader& cr)
 
     // no point in updating the power more than the PWM frequency, but no more than 1KHz
     // std::min(1000UL, 1000000/period)
-    SlowTicker::getInstance()->attach(1000, std::bind(&Laser::set_proportional_power, this));
+    SlowTicker::getInstance()->attach(100, std::bind(&Laser::set_proportional_power, this));
 
     return true;
 }

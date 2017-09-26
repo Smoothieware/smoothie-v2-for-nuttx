@@ -26,7 +26,7 @@ alpha.ms1_pin = gpio1_13 # Pin for alpha micro stepping\n\
 alpha.ms2_pin = gpio7_14 # Pin for alpha micro stepping\n\
 #alpha.ms3_pin = gpio7_11 # Pin for alpha micro stepping\n\
 alpha.microstepping = 1,1 # settings for alpha micro stepping pins ms1,ms2 default 1/16\n\
-alpha.max_rate = 30000.0 # Maximum rate in mm/min\n\
+alpha.max_rate = 1800.0 # Maximum rate in mm/min\n\
 x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 beta.steps_per_mm = 400 # Steps per mm for beta ( Y ) stepper\n\
@@ -37,7 +37,7 @@ beta.ms1_pin = gpio1_11 # Pin for beta micro stepping\n\
 beta.ms2_pin = gpio7_7 # Pin for beta micro stepping\n\
 #beta.ms3_pin = gpio2_8 # Pin for beta micro stepping\n\
 beta.microstepping = 1,1 # settings for beta micro stepping pins ms1,ms2 default 1/16\n\
-beta.max_rate = 30000.0 # Maxmimum rate in mm/min\n\
+beta.max_rate = 1800.0 # Maxmimum rate in mm/min\n\
 y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 gamma.steps_per_mm = 400 # Steps per mm for gamma ( Z ) stepper\n\
@@ -92,23 +92,23 @@ misc.output_type = digital          # Digital means this is just an on or off pi
 led1.enable            = true\n\
 led1.input_on_command  = M1\n\
 led1.input_off_command = M2\n\
-led1.output_pin        = gpio1_1\n\
+led1.output_pin        = gpio6_12\n\
 led1.output_type       = digital\n\
 \n\
-led2.enable            = true\n\
-led2.input_on_command  = M3\n\
-led2.input_off_command = M4\n\
-led2.output_pin        = gpio2_7\n\
-led2.output_type       = sigmadeltapwm\n\
+#led2.enable            = true\n\
+#led2.input_on_command  = M3\n\
+#led2.input_off_command = M4\n\
+#led2.output_pin        = gpio2_7\n\
+#led2.output_type       = sigmadeltapwm\n\
 \n\
-but1.enable             = true                     # Enable this module\n\
-but1.input_pin          = gpio0_7!                 # button\n\
-but1.output_on_command  = M1                       # command to send\n\
-but1.output_off_command = M2                       # command to send\n\
-but1.input_pin_behavior = toggle\n\
+#but1.enable             = true                     # Enable this module\n\
+#but1.input_pin          = gpio0_7!                 # button\n\
+#but1.output_on_command  = M1                       # command to send\n\
+#but1.output_off_command = M2                       # command to send\n\
+#but1.input_pin_behavior = toggle\n\
 \n\
 [extruder]\n\
-hotend.enable = true             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
+hotend.enable = false             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
 hotend.tool_id = 0               # T0 will select\n\
 hotend.default_feed_rate = 600   # Default rate ( mm/minute ) for moves where only the extruder moves\n\
 hotend.max_speed = 50            # Maximum speed in mm/s\n\
@@ -123,7 +123,7 @@ hotend2.y_offset = 25.0          # y offset from origin in mm\n\
 hotend2.z_offset = 0             # z offset from origin in mm\n\
 \n\
 [temperature control]\n\
-hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend.enable = false             # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend.tool_id = 0               # T0 will select\n\
 hotend.thermistor_pin = ADC0_1     # Pin for the thermistor to read\n\
 hotend.heater_pin = P7.1         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
@@ -131,6 +131,7 @@ hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontro
 hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
 hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend.designator = T            # Designator letter for this module\n\
+hotend.pwm_frequency = 100       # FIXME slow for now when is SPIFI\n\
 \n\
 hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend2.tool_id = 1               # T1 will select\n\
@@ -141,7 +142,7 @@ hotend2.set_m_code = 104          # M-code to set the temperature for this modul
 hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
 \n\
-bed.enable = true # Whether to activate this module at all.\n\
+bed.enable = false # Whether to activate this module at all.\n\
 bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
 bed.thermistor_pin = ADC0_2 # Pin for the thermistor to read\n\
 bed.heater_pin = P7.5     # Pin that controls the heater\n\
@@ -149,6 +150,7 @@ bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#
 bed.set_m_code = 140 # M-code to set the temperature for this module\n\
 bed.set_and_wait_m_code = 190 # M-code to set-and-wait for this module\n\
 bed.designator = B # Designator letter for this module\n\
+bed.pwm_frequency = 100       # FIXME slow for now when is SPIFI\n\
 \n\
 [kill button]\n\
 enable = true          # Set to true to enable a kill button\n\

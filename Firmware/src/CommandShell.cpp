@@ -41,6 +41,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "get", std::bind( &CommandShell::get_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "$#", std::bind( &CommandShell::grblDP_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
 
     return true;
 }
@@ -672,5 +673,11 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
         os.printf(" test raw axis steps steps/sec\n");
     }
 
+    return true;
+}
+
+bool CommandShell::version_cmd(std::string& params, OutputStream& os)
+{
+    os.printf("Smoothie Version2 for Mini Alpha: build 0.1\n");
     return true;
 }
