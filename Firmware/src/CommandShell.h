@@ -26,6 +26,7 @@ private:
     bool get_cmd(std::string& params, OutputStream& os);
     bool grblDP_cmd(std::string& params, OutputStream& os);
     bool grblDG_cmd(std::string& params, OutputStream& os);
+    bool grblDH_cmd(std::string& params, OutputStream& os);
     bool test_cmd(std::string& params, OutputStream& os);
     bool version_cmd(std::string& params, OutputStream& os);
 

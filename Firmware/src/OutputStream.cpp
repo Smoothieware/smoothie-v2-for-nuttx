@@ -79,6 +79,7 @@ int OutputStream::FdBuf::sync()
 		if(len < 64) {
 			// FIXME write may return less than len need to address that case
 			::write(fd, this->str().c_str(), len);
+			//::printf("write: %d\n", s);
 
 		} else {
 			// FIXME: hack before we fix the cdc driver

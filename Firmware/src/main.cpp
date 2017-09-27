@@ -341,8 +341,8 @@ static void uart_comms()
     // get the message queue
     mqd_t mqfd = get_message_queue(false);
 
-    // create an output stream that writes to cout/stdout
-    OutputStream os(std::cout);
+    // create an output stream that writes to stdout which is the uart
+    OutputStream os(1); // use stdout fd, not this which is buffered (&std::cout);
 
     // now read lines and dispatch them
     char line[132];

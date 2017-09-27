@@ -41,6 +41,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "get", std::bind( &CommandShell::get_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "$#", std::bind( &CommandShell::grblDP_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "$G", std::bind( &CommandShell::grblDG_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "$H", std::bind( &CommandShell::grblDH_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
 
@@ -473,6 +474,15 @@ bool CommandShell::grblDG_cmd(std::string& params, OutputStream& os)
 {
     std::string cmd("state");
     return get_cmd(cmd, os);
+}
+
+bool CommandShell::grblDH_cmd(std::string& params, OutputStream& os)
+{
+    if(THEDISPATCHER->is_grbl_mode()) {
+        return THEDISPATCHER->dispatch(os, 'G', 28, 2, 0); // G28.2 to home
+    }else{
+        return THEDISPATCHER->dispatch(os, 'G', 28, 0); // G28 to home
+    }
 }
 
 bool CommandShell::grblDP_cmd(std::string& params, OutputStream& os)
