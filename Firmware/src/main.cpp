@@ -457,6 +457,8 @@ static void *commandthrd(void *)
         }
 
         // set in comms thread, and executed here to avoid thread clashes
+        // FIXME the trouble with this is that ? does not reply if a long command is blocking above call to dispatch_line
+        // test comamnds for instance or a long line when the queue is full
         if(do_query) {
             std::string r;
             Robot::getInstance()->get_query_string(r);
@@ -555,6 +557,15 @@ static int smoothie_startup(int, char **)
         printf("Starting configuration of modules from memory...\n");
 #endif
 
+        {
+            // get general system settings
+            ConfigReader::section_map_t m;
+            if(cr.get_section("general", m)) {
+                bool f= cr.get_bool(m, "grbl_mode", false);
+                THEDISPATCHER->set_grbl_mode(f);
+                printf("grbl mode %s\n", f?"set":"not set");
+            }
+        }
 
         printf("configure the planner\n");
         Planner *planner = new Planner();

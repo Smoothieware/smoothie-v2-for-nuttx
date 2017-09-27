@@ -1,4 +1,7 @@
 static const char *string_config= "\
+[general]\n\
+grbl_mode = true\n\
+\n\
 [motion control]\n\
 default_feed_rate = 4000 # Default speed (mm/minute) for G1/G2/G3 moves\n\
 default_seek_rate = 4000 # Default speed (mm/minute) for G0 moves\n\

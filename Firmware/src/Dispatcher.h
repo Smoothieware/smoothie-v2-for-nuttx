@@ -39,6 +39,7 @@ public:
     bool load_configuration() const;
     void clear_handlers();
     bool is_grbl_mode() const { return grbl_mode; }
+    void set_grbl_mode(bool flg) { grbl_mode= flg; }
 
 private:
     static Dispatcher *instance;
