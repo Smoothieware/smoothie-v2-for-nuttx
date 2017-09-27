@@ -1767,7 +1767,7 @@ float Robot::get_feed_rate() const
 }
 
 // return a GRBL-like query string for ? command
-void Robot::get_query_string(std::string& str)
+void Robot::get_query_string(std::string& str) const
 {
     bool homing = false;
     bool running = false;

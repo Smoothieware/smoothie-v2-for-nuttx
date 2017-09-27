@@ -69,7 +69,7 @@ public:
     uint8_t register_actuator(StepperMotor*);
     uint8_t get_number_registered_motors() const {return n_motors; }
     void enable_all_motors(bool flg);
-    void get_query_string(std::string&);
+    void get_query_string(std::string&) const;
     void do_park();
 
     bool is_halted() const { return halted; }
