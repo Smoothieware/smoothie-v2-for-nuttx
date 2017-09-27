@@ -70,7 +70,7 @@ public:
     uint8_t get_number_registered_motors() const {return n_motors; }
     void enable_all_motors(bool flg);
     void get_query_string(std::string&);
-    void do_park(OutputStream& os);
+    void do_park();
 
     bool is_halted() const { return halted; }
 

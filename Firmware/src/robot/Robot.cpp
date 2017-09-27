@@ -92,6 +92,7 @@ Robot::Robot() : Module("robot")
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     memset(this->machine_position, 0, sizeof machine_position);
     memset(this->compensated_machine_position, 0, sizeof compensated_machine_position);
+    memset(this->park_position, 0, sizeof park_position);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
@@ -331,6 +332,7 @@ bool Robot::configure(ConfigReader& cr)
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 21, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 28, std::bind(&Robot::handle_gcodes, this, _1, _2));
 
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 53, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 54, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 55, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 56, std::bind(&Robot::handle_gcodes, this, _1, _2));
@@ -679,15 +681,15 @@ bool Robot::handle_motion_command(GCode& gcode, OutputStream& os)
 {
     bool handled = true;
     enum MOTION_MODE_T motion_mode = NONE;
-    if( gcode.has_g()) {
-        switch( gcode.get_code() ) {
-            case 0: motion_mode = SEEK;    break;
-            case 1: motion_mode = LINEAR;  break;
-            case 2: motion_mode = CW_ARC;  break;
-            case 3: motion_mode = CCW_ARC; break;
-            default: handled = false; break;
+        if( gcode.has_g()) {
+            switch( gcode.get_code() ) {
+                case 0: motion_mode = SEEK;    break;
+                case 1: motion_mode = LINEAR;  break;
+                case 2: motion_mode = CW_ARC;  break;
+                case 3: motion_mode = CCW_ARC; break;
+                default: handled = false; break;
+            }
         }
-    }
 
     if( motion_mode != NONE) {
         is_g123 = motion_mode != SEEK;
@@ -703,17 +705,15 @@ bool Robot::handle_motion_command(GCode& gcode, OutputStream& os)
     return handled;
 }
 
-void Robot::do_park(OutputStream& os)
+void Robot::do_park()
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     push_state();
     absolute_mode = true;
     next_command_is_MCS= true; // must use machine coordinates in case G92 or WCS is in effect
+    OutputStream nullos;
+    THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', from_millimeters(park_position[X_AXIS]), 'Y', from_millimeters(park_position[Y_AXIS]), 'F', default_seek_rate, 0);
 
-    THEDISPATCHER->dispatch(os, 'G', 0, 'X', from_millimeters(park_position[X_AXIS]), 'Y', from_millimeters(park_position[Y_AXIS]), 'F', default_seek_rate, 0);
-
-    // Wait for above to finish
-    Conveyor::getInstance()->wait_for_idle();
     pop_state();
 }
 
@@ -734,7 +734,7 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
                switch(gcode.get_subcode()) {
                    case 0: // G28 in grbl mode will do a rapid to the predefined position otherwise it is home command
                         if(is_grbl_mode()){
-                            do_park(os);
+                            do_park();
                         }else{
                             handled= false;
                         }
@@ -751,7 +751,7 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
 
                     case 2: // G28.2 in grbl mode does homing (triggered by $H), otherwise it moves to the park position
                         if(!is_grbl_mode()) {
-                            do_park(os);
+                            do_park();
                         }else{
                             handled= false;
                         }

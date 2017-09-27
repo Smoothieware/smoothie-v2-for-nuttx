@@ -182,15 +182,17 @@ bool dispatch_line(OutputStream& os, const char *line)
     if(islower(line[0]) || line[0] == '$') {
 
         // we could handle this in CommandShell
-        if(strlen(line) >= 2 && line[1] == 'X') {
-            // handle $X
-            if(Module::is_halted()) {
-                Module::broadcast_halt(false);
-                os.puts("[Caution: Unlocked]\nok\n");
-            } else {
-                os.puts("ok\n");
+        if(line[0] == '$' && strlen(line) >= 2) {
+            if(line[1] == 'X') {
+                // handle $X
+                if(Module::is_halted()) {
+                    Module::broadcast_halt(false);
+                    os.puts("[Caution: Unlocked]\nok\n");
+                } else {
+                    os.puts("ok\n");
+                }
+                return true;
             }
-            return true;
         }
 
         // dispatch command

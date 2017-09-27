@@ -40,6 +40,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "get", std::bind( &CommandShell::get_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "$#", std::bind( &CommandShell::grblDP_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "$G", std::bind( &CommandShell::grblDG_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
 
@@ -348,7 +349,7 @@ bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::get_cmd(std::string& params, OutputStream& os)
 {
-    HELP("get pos|wcs|state")
+    HELP("get pos|wcs|state|status")
     std::string what = stringutils::shift_parameter( params );
     bool handled= true;
     if (what == "temp") {
@@ -456,7 +457,9 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
 
     } else if (what == "status") {
         // also ? on serial and usb
-        //os.printf("%s\n", THEKERNEL->get_query_string().c_str());
+        std::string str;
+        Robot::getInstance()->get_query_string(str);
+        os.printf("%s\n", str.c_str());
 
     } else {
 
@@ -464,6 +467,12 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
     }
 
     return handled;
+}
+
+bool CommandShell::grblDG_cmd(std::string& params, OutputStream& os)
+{
+    std::string cmd("state");
+    return get_cmd(cmd, os);
 }
 
 bool CommandShell::grblDP_cmd(std::string& params, OutputStream& os)
