@@ -1576,8 +1576,6 @@ bool Robot::append_line(GCode& gcode, const float target[], float rate_mm_s, flo
     // Append the end of this full move to the queue
     if(this->append_milestone(target, rate_mm_s)) moved = true;
 
-    this->next_command_is_MCS = false; // always reset this
-
     return moved;
 }
 
