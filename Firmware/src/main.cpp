@@ -221,10 +221,18 @@ bool dispatch_line(OutputStream& os, const char *line)
     }
 
     // dispatch gcodes
+    // TODO return one ok per line instead of per GCode
     for(auto& i : gcodes) {
-        if(!THEDISPATCHER->dispatch(i, os)) {
-            // no handler processed this gcode, return ok - ignored
-            os.puts("ok - ignored\n");
+        //i.dump(os);
+        if(i.has_m() || i.has_g()) {
+            if(!THEDISPATCHER->dispatch(i, os)) {
+                // no handler processed this gcode, return ok - ignored
+                os.puts("ok - ignored\n");
+            }
+
+        } else {
+            // if it has neither g or m then it was a blank line or comment
+            os.puts("ok\n");
         }
     }
 

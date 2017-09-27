@@ -70,6 +70,7 @@ public:
     uint8_t get_number_registered_motors() const {return n_motors; }
     void enable_all_motors(bool flg);
     void get_query_string(std::string&);
+    void do_park(OutputStream& os);
 
     bool is_halted() const { return halted; }
 
@@ -145,6 +146,7 @@ private:
     float machine_position[k_max_actuators]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
     float compensated_machine_position[k_max_actuators]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
 
+    float default_seek_rate;                             // the default seek rate as specified in config.ini
     float seek_rate;                                     // Current rate for seeking moves ( mm/min )
     float feed_rate;                                     // Current rate for feeding moves ( mm/min )
     float mm_per_line_segment;                           // Setting : Used to split lines into segments
@@ -162,6 +164,7 @@ private:
     // computational efficiency of generating arcs.
     int arc_correction;                                  // Setting : how often to rectify arc computation
     float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
+    float park_position[2];
 
     uint8_t n_motors;                                    //count of the motors/axis registered
 

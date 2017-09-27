@@ -158,13 +158,13 @@ bool Robot::configure(ConfigReader& cr)
         this->arm_solution = new CartesianSolution(cr);
     }
 
-    this->feed_rate           = cr.get_float(m, default_feed_rate_key, 100.0F);
-    this->seek_rate           = cr.get_float(m, default_seek_rate_key, 100.0F);
+    this->feed_rate = cr.get_float(m, default_feed_rate_key, 100.0F);
+    this->seek_rate = default_seek_rate= cr.get_float(m, default_seek_rate_key, 100.0F);
     this->mm_per_line_segment = cr.get_float(m, mm_per_line_segment_key, 0.0F);
     this->delta_segments_per_second = cr.get_float(m, delta_segments_per_second_key, 0.0f);
-    this->mm_per_arc_segment  = cr.get_float(m, mm_per_arc_segment_key, 0.0f);
-    this->mm_max_arc_error    = cr.get_float(m, mm_max_arc_error_key, 0.01f);
-    this->arc_correction      = cr.get_float(m, arc_correction_key, 5);
+    this->mm_per_arc_segment = cr.get_float(m, mm_per_arc_segment_key, 0.0f);
+    this->mm_max_arc_error = cr.get_float(m, mm_max_arc_error_key, 0.01f);
+    this->arc_correction = cr.get_float(m, arc_correction_key, 5);
 
     // in mm/sec but specified in config as mm/min
     this->max_speeds[X_AXIS]  = cr.get_float(m, x_axis_max_speed_key, 60000.0F) / 60.0F;
@@ -329,6 +329,7 @@ bool Robot::configure(ConfigReader& cr)
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 19, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 20, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 21, std::bind(&Robot::handle_gcodes, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 28, std::bind(&Robot::handle_gcodes, this, _1, _2));
 
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 54, std::bind(&Robot::handle_gcodes, this, _1, _2));
     THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 55, std::bind(&Robot::handle_gcodes, this, _1, _2));
@@ -702,6 +703,20 @@ bool Robot::handle_motion_command(GCode& gcode, OutputStream& os)
     return handled;
 }
 
+void Robot::do_park(OutputStream& os)
+{
+    // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
+    push_state();
+    absolute_mode = true;
+    next_command_is_MCS= true; // must use machine coordinates in case G92 or WCS is in effect
+
+    THEDISPATCHER->dispatch(os, 'G', 0, 'X', from_millimeters(park_position[X_AXIS]), 'Y', from_millimeters(park_position[Y_AXIS]), 'F', default_seek_rate, 0);
+
+    // Wait for above to finish
+    Conveyor::getInstance()->wait_for_idle();
+    pop_state();
+}
+
 // A GCode has been received
 // See if the current Gcode line has some orders for us
 bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
@@ -715,6 +730,44 @@ bool Robot::handle_gcodes(GCode& gcode, OutputStream& os)
         case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
         case 20: this->inch_mode = true;   break;
         case 21: this->inch_mode = false;   break;
+        case 28: // we only handle the park codes here, the homing module will handle the homing commands
+               switch(gcode.get_subcode()) {
+                   case 0: // G28 in grbl mode will do a rapid to the predefined position otherwise it is home command
+                        if(is_grbl_mode()){
+                            do_park(os);
+                        }else{
+                            handled= false;
+                        }
+                        break;
+
+                    case 1: // G28.1 set pre defined park position
+                        // saves current position in absolute machine coordinates
+                        get_axis_position(park_position, 2); // Only XY are used
+                        // Note the following is only meant to be used for recovering a saved position from config-override
+                        // Not a standard Gcode and not to be relied on
+                        if (gcode.has_arg('X')) park_position[X_AXIS] = gcode.get_arg('X');
+                        if (gcode.has_arg('Y')) park_position[Y_AXIS] = gcode.get_arg('Y');
+                        break;
+
+                    case 2: // G28.2 in grbl mode does homing (triggered by $H), otherwise it moves to the park position
+                        if(!is_grbl_mode()) {
+                            do_park(os);
+                        }else{
+                            handled= false;
+                        }
+                        break;
+
+                    default: handled= false;
+                }
+                break;
+
+        case 53: // G53 not fully supported. G53 G1 X1 Y1 is ok, but G53 X1 Y1 is not supported
+            if(gcode.has_no_args()) {
+                next_command_is_MCS= true;
+            }else{
+                os.printf("WARNING: G53 with args is not supported\n");
+            }
+            break;
 
         case 54: case 55: case 56: case 57: case 58: case 59:
             // select WCS 0-8: G54..G59, G59.1, G59.2, G59.3
