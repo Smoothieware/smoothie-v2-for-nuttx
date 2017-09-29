@@ -11,6 +11,8 @@
 // just swaps the parameters
 #define TEST_ASSERT_STRING_S(a, b) TEST_ASSERT_EQUAL_STRING(b, a)
 
+Dispatcher *dispatcher= new Dispatcher;
+
 TEST_DECLARE(Dispatcher)
     bool cb1;
     bool cb2;
@@ -19,12 +21,10 @@ TEST_DECLARE(Dispatcher)
     GCodeProcessor::GCodes_t gcodes;
     Dispatcher::Handlers_t::iterator h3;
     GCode::Args_t args;
-    Dispatcher *dispatcher;
 TEST_END_DECLARE
 
 TEST_SETUP(Dispatcher)
 {
-    dispatcher= new Dispatcher;
     cb1= false;
     cb2= false;
     cb3= false;
@@ -45,7 +45,6 @@ TEST_SETUP(Dispatcher)
 TEST_TEARDOWN(Dispatcher)
 {
     THEDISPATCHER->clear_handlers();
-    delete dispatcher;
 }
 
 REGISTER_TESTF(Dispatcher, check_callbacks)
