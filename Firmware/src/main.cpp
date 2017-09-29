@@ -223,19 +223,23 @@ bool dispatch_line(OutputStream& os, const char *line)
     }
 
     // dispatch gcodes
-    // TODO return one ok per line instead of per GCode
+    // NOTE return one ok per line instead of per GCode only works for regular gcodes like G0-G3, G92 etc
+    // gcodes returning data like M114 should NOT be put on multi gcode lines.
+    int ngcodes= gcodes.size();
     for(auto& i : gcodes) {
         //i.dump(os);
         if(i.has_m() || i.has_g()) {
-            if(!THEDISPATCHER->dispatch(i, os)) {
+            // if this is a multi gcode line then dispatch must not send ok unless this is the last one
+            if(!THEDISPATCHER->dispatch(i, os, ngcodes == 1)) {
                 // no handler processed this gcode, return ok - ignored
-                os.puts("ok - ignored\n");
+                if(ngcodes == 1) os.puts("ok - ignored\n");
             }
 
         } else {
             // if it has neither g or m then it was a blank line or comment
             os.puts("ok\n");
         }
+        --ngcodes;
     }
 
     return true;

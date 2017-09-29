@@ -33,7 +33,7 @@ public:
     CommandHandlers_t::iterator add_handler(std::string cmd, CommandHandler_t fnc);
     std::set<std::string> get_commands() const;
     void remove_handler(HANDLER_NAME gcode, Handlers_t::iterator);
-    bool dispatch(GCode &gc, OutputStream& os) const;
+    bool dispatch(GCode &gc, OutputStream& os, bool need_ok= true) const;
     bool dispatch(OutputStream& os, char cmd, uint16_t code, ...) const;
     bool dispatch(const char *line, OutputStream& os) const;
     bool load_configuration() const;

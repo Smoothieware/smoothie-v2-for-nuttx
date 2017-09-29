@@ -41,7 +41,7 @@ static bool is_allowed_mcode(int m) {
 }
 
 // Must be called from the command thread context
-bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
+bool Dispatcher::dispatch(GCode& gc, OutputStream& os, bool need_ok) const
 {
 	// if(gc.has_m() && gc.get_code() == 503) {
 	// 	// alias M503 to M500.3
@@ -75,7 +75,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 		if(it->second(gc, os)) {
 			ret = true;
 		} else {
-			// not really useful as many handlers will onlt process if certain params are set, so not an error unless no handler deals with it.
+			// not really useful as many handlers will only process if certain params are set, so not an error unless no handler deals with it.
 			DEBUG_WARNING("handler did not handle %c%d\n", gc.has_g() ? 'G' : 'M', gc.get_code());
 		}
 	}
@@ -124,7 +124,7 @@ bool Dispatcher::dispatch(GCode& gc, OutputStream& os) const
 			os.printf("\n");
 		}
 
-		if(send_ok) {
+		if(send_ok && need_ok) {
 			os.printf("ok\n");
 		}
 
