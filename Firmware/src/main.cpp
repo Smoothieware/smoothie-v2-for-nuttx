@@ -27,7 +27,7 @@
 static bool do_query = false;
 static OutputStream *query_os = nullptr;
 
-static int setup_CDC()
+static bool setup_CDC(int& rfd, int& wfd)
 {
     // create the CDC device
     struct boardioc_usbdev_ctrl_s ctrl;
@@ -42,14 +42,14 @@ static int setup_CDC()
     ctrl.handle   = &handle;
 
     ret = boardctl(BOARDIOC_USBDEV_CONTROL, (uintptr_t)&ctrl);
-    if(OK != ret) return -1;
+    if(OK != ret) return false;
 
     sleep(3);
 
     /* Try to open the console */
     int fd;
     do {
-        fd = open("/dev/ttyACM0", O_RDWR);
+        fd = open("/dev/ttyACM0", O_RDONLY);
         /* ENOTCONN means that the USB device is not yet connected. Anything
          * else is bad.
          */
@@ -59,8 +59,8 @@ static int setup_CDC()
                 sleep(2);
 
             } else {
-                printf("ttyACM0 Got error: %d\n", errno);
-                return -1;
+                printf("ttyACM0 Got error opening for read: %d\n", errno);
+                return false;
             }
         }
     } while (fd < 0);
@@ -68,7 +68,17 @@ static int setup_CDC()
     // we think we had a connection but due to a bug in Nuttx we may or may not
     // but it doesn't really seem to matter
 
-    return fd;
+    rfd= fd;
+
+    // now open for write
+    fd = open("/dev/ttyACM0", O_WRONLY);
+    if(fd < 0) {
+        printf("ttyACM0 got error opening for write: %d\n", errno);
+        return false;
+    }
+
+    wfd= fd;
+    return true;
 }
 
 #include "OutputStream.h"
@@ -248,9 +258,9 @@ bool dispatch_line(OutputStream& os, const char *line)
 static void usb_comms()
 {
     printf("USB Comms thread running\n");
+    int rfd, wfd;
 
-    int fd = setup_CDC();
-    if(fd == -1) {
+    if(!setup_CDC(rfd, wfd)) {
         printf("CDC setup failed\n");
         return;
     }
@@ -260,19 +270,20 @@ static void usb_comms()
 
     size_t n;
     char line[132];
-    n = read(fd, line, 1);
+    n = read(rfd, line, 1);
     if(n == 1) {
-        n = write(fd, welcome_message, strlen(welcome_message));
+        n = write(wfd, welcome_message, strlen(welcome_message));
         if(n < 0) {
             printf("ttyACM0: Error writing welcome: %d\n", errno);
-            close(fd);
-            fd = -1;
+            close(rfd);
+            close(wfd);
             return;
         }
 
     } else {
         printf("ttyACM0: Error reading: %d\n", errno);
-        fd = -1;
+        close(rfd);
+        close(wfd);
         return;
     }
 
@@ -280,13 +291,13 @@ static void usb_comms()
     mqd_t mqfd = get_message_queue(false);
 
     // create an output stream that writes to the already open fd
-    OutputStream os(fd);
+    OutputStream os(wfd);
 
     // now read lines and dispatch them
     size_t cnt = 0;
     bool discard = false;
     for(;;) {
-        n = read(fd, &line[cnt], 1);
+        n = read(rfd, &line[cnt], 1);
         if(n == 1) {
             if(line[cnt] == 24) { // ^X
                 if(!Module::is_halted()) {
