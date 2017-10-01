@@ -106,7 +106,6 @@ bool Endstops::load_endstops(ConfigReader& cr)
         t.axis= 0;
         t.axis_index= 0;
         t.pin_info= nullptr;
-
         temp_axis_array.fill(t);
     }
 
@@ -220,6 +219,7 @@ bool Endstops::load_endstops(ConfigReader& cr)
             // was not configured above, if it is XYZ then we need to force a dummy entry
             if(i <= Z_AXIS) {
                 homing_info_t t;
+                t.homed= false;
                 t.axis= 'X' + i;
                 t.axis_index= i;
                 t.pin_info= nullptr; // this tells it that it cannot be used for homing
@@ -269,6 +269,20 @@ bool Endstops::load_endstops(ConfigReader& cr)
 
         // set to true by default for deltas due to trim, false on cartesians
         this->move_to_origin_after_home = cr.get_bool(mm, move_to_origin_key, is_delta);
+
+    }else{
+        // set defaults
+        this->debounce_ms= 0;
+        this->is_corexy= false;
+        this->is_delta=  false;
+        this->is_rdelta= false;
+        this->is_scara=  false;
+        this->home_z_first= false;
+        this->trim_mm[0] = 0;
+        this->trim_mm[1] = 0;
+        this->trim_mm[2] = 0;
+        this->homing_order = 0;
+        this->move_to_origin_after_home = is_delta;
     }
 
     return true;
@@ -277,7 +291,7 @@ bool Endstops::load_endstops(ConfigReader& cr)
 // called in command context
 void Endstops::in_command_ctx()
 {
-    if(!report_string[0] != '\0'){
+    if(report_string[0] != '\0'){
         print_to_all_consoles(report_string);
         report_string[0]= 0;
     }
@@ -370,7 +384,7 @@ void Endstops::check_limits()
 
                     }else{
                         // this needs to go to all connected consoles
-                        snprintf(report_string, sizeof(report_string), "ALARM: Hard limit %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                        snprintf(report_string, sizeof(report_string), "ALARM: Hard limit %c%c was hit - $X needed\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
                         want_command_ctx= true;
                     }
 
@@ -661,6 +675,8 @@ void Endstops::process_home_command(GCode& gcode, OutputStream& os)
 
     if(haxis.none()) {
         printf("WARNING: Nothing to home\n");
+        // restore compensationTransform
+        Robot::getInstance()->compensationTransform= savect;
         return;
     }
 
@@ -999,6 +1015,12 @@ bool Endstops::handle_mcode(GCode& gcode, OutputStream& os)
 
 bool Endstops::request(const char *key, void *value)
 {
+    if(strcmp(key, "get_homing_status") == 0) {
+        bool *homing = static_cast<bool *>(value);
+        *homing = this->status != NOT_HOMING;
+        return true;
+    }
+
     if(strcmp(key, "get_trim") == 0) {
         float *trim = static_cast<float *>(value);
         for (int i = 0; i < 3; ++i) {
@@ -1013,12 +1035,6 @@ bool Endstops::request(const char *key, void *value)
         for (int i = 0; i < 3; ++i) {
             data[i]= homing_axis[i].home_offset;
         }
-        return true;
-    }
-
-    if(strcmp(key, "get_homing_status") == 0) {
-        bool *homing = static_cast<bool *>(value);
-        *homing = this->status != NOT_HOMING;
         return true;
     }
 

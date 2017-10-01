@@ -521,6 +521,7 @@ static void *commandthrd(void *)
 #include "Pwm.h"
 #include "CurrentControl.h"
 #include "Laser.h"
+#include "Endstops.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -644,6 +645,14 @@ static int smoothie_startup(int, char **)
             }else{
                 printf("ERROR: ADC failed to setup\n");
             }
+        }
+
+        printf("configure endstops\n");
+        Endstops *endstops = new Endstops();
+        if(!endstops->configure(cr)) {
+            printf("INFO: No endstops enabled\n");
+            delete endstops;
+            endstops = nullptr;
         }
 
         printf("configure kill button\n");

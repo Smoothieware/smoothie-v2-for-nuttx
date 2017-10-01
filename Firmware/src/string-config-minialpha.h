@@ -177,7 +177,7 @@ pwm_pin = P1.8 # This pin will be PWMed to control the laser.\n\
 \n\
 [endstop]\n\
 minx.enable = true             # enable an endstop\n\
-minx.pin = gpio4_0!            # pin\n\
+minx.pin = gpio4_0            # pin\n\
 minx.homing_direction = home_to_min      # direction it moves to the endstop\n\
 minx.homing_position = 0                # the cartesian coordinate this is set to when it homes\n\
 minx.axis = X                # the axis designator\n\
@@ -187,18 +187,18 @@ minx.slow_rate = 5               # slow homing rate in mm/sec\n\
 minx.retract = 5                # bounce off endstop in mm\n\
 minx.limit_enable = true        # enable hard limit\n\
 \n\
-miny.enable = true             # enable an endstop\n\
-miny.pin = gpio2_0!             # pin\n\
-miny.homing_direction = home_to_min      # direction it moves to the endstop\n\
-miny.homing_position = 0                # the cartesian coordinate this is set to when it homes\n\
-miny.axis = X                # the axis designator\n\
-miny.max_travel = 500              # the maximum travel in mm before it times out\n\
-miny.fast_rate = 30               # fast homing rate in mm/sec\n\
-miny.slow_rate = 5               # slow homing rate in mm/sec\n\
-miny.retract = 5                # bounce off endstop in mm\n\
-miny.limit_enable = true        # enable hard limits\n\
+miny.enable = true                  # enable an endstop\n\
+miny.pin = gpio2_0                  # pin\n\
+miny.homing_direction = home_to_min # direction it moves to the endstop\n\
+miny.homing_position = 0            # the cartesian coordinate this is set to when it homes\n\
+miny.axis = Y                       # the axis designator\n\
+miny.max_travel = 500               # the maximum travel in mm before it times out\n\
+miny.fast_rate = 30                 # fast homing rate in mm/sec\n\
+miny.slow_rate = 5                  # slow homing rate in mm/sec\n\
+miny.retract = 5                    # bounce off endstop in mm\n\
+miny.limit_enable = true            # enable hard limits\n\
 \n\
-#minz.pin = gpio7_22!\n\
-#probe.pin = gpio7_21!\n\
+#minz.pin = gpio7_22\n\
+#probe.pin = gpio7_21\n\
 \n\
 \n";

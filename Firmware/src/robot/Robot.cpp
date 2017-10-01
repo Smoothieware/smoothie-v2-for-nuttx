@@ -1777,11 +1777,11 @@ void Robot::get_query_string(std::string& str) const
     bool feed_hold = false;
 
     // see if we are homing
-    Module *m = Module::lookup("homing");
+    Module *m = Module::lookup("endstops");
     if(m != nullptr) {
-        int state;
-        bool ok = m->request("status", &state);
-        if(ok && state == 1) homing = true;
+        bool state;
+        bool ok = m->request("get_homing_status", &state);
+        if(ok && state) homing = true;
     }
 
     str.append("<");
