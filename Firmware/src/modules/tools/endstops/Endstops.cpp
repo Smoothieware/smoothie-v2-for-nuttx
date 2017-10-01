@@ -23,7 +23,6 @@
 #define rdelta_homing_key "rdelta_homing"
 #define scara_homing_key "scara_homing"
 
-#define endstop_debounce_count_key "endstop_debounce_count"
 #define endstop_debounce_ms_key "endstop_debounce_ms"
 
 #define home_z_first_key "home_z_first"
@@ -111,7 +110,7 @@ bool Endstops::load_endstops(ConfigReader& cr)
 
     // iterate over all in endstops section
     ConfigReader::sub_section_map_t ssmap;
-    if(!cr.get_sub_sections("endstop", ssmap)) {
+    if(!cr.get_sub_sections("endstops", ssmap)) {
         printf("configure-endstop: no section found\n");
         return false;
     }

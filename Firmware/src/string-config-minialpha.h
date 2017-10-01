@@ -175,7 +175,11 @@ pwm_pin = P1.8 # This pin will be PWMed to control the laser.\n\
 #minimum_power = 0.0 # This is a value just below the minimum duty cycle that keeps the laser active without actually burning.\n\
 #default_power = 0.8 # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between the maximum and minimum power levels specified above\n\
 \n\
-[endstop]\n\
+[endstops]\n\
+common.debounce_ms = 0         # debounce time in ms (actually 10ms min)\n\
+#common.is_delta = true\n\
+#common.homing_order = XYZ     # order in which axis homes (if defined)\n\
+\n\
 minx.enable = true             # enable an endstop\n\
 minx.pin = gpio4_0            # pin\n\
 minx.homing_direction = home_to_min      # direction it moves to the endstop\n\
