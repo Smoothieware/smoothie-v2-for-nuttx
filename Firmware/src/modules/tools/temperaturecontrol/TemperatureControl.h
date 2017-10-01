@@ -76,7 +76,7 @@ private:
 
     float runaway_error_range;
 
-    char *error_msg{nullptr};
+    char error_msg[132]{0};
 
     enum RUNAWAY_TYPE {NOT_HEATING, HEATING_UP, COOLING_DOWN, TARGET_TEMPERATURE_REACHED};
 

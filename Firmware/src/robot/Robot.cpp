@@ -1041,7 +1041,6 @@ bool Robot::handle_M500(GCode& gcode, OutputStream& os)
     return true;
 }
 
-
 bool Robot::handle_M665(GCode& gcode, OutputStream& os)
 {
     // M665 set optional arm solution variables based on arm solution.

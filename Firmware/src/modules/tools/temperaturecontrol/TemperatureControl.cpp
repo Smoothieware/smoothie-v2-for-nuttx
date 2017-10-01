@@ -525,9 +525,7 @@ void TemperatureControl::thermistor_read_tick()
             heater_pin->set((this->o = 0));
 
             // we schedule a call back in command context to print the errors
-            char msg[132];
-            snprintf(msg, sizeof(msg), "ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\nHALT asserted - reset or M999 required\n", designator.c_str());
-            error_msg= strdup(msg);
+            snprintf(error_msg, sizeof(error_msg), "ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\nHALT asserted - reset or M999 required\n", designator.c_str());
             want_command_ctx= true;
 
             // force into ALARM state
@@ -633,9 +631,7 @@ void TemperatureControl::check_runaway()
                     // we are still heating up see if we have hit the max time allowed
                     if(t > 0 && ++this->runaway_timer > t) {
                         // this needs to go to any connected terminal, so do it in command thread context
-                        char msg[132];
-                        snprintf(msg, sizeof(msg), "ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
-                        error_msg= strdup(msg);
+                        snprintf(error_msg, sizeof(error_msg), "ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                         want_command_ctx= true; // request a callback in command thread context
 
                         broadcast_halt(true);
@@ -653,9 +649,7 @@ void TemperatureControl::check_runaway()
                     // If the temperature is outside the acceptable range for 8 seconds, this allows for some noise spikes without halting
                     if(fabsf(delta) > this->runaway_range) {
                         if(this->runaway_timer++ >= 1) { // this being 8 seconds
-                            char msg[132];
-                            snprintf(msg, sizeof(msg), "ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
-                            error_msg= strdup(msg);
+                            snprintf(error_msg, sizeof(error_msg), "ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
                             want_command_ctx= true;
 
                             broadcast_halt(true);
@@ -691,10 +685,9 @@ void TemperatureControl::setPIDd(float d)
 // called in command context
 void TemperatureControl::in_command_ctx()
 {
-    if(error_msg != nullptr) {
+    if(error_msg[0] != 0) {
         print_to_all_consoles(error_msg);
-        free(error_msg);
-        error_msg= nullptr;
+        error_msg[0]= 0;
     }
     want_command_ctx= false;
 }
