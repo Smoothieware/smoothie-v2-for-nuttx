@@ -20,6 +20,7 @@ public:
     bool configure(ConfigReader& cr);
     void on_halt(bool flg);
     bool request(const char *key, void *value);
+    void in_command_ctx();
 
     void set_desired_temperature(float desired_temperature);
     float get_temperature();
@@ -74,6 +75,8 @@ private:
     float PIDdt;
 
     float runaway_error_range;
+
+    char *error_msg{nullptr};
 
     enum RUNAWAY_TYPE {NOT_HEATING, HEATING_UP, COOLING_DOWN, TARGET_TEMPERATURE_REACHED};
 

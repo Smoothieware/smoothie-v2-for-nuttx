@@ -119,6 +119,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 
     } else if(type == "hwpwm") {
         this->output_type = HWPWM;
+        // TODO add HWPWM
         // Pin *pin = new Pin();
         // pin->from_string(output_pin)->as_output();
         // this->pwm_pin = pin->hardware_pwm();
@@ -129,7 +130,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         // }
         // delete pin;
         // if(this->pwm_pin == nullptr) {
-        //     THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+        //     printf("Selected Switch output pin is not PWM capable - disabled");
         //     this->output_type = NONE;
         // }
 

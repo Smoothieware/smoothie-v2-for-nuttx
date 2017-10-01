@@ -1034,6 +1034,10 @@ bool Robot::handle_M500(GCode& gcode, OutputStream& os)
         }
     }
 
+    if(park_position[X_AXIS] != 0 || park_position[Y_AXIS] != 0) {
+        os.printf(";predefined position:\nG28.1 X%1.4f Y%1.4f\n", park_position[X_AXIS], park_position[Y_AXIS]);
+    }
+
     return true;
 }
 

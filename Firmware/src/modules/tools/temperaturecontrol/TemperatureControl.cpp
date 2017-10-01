@@ -1,10 +1,3 @@
-/*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include "TemperatureControl.h"
 #include "TempSensor.h"
 #include "SigmaDeltaPwm.h"
@@ -13,6 +6,7 @@
 #include "GCode.h"
 #include "SlowTicker.h"
 #include "Dispatcher.h"
+#include "main.h"
 
 //#include "PID_Autotuner.h"
 
@@ -265,17 +259,6 @@ void TemperatureControl::on_halt(bool flg)
         this->target_temperature = UNDEFINED;
     }
 }
-
-// TODO this should actually be on idle as main loop can block
-// void TemperatureControl::on_main_loop(void *argument)
-// {
-//     if (this->temp_violated) {
-//         this->temp_violated = false;
-//         THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
-//         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
-//         THEKERNEL->call_event(ON_HALT, nullptr);
-//     }
-// }
 
 // handle tool change
 bool TemperatureControl::handle_M6(GCode& gcode, OutputStream& os)
@@ -538,9 +521,17 @@ void TemperatureControl::thermistor_read_tick()
     float temperature = sensor->get_temperature();
     if(!this->readonly && target_temperature > 2) {
         if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
-            this->temp_violated = true;
             target_temperature = UNDEFINED;
             heater_pin->set((this->o = 0));
+
+            // we schedule a call back in command context to print the errors
+            char msg[132];
+            snprintf(msg, sizeof(msg), "ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\nHALT asserted - reset or M999 required\n", designator.c_str());
+            error_msg= strdup(msg);
+            want_command_ctx= true;
+
+            // force into ALARM state
+            broadcast_halt(true);
 
         } else {
             pid_process(temperature);
@@ -641,8 +632,12 @@ void TemperatureControl::check_runaway()
                     uint16_t t = (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;
                     // we are still heating up see if we have hit the max time allowed
                     if(t > 0 && ++this->runaway_timer > t) {
-                        // TODO this needs to go to any connrcted terminal not just UART, do it in command thread context?
-                        printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                        // this needs to go to any connected terminal, so do it in command thread context
+                        char msg[132];
+                        snprintf(msg, sizeof(msg), "ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                        error_msg= strdup(msg);
+                        want_command_ctx= true; // request a callback in command thread context
+
                         broadcast_halt(true);
                         this->runaway_state = NOT_HEATING;
                         this->runaway_timer = 0;
@@ -658,7 +653,11 @@ void TemperatureControl::check_runaway()
                     // If the temperature is outside the acceptable range for 8 seconds, this allows for some noise spikes without halting
                     if(fabsf(delta) > this->runaway_range) {
                         if(this->runaway_timer++ >= 1) { // this being 8 seconds
-                            printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
+                            char msg[132];
+                            snprintf(msg, sizeof(msg), "ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
+                            error_msg= strdup(msg);
+                            want_command_ctx= true;
+
                             broadcast_halt(true);
                             this->runaway_state = NOT_HEATING;
                             this->runaway_timer = 0;
@@ -687,4 +686,15 @@ void TemperatureControl::setPIDi(float i)
 void TemperatureControl::setPIDd(float d)
 {
     this->d_factor = d / this->PIDdt;
+}
+
+// called in command context
+void TemperatureControl::in_command_ctx()
+{
+    if(error_msg != nullptr) {
+        print_to_all_consoles(error_msg);
+        free(error_msg);
+        error_msg= nullptr;
+    }
+    want_command_ctx= false;
 }

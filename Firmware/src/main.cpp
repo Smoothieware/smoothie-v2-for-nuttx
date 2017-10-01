@@ -255,6 +255,9 @@ bool dispatch_line(OutputStream& os, const char *line)
     return true;
 }
 
+#include <vector>
+std::vector<OutputStream*> output_streams;
+
 static void usb_comms()
 {
     printf("USB Comms thread running\n");
@@ -292,6 +295,7 @@ static void usb_comms()
 
     // create an output stream that writes to the already open fd
     OutputStream os(wfd);
+    output_streams.push_back(&os);
 
     // now read lines and dispatch them
     size_t cnt = 0;
@@ -358,6 +362,7 @@ static void uart_comms()
 
     // create an output stream that writes to stdout which is the uart
     OutputStream os(1); // use stdout fd, not this which is buffered (&std::cout);
+    output_streams.push_back(&os);
 
     // now read lines and dispatch them
     char line[132];
@@ -423,6 +428,16 @@ static void uart_comms()
     }
 
     printf("UART Comms thread exiting\n");
+}
+
+
+// this prints the string to all consoles that are connected and active
+// must be called in command thread context
+void print_to_all_consoles(const char *str)
+{
+    for(auto i : output_streams) {
+        i->puts(str);
+    }
 }
 
 #include "Conveyor.h"
