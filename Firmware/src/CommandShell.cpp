@@ -7,6 +7,7 @@
 #include "AutoPushPop.h"
 #include "StepperMotor.h"
 #include "main.h"
+#include "TemperatureControl.h"
 
 #include <functional>
 #include <set>
@@ -351,34 +352,31 @@ bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::get_cmd(std::string& params, OutputStream& os)
 {
-    HELP("get pos|wcs|state|status")
+    HELP("get pos|wcs|state|status|temp")
     std::string what = stringutils::shift_parameter( params );
     bool handled= true;
     if (what == "temp") {
-        // struct pad_temperature temp;
-        // string type = shift_parameter( params );
-        // if(type.empty()) {
-        //     // scan all temperature controls
-        //     std::vector<struct pad_temperature> controllers;
-        //     bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-        //     if (ok) {
-        //         for (auto &c : controllers) {
-        //            os.printf("%s (%d) temp: %f/%f @%d\r\n", c.designator.c_str(), c.id, c.current_temperature, c.target_temperature, c.pwm);
-        //         }
+        std::string type = stringutils::shift_parameter( params );
+        if(type.empty()) {
+            // scan all temperature controls
+            std::vector<Module*> controllers= Module::lookup_group("temperature control");
+            for(auto m : controllers) {
+                TemperatureControl::pad_temperature_t temp;
+                m->request("get_current_temperature", &temp);
+                os.printf("%s: %s (%d) temp: %f/%f @%d\r\n", m->get_instance_name(), temp.designator.c_str(), temp.tool_id, temp.current_temperature, temp.target_temperature, temp.pwm);
+            }
 
-        //     } else {
-        //         os.printf("no heaters found\r\n");
-        //     }
+        }else{
+            Module *m= Module::lookup("temperature control", type.c_str());
+            if(m == nullptr) {
+                os.printf("%s is not a known temperature control", type.c_str());
 
-        // }else{
-        //     bool ok = PublicData::get_value( temperature_control_checksum, current_temperature_checksum, get_checksum(type), &temp );
-
-        //     if (ok) {
-        //         os.printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
-        //     } else {
-        //         os.printf("%s is not a known temperature device\r\n", type.c_str());
-        //     }
-        // }
+            }else{
+                TemperatureControl::pad_temperature_t temp;
+                m->request("get_current_temperature", &temp);
+                os.printf("%s temp: %f/%f @%d\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
+            }
+        }
 
     } else if (what == "fk" || what == "ik") {
         // string p= shift_parameter( params );
