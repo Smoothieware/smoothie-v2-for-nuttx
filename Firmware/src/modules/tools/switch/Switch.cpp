@@ -5,6 +5,7 @@
 #include "ConfigReader.h"
 #include "SlowTicker.h"
 #include "SigmaDeltaPwm.h"
+#include "Pwm.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
 #include "main.h"
@@ -119,20 +120,18 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 
     } else if(type == "hwpwm") {
         this->output_type = HWPWM;
-        // TODO add HWPWM
-        // Pin *pin = new Pin();
-        // pin->from_string(output_pin)->as_output();
-        // this->pwm_pin = pin->hardware_pwm();
-        // if(failsafe == 1) {
-        //     set_high_on_debug(pin->port_number, pin->pin);
-        // } else {
-        //     set_low_on_debug(pin->port_number, pin->pin);
-        // }
-        // delete pin;
-        // if(this->pwm_pin == nullptr) {
-        //     printf("Selected Switch output pin is not PWM capable - disabled");
-        //     this->output_type = NONE;
-        // }
+        pwm_pin = new Pwm(output_pin.c_str());
+        if(failsafe == 1) {
+            //set_high_on_debug(pin->port_number, pin->pin);
+        } else {
+            //set_low_on_debug(pin->port_number, pin->pin);
+        }
+        if(!pwm_pin->is_valid()) {
+            printf("configure-switch: Selected Switch PWM output pin is not PWM capable - disabled");
+            delete pwm_pin;
+            pwm_pin= nullptr;
+            this->output_type = NONE;
+        }
 
     } else {
         this->digital_pin = nullptr;
@@ -152,17 +151,17 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         }
 
     } else if(this->output_type == HWPWM) {
-        // default is 50Hz
+        // We can;t set the PWM here it is global
         // float p = cr.get_float(m, pwm_period_ms_key, 20) * 1000.0F; // ms but fractions are allowed
         // this->pwm_pin->period_us(p);
 
-        // // default is 0% duty cycle
-        // this->switch_value = cr.get_int(m, startup_value_key, 0);
-        // if(this->switch_state) {
-        //     this->pwm_pin->write(this->switch_value / 100.0F);
-        // } else {
-        //     this->pwm_pin->write(0);
-        // }
+        // default is 0% duty cycle
+        this->switch_value = cr.get_int(m, startup_value_key, 0);
+        if(this->switch_state) {
+            pwm_pin->set(this->switch_value / 100.0F);
+        } else {
+            pwm_pin->set(0);
+        }
 
     } else if(this->output_type == DIGITAL) {
         this->digital_pin->set(this->switch_state);
@@ -291,7 +290,7 @@ void Switch::on_halt(bool flg)
         switch(this->output_type) {
             case DIGITAL: this->digital_pin->set(this->failsafe); break;
             case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
-            case HWPWM: //this->pwm_pin->write(0); break;
+            case HWPWM: this->pwm_pin->set(0); break;
             case NONE: break;
         }
         this->switch_state = this->failsafe;
@@ -350,10 +349,10 @@ bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
                 float v = gcode.get_arg('S');
                 if(v > 100) v = 100;
                 else if(v < 0) v = 0;
-                //this->pwm_pin->write(v / 100.0F);
+                this->pwm_pin->set(v / 100.0F);
                 this->switch_state = (v != 0);
             } else {
-                //this->pwm_pin->write(this->switch_value);
+                this->pwm_pin->set(this->switch_value);
                 this->switch_state = (this->switch_value != 0);
             }
 
@@ -375,7 +374,7 @@ bool Switch::handle_gcode(GCode& gcode, OutputStream& os)
             this->sigmadelta_pin->set(false);
 
         } else if (this->output_type == HWPWM) {
-            //this->pwm_pin->write(0);
+            this->pwm_pin->set(0);
 
         } else if (this->output_type == DIGITAL) {
             // logic pin turn off
@@ -440,7 +439,7 @@ void Switch::handle_switch_changed()
             this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
 
         } else if (this->output_type == HWPWM) {
-            //this->pwm_pin->write(this->switch_value / 100.0F);
+            this->pwm_pin->set(this->switch_value / 100.0F);
 
         } else if (this->output_type == DIGITAL) {
             this->digital_pin->set(true);
@@ -456,7 +455,7 @@ void Switch::handle_switch_changed()
             this->sigmadelta_pin->set(false);
 
         } else if (this->output_type == HWPWM) {
-            //this->pwm_pin->write(0);
+            this->pwm_pin->set(0);
 
         } else if (this->output_type == DIGITAL) {
             this->digital_pin->set(false);
@@ -469,7 +468,7 @@ void Switch::handle_switch_changed()
 // we need to protect switch_state from concurrent access so it is an atomic_bool
 // this just sets the state and lets handle_switch_changed() changethe actual pins
 // TODO however if there is no output_on_command and output_off_command set it could set the pins here instead
-// FIXME there is a race condition where if the button is pressed and released faster than the comand loop runs then it will not see the button as active
+// FIXME there is a race condition where if the button is pressed and released faster than the command loop runs then it will not see the button as active
 void Switch::pinpoll_tick()
 {
     if(!input_pin.connected()) return;

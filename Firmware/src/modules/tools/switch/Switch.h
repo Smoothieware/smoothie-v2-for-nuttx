@@ -18,10 +18,7 @@
 class GCode;
 class OutputStream;
 class SigmaDeltaPwm;
-
-// namespace mbed {
-//     class PwmOut;
-// }
+class Pwm;
 
 class Switch : public Module {
     public:
@@ -51,7 +48,7 @@ class Switch : public Module {
         union {
             Pin *digital_pin;
             SigmaDeltaPwm *sigmadelta_pin;
-            //mbed::PwmOut *pwm_pin;
+            Pwm *pwm_pin;
         };
         std::string    output_on_command;
         std::string    output_off_command;

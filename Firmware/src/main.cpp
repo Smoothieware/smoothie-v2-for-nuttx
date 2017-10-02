@@ -513,7 +513,7 @@ void safe_sleep(uint32_t ms)
 {
     // here we need to sleep (and yield) for 10ms then check if we need to handle the query command
     while(ms > 0) {
-        usleep(10000); // 10 ms sleep (minimum anyway)
+        usleep(10000); // 10 ms sleep (minimum anyway due to thread slice time)
         if(do_query) {
             std::string r;
             Robot::getInstance()->get_query_string(r);
