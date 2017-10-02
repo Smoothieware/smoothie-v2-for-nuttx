@@ -8,6 +8,7 @@
 #include "StepTicker.h"
 #include "ConfigReader.h"
 #include "StringUtils.h"
+#include "main.h"
 
 #include "BaseSolution.h"
 #include "CartesianSolution.h"
@@ -576,7 +577,7 @@ bool Robot::handle_dwell(GCode& gcode, OutputStream& os)
     if (delay_ms > 0) {
         // drain queue
         Conveyor::getInstance()->wait_for_idle();
-        usleep(delay_ms * 1000);
+        safe_sleep(delay_ms);
     }
 
     return true;
@@ -1439,7 +1440,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
     // TODO implement feed hold
     // while(THEKERNEL->get_feed_hold()) {
-    //     usleep(100000);
+    //     safe_sleep(100);
     //     // if we also got a HALT then break out of this
     //     if(halted) return false;
     // }

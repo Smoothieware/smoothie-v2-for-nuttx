@@ -4,6 +4,7 @@
 #include "StepperMotor.h"
 #include "Block.h"
 #include "Conveyor.h"
+#include "Module.h"
 
 #include <nuttx/config.h>
 #include <sys/ioctl.h>
@@ -163,7 +164,7 @@ _ramfunc_  void StepTicker::step_tick (void)
         }
     }
 
-    if(Conveyor::getInstance()->is_halted()) {
+    if(Module::is_halted()) {
         running = false;
         current_tick = 0;
         current_block = nullptr;

@@ -487,8 +487,9 @@ static void *commandthrd(void *)
         }
 
         // set in comms thread, and executed here to avoid thread clashes
-        // FIXME the trouble with this is that ? does not reply if a long command is blocking above call to dispatch_line
-        // test comamnds for instance or a long line when the queue is full
+        // the trouble with this is that ? does not reply if a long command is blocking above call to dispatch_line
+        // test comamnds for instance or a long line when the queue is full or G4 etc
+        // so long as safe_sleep() is called then this will still be handled
         if(do_query) {
             std::string r;
             Robot::getInstance()->get_query_string(r);
@@ -500,10 +501,31 @@ static void *commandthrd(void *)
         Module::broadcast_in_commmand_ctx();
 
         // we check the queue to see if it is ready to run
-        // TODO trouble is we may stall waiting for the queue in some other module,
         // we specifically deal with this in append_block, but need to check for other places
         // This used to be done in on_idle which never blocked
         Conveyor::getInstance()->check_queue();
+    }
+}
+
+// called only in command thread context, it will sleep (and yield) thread but will also
+// process things like query
+void safe_sleep(uint32_t ms)
+{
+    // here we need to sleep (and yield) for 10ms then check if we need to handle the query command
+    while(ms > 0) {
+        usleep(10000); // 10 ms sleep (minimum anyway)
+        if(do_query) {
+            std::string r;
+            Robot::getInstance()->get_query_string(r);
+            query_os->puts(r.c_str());
+            do_query = false;
+        }
+
+        if(ms > 10) {
+            ms -= 10;
+        }else{
+            break;
+        }
     }
 }
 

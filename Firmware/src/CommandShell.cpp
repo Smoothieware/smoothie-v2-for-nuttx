@@ -6,6 +6,7 @@
 #include "Robot.h"
 #include "AutoPushPop.h"
 #include "StepperMotor.h"
+#include "main.h"
 
 #include <functional>
 #include <set>
@@ -580,7 +581,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
         Robot::getInstance()->absolute_mode= false;
         for (uint32_t i = 0; i < n; ++i) {
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'F', f, toupper(axis[0]), toggle?-d:d, 0);
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
             toggle= !toggle;
         }
         os.printf("done\n");
@@ -604,12 +605,12 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
         Robot::getInstance()->absolute_mode= true;
 
         for (uint32_t i = 0; i < n; ++i) {
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
             THEDISPATCHER->dispatch(nullos, 'G', 2, 'I', r, 'J', 0.0F, 'F', f, 0);
         }
 
         // leave it where it started
-        if(!Robot::getInstance()->is_halted()) {
+        if(!Module::is_halted()) {
             Robot::getInstance()->absolute_mode= false;
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', r, 'F', f, 0);
             Robot::getInstance()->absolute_mode= true;
@@ -637,7 +638,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'Y', d, 0);
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', -d, 0);
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'Y', -d, 0);
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
         }
         os.printf("done\n");
 
@@ -674,10 +675,10 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
         os.printf("issuing %d steps at a rate of %d steps/sec on the %c axis\n", steps, sps, ax);
         uint32_t delayus= 1000000.0F / sps;
         for(int s= 0;s<steps;s++) {
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
             Robot::getInstance()->actuators[a]->manual_step(dir);
             // delay (note minimum is 10ms due to nuttx)
-            usleep(delayus);
+            safe_sleep(delayus/1000);
         }
 
         // reset the position based on current actuator position

@@ -428,7 +428,7 @@ bool TemperatureControl::handle_gcode(GCode & gcode, OutputStream & os)
 
                         int cnt = 0;
                         while ( get_temperature() < target_temperature ) {
-                            usleep(200000); // wait 200 ms
+                            safe_sleep(200); // wait 200 ms
                             // check if ON_HALT was called (usually by kill button)
                             if(is_halted() || this->target_temperature == UNDEFINED) {
                                 os.printf("Wait on temperature aborted by kill\n");

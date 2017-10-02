@@ -102,7 +102,7 @@ bool Laser::handle_fire_cmd( std::string& params, OutputStream& os )
 {
     HELP("fire laser: 0-100 | off");
 
-    if(Robot::getInstance()->is_halted()) return true; // if in halted state ignore any commands
+    if(Module::is_halted()) return true; // if in halted state ignore any commands
 
     std::string power = stringutils::shift_parameter( params );
     if(power.empty()) {

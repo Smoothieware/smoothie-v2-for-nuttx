@@ -72,7 +72,6 @@ public:
     void get_query_string(std::string&) const;
     void do_park();
 
-    bool is_halted() const { return halted; }
 
     BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -128,6 +127,7 @@ private:
     bool append_arc(GCode& gcode, const float target[], const float offset[], float radius, bool is_clockwise );
     bool compute_arc(GCode& gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode);
     void process_move(GCode& gcode, enum MOTION_MODE_T);
+    bool is_halted() const { return halted; }
 
     float theta(float x, float y);
     void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);

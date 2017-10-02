@@ -34,7 +34,6 @@ public:
 
     void wait_for_idle(bool wait_for_motors=true);
     bool is_idle() const;
-    bool is_halted() const { return halted; }
 
     // returns next available block writes it to block and returns true
     bool get_next_block(Block **block);

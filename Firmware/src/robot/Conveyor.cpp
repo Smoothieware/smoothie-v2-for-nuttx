@@ -10,6 +10,7 @@
 #include "Robot.h"
 #include "StepperMotor.h"
 #include "PlannerQueue.h"
+#include "main.h"
 
 #include <functional>
 #include <vector>
@@ -89,7 +90,7 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     if(wait_for_motors) {
         // now we wait for all motors to stop moving
         while(!is_idle()) {
-            usleep(10000); // is 10ms ok?
+            safe_sleep(10); // is 10ms ok?
         }
     }
 

@@ -7,6 +7,8 @@
 #include "StepTicker.h"
 #include "Robot.h"
 #include "Conveyor.h"
+#include "main.h"
+#include "Module.h"
 
 #include <math.h>
 #include <algorithm>
@@ -216,9 +218,9 @@ bool Planner::append_block(ActuatorCoordinates& actuator_pos, uint8_t n_motors, 
     while(!queue->queue_head()) {
         // queue is full
         // stall the command thread until we have room in the queue
-        usleep(10000); // is 10ms a good stall time?
+        safe_sleep(10); // is 10ms a good stall time?
 
-        if(Robot::getInstance()->is_halted()) {
+        if(Module::is_halted()) {
             // we do not want to stick more stuff on the queue if we are in halt state
             // clear the block on the head
             block->clear();

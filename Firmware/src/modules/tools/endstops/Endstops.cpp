@@ -692,7 +692,7 @@ void Endstops::process_home_command(GCode& gcode, OutputStream& os)
                 home(bs);
             }
             // check if on_halt (eg kill)
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
         }
 
     } else if(is_corexy) {
@@ -704,7 +704,7 @@ void Endstops::process_home_command(GCode& gcode, OutputStream& os)
                 home(bs);
             }
             // check if on_halt (eg kill)
-            if(Robot::getInstance()->is_halted()) break;
+            if(Module::is_halted()) break;
         }
 
     } else {
@@ -716,7 +716,7 @@ void Endstops::process_home_command(GCode& gcode, OutputStream& os)
     Robot::getInstance()->compensationTransform= savect;
 
     // check if on_halt (eg kill or fail)
-    if(Robot::getInstance()->is_halted()) {
+    if(Module::is_halted()) {
         if(!THEDISPATCHER->is_grbl_mode()) {
             os.printf("ERROR: Homing cycle failed\n");
         }else{
