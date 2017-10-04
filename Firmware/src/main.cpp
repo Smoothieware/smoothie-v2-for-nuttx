@@ -797,7 +797,7 @@ static int smoothie_startup(int, char **)
         printf("main: Set command thread policy to SCHED_RR\n");
     }
 
-    sparam.sched_priority = 150; // (prio_min + prio_mid) / 2;
+    sparam.sched_priority = 90; // set lower than comms threads... 150; // (prio_min + prio_mid) / 2;
     status = pthread_attr_setschedparam(&attr, &sparam);
     if (status != OK) {
         printf("main: pthread_attr_setschedparam failed, status=%d\n", status);
