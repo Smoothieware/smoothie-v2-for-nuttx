@@ -544,6 +544,7 @@ void safe_sleep(uint32_t ms)
 #include "CurrentControl.h"
 #include "Laser.h"
 #include "Endstops.h"
+#include "ZProbe.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -710,6 +711,14 @@ static int smoothie_startup(int, char **)
             printf("INFO: No laser configured\n");
             delete laser;
             laser = nullptr;
+        }
+
+        printf("configure zprobe\n");
+        ZProbe *zprobe = new ZProbe();
+        if(!zprobe->configure(cr)) {
+            printf("INFO: No ZProbe configured\n");
+            delete zprobe;
+            zprobe = nullptr;
         }
 
         {

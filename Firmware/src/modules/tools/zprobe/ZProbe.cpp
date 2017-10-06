@@ -15,8 +15,8 @@
 
 // strategies we know about
 #include "ThreePointStrategy.h"
-//#include "DeltaCalibrationStrategy.h"
-//#include "DeltaGridStrategy.h"
+#include "DeltaCalibrationStrategy.h"
+#include "DeltaGridStrategy.h"
 //#include "CartGridStrategy.h"
 
 #define enable_key "enable"
@@ -74,11 +74,11 @@ bool ZProbe::configure(ConfigReader& cr)
             // NOTE this strategy is mutually exclusive with the delta calibration strategy
             leveling_strategy = new ThreePointStrategy(this);
 
-            // }else if(leveling == "delta grid") {
-            //     leveling_strategy= new DeltaGridStrategy(this);
+        }else if(leveling == "delta grid") {
+            leveling_strategy= new DeltaGridStrategy(this);
 
-            // }else if(leveling == "cartesian grid") {
-            //     leveling_strategy = new CartGridStrategy(this);
+        // }else if(leveling == "cartesian grid") {
+        //     leveling_strategy = new CartGridStrategy(this);
 
         } else {
             printf("ERROR: config-zprobe: Unknown leveling stratagy: %s", leveling.c_str());
@@ -99,7 +99,7 @@ bool ZProbe::configure(ConfigReader& cr)
     if(!calibration.empty()) {
         // check with each known strategy and load it if it matches
         if(calibration == "delta") {
-//           calibration_strategy= new DeltaCalibrationStrategy(this);
+            calibration_strategy= new DeltaCalibrationStrategy(this);
 
         } else {
             printf("ERROR: config-zprobe: Unknown calibration stratagy: %s", calibration.c_str());
@@ -122,6 +122,24 @@ bool ZProbe::configure(ConfigReader& cr)
     this->max_z         = cr.get_float(m, max_z_key, 0); // maximum zprobe distance
 
     this->dwell_before_probing = cr.get_float(m, dwell_before_probing_key, 0); // dwell time in seconds before probing
+
+    // register gcodes and mcodes
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+
+    // G Code handlers
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 29, std::bind(&ZProbe::handle_gcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 30, std::bind(&ZProbe::handle_gcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 31, std::bind(&ZProbe::handle_gcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 32, std::bind(&ZProbe::handle_gcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::GCODE_HANDLER, 38, std::bind(&ZProbe::handle_gcode, this, _1, _2));
+
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 119, std::bind(&ZProbe::handle_mcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 670, std::bind(&ZProbe::handle_mcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&ZProbe::handle_mcode, this, _1, _2));
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&ZProbe::handle_mcode, this, _1, _2));
+
+    // strategies may handle their own mcodes but we need to register them from the strategy themselves
 
     // we read the probe in this timer
     SlowTicker::getInstance()->attach(100, std::bind(&ZProbe::read_probe, this));
@@ -372,18 +390,10 @@ bool ZProbe::handle_mcode(GCode& gcode, OutputStream& os)
         case 503: // print settings
             os.printf(";Probe feedrates Slow/fast(K)/Return (mm/sec) max_z (mm) height (mm) dwell (s):\nM670 S%1.2f K%1.2f R%1.2f Z%1.2f H%1.2f D%1.2f\n",
                       this->slow_feedrate, this->fast_feedrate, this->return_feedrate, this->max_z, this->probe_height, this->dwell_before_probing);
+            break;
 
-        // fall through is intended so leveling strategies can handle m-codes too
-        default: {
-            bool ret= false;
-            if(leveling_strategy != nullptr) {
-                ret= leveling_strategy->handleGCode(gcode, os);
-            }
-            if(calibration_strategy != nullptr) {
-                ret |= calibration_strategy->handleGCode(gcode, os);
-            }
-            return ret;
-        }
+        default:
+            return false;
     }
     return true;
 }

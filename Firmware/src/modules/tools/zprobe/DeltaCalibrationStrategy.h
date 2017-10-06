@@ -3,7 +3,6 @@
 #include "ZProbeStrategy.h"
 
 class OutputStream;
-class Plane3D;
 class GCode;
 class ConfigReader;
 
@@ -16,6 +15,7 @@ public:
     bool configure(ConfigReader& cr);
 
 private:
+    bool handle_mcode(GCode& gcode, OutputStream& os);
     bool set_trim(float x, float y, float z, OutputStream& os);
     bool get_trim(float& x, float& y, float& z);
     bool calibrate_delta_endstops(GCode& gcode, OutputStream& os);

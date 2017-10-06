@@ -26,52 +26,46 @@ bool DeltaCalibrationStrategy::configure(ConfigReader& cr)
     }
 
     // default is probably wrong
-   this->probe_radius= cr.get_float(m, radius_key, 100.0F);
+    this->probe_radius = cr.get_float(m, radius_key, 100.0F);
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
-    this->initial_height= cr.get_float(m, initial_height_key, 10);
+    this->initial_height = cr.get_float(m, initial_height_key, 10);
     return true;
 }
 
 bool DeltaCalibrationStrategy::handleGCode(GCode& gcode, OutputStream& os)
 {
-    if(gcode.has_g()) {
-        // G code processing
-        if( gcode.get_code() == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
-            // first wait for an empty queue i.e. no moves left
-            Conveyor::getInstance()->wait_for_idle();
+    // G code processing
+    if( gcode.get_code() == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
+        // first wait for an empty queue i.e. no moves left
+        Conveyor::getInstance()->wait_for_idle();
 
-            // turn off any compensation transform as it will be invalidated anyway by this
-            Robot::getInstance()->compensationTransform= nullptr;
+        // turn off any compensation transform as it will be invalidated anyway by this
+        Robot::getInstance()->compensationTransform = nullptr;
 
-            if(!gcode.has_arg('R')) {
-                if(!calibrate_delta_endstops(gcode, os)) {
-                    os.printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
-                    return true;
-                }
-            }
-            if(!gcode.has_arg('E')) {
-                if(!calibrate_delta_radius(gcode, os)) {
-                    os.printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
-                    return true;
-                }
-            }
-            os.printf("Calibration complete, save settings with M500\n");
-            return true;
-
-        }else if (gcode.get_code() == 29) {
-            // probe the 7 points
-            if(!probe_delta_points(gcode, os)) {
+        if(!gcode.has_arg('R')) {
+            if(!calibrate_delta_endstops(gcode, os)) {
                 os.printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+                return true;
             }
-            return true;
         }
+        if(!gcode.has_arg('E')) {
+            if(!calibrate_delta_radius(gcode, os)) {
+                os.printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+                return true;
+            }
+        }
+        os.printf("Calibration complete, save settings with M500\n");
+        return true;
 
-    } else if(gcode.has_m()) {
-        // handle mcodes
+    } else if (gcode.get_code() == 29) {
+        // probe the 7 points
+        if(!probe_delta_points(gcode, os)) {
+            os.printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+        }
+        return true;
     }
-
     return false;
 }
 
@@ -106,12 +100,12 @@ bool DeltaCalibrationStrategy::probe_delta_points(GCode& gcode, OutputStream& os
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
     // gather probe points
-    float pp[][2] {{t1x, t1y}, {t2x, t2y}, {t3x, t3y}, {0, 0}, {-t1x, -t1y}, {-t2x, -t2y}, {-t3x, -t3y}};
+    float pp[][2] {{t1x, t1y}, {t2x, t2y}, {t3x, t3y}, {0, 0}, { -t1x, -t1y}, { -t2x, -t2y}, { -t3x, -t3y}};
 
-    float max_delta= 0;
+    float max_delta = 0;
     float last_z;
-    bool last_z_set= false;
-    float start_z= Robot::getInstance()->actuators[2]->get_current_position();
+    bool last_z_set = false;
+    float start_z = Robot::getInstance()->actuators[2]->get_current_position();
 
     for(auto& i : pp) {
         if(!zprobe->doProbeAt(mm, i[0], i[1])) return false;
@@ -120,16 +114,16 @@ bool DeltaCalibrationStrategy::probe_delta_points(GCode& gcode, OutputStream& os
             // prints the delta Z moved at the XY coordinates given
             os.printf("X:%1.4f Y:%1.4f Z:%1.4f\n", i[0], i[1], z);
 
-        }else if(gcode.get_subcode() == 1) {
+        } else if(gcode.get_subcode() == 1) {
             // format that can be pasted here http://escher3d.com/pages/wizards/wizarddelta.php
             os.printf("X%1.4f Y%1.4f Z%1.4f\n", i[0], i[1], start_z - z); // actual Z of bed at probe point
         }
 
         if(!last_z_set) {
-            last_z= z;
-            last_z_set= true;
-        }else{
-            max_delta= std::max(max_delta, fabsf(z-last_z));
+            last_z = z;
+            last_z_set = true;
+        } else {
+            max_delta = std::max(max_delta, fabsf(z - last_z));
         }
     }
 
@@ -144,7 +138,7 @@ bool DeltaCalibrationStrategy::findBed(float& ht)
     zprobe->home();
 
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz= zprobe->getMaxZ() - initial_height;
+    float deltaz = zprobe->getMaxZ() - initial_height;
     zprobe->move_z(-deltaz, zprobe->getFastFeedrate(), true);
 
     // find bed, run at slow rate so as to not hit bed hard
@@ -152,10 +146,10 @@ bool DeltaCalibrationStrategy::findBed(float& ht)
     if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return false;
 
     // leave the probe zprobe->getProbeHeight() above bed
-    float dz= zprobe->getProbeHeight() - mm;
+    float dz = zprobe->getProbeHeight() - mm;
     zprobe->move_z(dz, zprobe->getFastFeedrate(), true); // relative move
 
-    ht= mm + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
+    ht = mm + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
     return true;
 }
 
@@ -213,8 +207,8 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(GCode& gcode, OutputStre
     float dz = zprobe->getProbeHeight() - mm;
     os.printf("center probe: %1.4f\n", dz);
     if(fabsf(dz) > target) {
-         os.printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
-         return false;
+        os.printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
+        return false;
     }
 
     // get initial probes
@@ -317,8 +311,8 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(GCode& gcode, OutputStream
     float dz = zprobe->getProbeHeight() - mm;
     os.printf("center probe: %1.4f\n", dz);
     if(fabsf(dz) > target) {
-         os.printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
-         return false;
+        os.printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
+        return false;
     }
 
     // probe center to get reference point at this Z height
@@ -339,7 +333,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(GCode& gcode, OutputStream
     }
     options.clear();
 
-    bool good= false;
+    bool good = false;
     float drinc = 2.5F; // approx
     for (int i = 1; i <= 10; ++i) {
         // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
@@ -356,8 +350,8 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(GCode& gcode, OutputStream
         float d = cmm - m;
         os.printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
 
-        if(fabsf(d) <= target){
-            good= true;
+        if(fabsf(d) <= target) {
+            good = true;
             break; // resolution of success
         }
 
@@ -385,7 +379,7 @@ bool DeltaCalibrationStrategy::set_trim(float x, float y, float z, OutputStream&
 {
     float t[3] {x, y, z};
 
-    Module *m= Module::lookup("endstops");
+    Module *m = Module::lookup("endstops");
     if(m == nullptr) {
         os.printf("unable to set trim, are endstops enabled?\n");
         return false;
@@ -403,7 +397,7 @@ bool DeltaCalibrationStrategy::set_trim(float x, float y, float z, OutputStream&
 
 bool DeltaCalibrationStrategy::get_trim(float &x, float &y, float &z)
 {
-    Module *m= Module::lookup("endstops");
+    Module *m = Module::lookup("endstops");
     if(m == nullptr) {
         return false;
     }

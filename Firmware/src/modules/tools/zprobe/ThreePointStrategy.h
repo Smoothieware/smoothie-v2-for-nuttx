@@ -20,6 +20,7 @@ public:
     float getZOffset(float x, float y);
 
 private:
+    bool handle_mcode(GCode& gcode, OutputStream& os);
     void homeXY();
     bool doProbing(OutputStream& os);
     std::tuple<float, float> parseXY(const char *str);
