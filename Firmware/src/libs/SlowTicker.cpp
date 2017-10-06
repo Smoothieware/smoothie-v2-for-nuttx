@@ -129,10 +129,10 @@ void SlowTicker::detach(int n)
 }
 
 // Set the base frequency we use for all sub-frequencies
-// NOTE this is a slow ticker so ticks fster than 100Hz are not allowed as this uses NUTTX timers running in slow SPIFI
+// NOTE this is a slow ticker so ticks faster than 100Hz are not allowed as this uses NUTTX timers running in slow SPIFI
 bool SlowTicker::set_frequency( int frequency )
 {
-    if(frequency > 1000) return false;
+    if(frequency > 100) return false;
     this->interval = BASE_FREQUENCY / frequency; // Timer increments in a second
     if(started) {
         stop(); // must stop timer first
@@ -161,7 +161,4 @@ _ramfunc_ void SlowTicker::tick()
             }
         }
     }
-
-    // TODO fire one second event if ready
-
 }
