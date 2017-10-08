@@ -39,27 +39,31 @@ public:
     std::function<void()> finished_fnc{nullptr};
 
     static StepTicker *getInstance() { return instance; }
+    static uint32_t get_usec_counter() { return usec_counter; }
 
 private:
     static StepTicker *instance;
-    void handle_finish (void);
+
     void unstep_tick();
     void step_tick (void);
     bool start_unstep_ticker();
-    int initial_setup(const char *dev, void *timer_handler, uint32_t per);
     bool start_next_block();
 
     static void step_timer_handler(void);
     static void unstep_timer_handler(void);
+    static void pendsv_handler(void);
 
     std::array<StepperMotor*, k_max_actuators> motor;
 
-    uint32_t unstep{0}; // one bit set per motor to indicayte step pin needs to be unstepped
+    volatile static uint32_t usec_counter;
+    static uint32_t usec_per_tick;
+
+    uint32_t unstep{0}; // one bit set per motor to indicate step pin needs to be unstepped
     uint32_t missed_unsteps{0};
 
     Block *current_block{nullptr};
 
-    uint32_t frequency{1000000}; // KHz
+    uint32_t frequency{100000}; // Hz
     uint32_t delay{1}; //microseconds
 
     uint32_t current_tick{0};

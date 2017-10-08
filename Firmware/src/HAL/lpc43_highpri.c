@@ -5,6 +5,8 @@
 #include <arch/board/board.h>
 #include "arch/common/up_internal.h"
 #include "arch/armv7-m/ram_vectors.h"
+#include "arch/armv7-m/nvic.h"
+
 #include "lpc43_timer.h"
 
 #ifndef ARCH_BOARD_H
@@ -87,7 +89,7 @@ int highpri_tmr0_setup(uint32_t frequency, uint32_t delay, void *mr0handler, voi
     LPC43_TMR_SETPERIOD(dev, period1);
     printf("TMR0 MR0 period=%d cyles; interrupt rate=%d Hz\n", period1, clk_frequency / period1);
 
-    // calculate ideal perid for MR1 for unstep interrupt (can't use NUTTX for this)
+    // calculate ideal period for MR1 for unstep interrupt (can't use NUTTX for this)
     // we do not set it here as it will need to add the current TC when it is enabled
     // note that the MR1 match interrupt starts off disabled
     delay_period = floorf(delay / (1000000.0F / clk_frequency)); // delay is in us
@@ -133,4 +135,28 @@ _ramfunc_ void highpri_tmr0_mr1_start()
     uint32_t regval = getreg32(LPC43_TIMER0_BASE + LPC43_TMR_MCR_OFFSET);
     regval |= 0x08; // enable MR1 match interrupt, but keep going with MR0
     putreg32(regval, LPC43_TIMER0_BASE + LPC43_TMR_MCR_OFFSET);
+}
+
+_ramfunc_  void fire_pendsv()
+{
+    putreg32(NVIC_INTCTRL_PENDSVSET, NVIC_INTCTRL); // may work on 4330 in nuttx
+}
+
+static void (*pendsv_handler)();
+_ramfunc_ static int pendsv_irq(int irq, FAR void *context, FAR void *arg)
+{
+    if(pendsv_handler != NULL) {
+        pendsv_handler();
+    }
+    return 0;
+}
+
+void setup_pendsv(void *handler)
+{
+    pendsv_handler= handler;
+    if(handler != NULL) {
+        irq_attach(LPC43_IRQ_PENDSV, pendsv_irq, NULL);
+    }else{
+        irq_detach(LPC43_IRQ_PENDSV);
+    }
 }

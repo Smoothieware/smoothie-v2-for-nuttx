@@ -26,7 +26,15 @@ Pin stepticker_debug_pin(STEPTICKER_DEBUG_PIN, Pin::AS_OUTPUT);
 // TODO move ramfunc define to a utils.h
 #define _ramfunc_ __attribute__ ((section(".ramfunctions"),long_call,noinline))
 
+//DEBUG
+uint32_t call_pendsv_time= 0;
+uint32_t in_pendsv_time= 0;
+uint32_t in_pendsv_task_time= 0;
+
+// statics
 StepTicker *StepTicker::instance= nullptr;
+volatile uint32_t StepTicker::usec_counter= 0;
+uint32_t StepTicker::usec_per_tick= 10;
 
 StepTicker::StepTicker()
 {
@@ -40,6 +48,7 @@ StepTicker::~StepTicker()
 // ISR callbacks from timer
 _ramfunc_ void StepTicker::step_timer_handler(void)
 {
+    usec_counter += usec_per_tick;
     StepTicker::getInstance()->step_tick();
 }
 
@@ -49,13 +58,69 @@ _ramfunc_ void StepTicker::unstep_timer_handler(void)
     StepTicker::getInstance()->unstep_tick();
 }
 
+// This is an IRQ, but is in NUTTX control
+_ramfunc_ void StepTicker::pendsv_handler(void)
+{
+    in_pendsv_time= get_usec_counter();
+    // call the callback for this
+    if(StepTicker::getInstance()->finished_fnc) StepTicker::getInstance()->finished_fnc();
+}
+
+// DEBUG
+#include <semaphore.h>
+static sem_t g_sem;
+
+_ramfunc_ void debug_pendsv_callback()
+{
+    sem_post(&g_sem);
+}
+
+int debug_pendsv_thread(int, char **)
+{
+    printf("DEBUG: pendsv thread started\n");
+    while(1) {
+        while (sem_wait(&g_sem) < 0);
+
+        in_pendsv_task_time= StepTicker::get_usec_counter();
+        printf("DEBUG: PENDSV TEST: times: \n");
+        printf("a: %d, b: %d, c: %d\n", call_pendsv_time, in_pendsv_time, in_pendsv_task_time);
+    }
+
+    printf("DEBUG: pendsv thread ended\n");
+    return 1;
+}
+
+void debug_setup_pendsv_callback()
+{
+    StepTicker::getInstance()->finished_fnc= debug_pendsv_callback;
+    // setup signal and high pri thread to handle the callback
+    // the callback set the signal
+    // the thread waits on signal and sets time when it gets called
+    sem_init(&g_sem, 0, 0);
+    sem_setprotocol(&g_sem, SEM_PRIO_NONE); // as it is a signalling instead of locking
+
+    task_create("debug_pendsv_thread", SCHED_PRIORITY_DEFAULT, // SHOULD be MAX but seems to work as default
+                2000,
+                (main_t)debug_pendsv_thread,
+                (FAR char * const *)NULL);
+}
+
+
+// END DEBUG
+
+
 // these are defined in HAL/lpc43_highpri.c
 extern "C" int highpri_tmr0_setup(uint32_t frequency, uint32_t delay, void *mr0handler, void *mr1handler);
 extern "C" void highpri_tmr0_mr1_start();
+extern "C" void fire_pendsv();
+extern "C" void setup_pendsv(void *handler);
 
 bool StepTicker::start()
 {
     if(!started) {
+        // number of microseconds per tick/intertupt
+        usec_per_tick = 1000000/frequency;
+        usec_counter= 0;
 
         // setup the step tick timer, which handles step ticks and one off unstep interrupts
         int permod = highpri_tmr0_setup(frequency, delay, (void *)step_timer_handler, (void *)unstep_timer_handler);
@@ -72,6 +137,11 @@ bool StepTicker::start()
     }
 
     current_tick = 0;
+
+    // setup the PENDSV interrupt called at end of moves
+    // This also gets us "back into the game" of NUTTX
+    debug_setup_pendsv_callback();
+    setup_pendsv((void *)pendsv_handler);
 
     return true;
 }
@@ -128,18 +198,6 @@ _ramfunc_  void StepTicker::unstep_tick()
     }
     this->unstep= 0;
 }
-
-// extern "C" void PendSV_Handler(void)
-// {
-//     StepTicker::getInstance()->handle_finish();
-// }
-
-// slightly lower priority than TIMER0, the whole end of block/start of block is done here allowing the timer to continue ticking
-// void StepTicker::handle_finish (void)
-// {
-//     // all moves finished signal block is finished
-//     if(finished_fnc) finished_fnc();
-// }
 
 // step clock
 _ramfunc_  void StepTicker::step_tick (void)
@@ -254,8 +312,9 @@ _ramfunc_  void StepTicker::step_tick (void)
 
         // all moves finished
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
-        //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
-        //SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
+        // DEBUG
+        call_pendsv_time= get_usec_counter();
+        fire_pendsv(); // in lpc43_highpri.c
     }
 }
 
