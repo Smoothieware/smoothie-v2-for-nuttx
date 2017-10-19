@@ -11,6 +11,9 @@ arc_correction = 5\n\
 junction_deviation = 0.05 # See http://smoothieware.org/motion-control#junction-deviation\n\
 default_acceleration = 1000.0 # default acceleration in mm/sec²\n\
 arm_solution = cartesian\n\
+x_axis_max_speed = 30000 # Maximum speed in mm/min\n\
+y_axis_max_speed = 30000 # Maximum speed in mm/min\n\
+z_axis_max_speed = 1800 # Maximum speed in mm/min\n\
 \n\
 [planner]\n\
 junction_deviation = 0.05\n\
@@ -30,7 +33,6 @@ alpha.ms2_pin = gpio7_14 # Pin for alpha micro stepping\n\
 #alpha.ms3_pin = gpio7_11 # Pin for alpha micro stepping\n\
 alpha.microstepping = 1,1 # settings for alpha micro stepping pins ms1,ms2 default 1/16\n\
 alpha.max_rate = 1800.0 # Maximum rate in mm/min\n\
-x.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 beta.steps_per_mm = 400 # Steps per mm for beta ( Y ) stepper\n\
 beta.step_pin = gpio3_6 # Pin for beta stepper step signal\n\
@@ -41,7 +43,6 @@ beta.ms2_pin = gpio7_7 # Pin for beta micro stepping\n\
 #beta.ms3_pin = gpio2_8 # Pin for beta micro stepping\n\
 beta.microstepping = 1,1 # settings for beta micro stepping pins ms1,ms2 default 1/16\n\
 beta.max_rate = 1800.0 # Maxmimum rate in mm/min\n\
-y.axis_max_speed = 30000 # Maximum speed in mm/min\n\
 \n\
 gamma.steps_per_mm = 400 # Steps per mm for gamma ( Z ) stepper\n\
 gamma.step_pin = gpio0_5 # Pin for gamma stepper step signal\n\
@@ -52,7 +53,6 @@ gamma.ms2_pin = gpio5_6 # Pin for gamma micro stepping\n\
 #gamma.ms3_pin = gpio3_1 # Pin for gamma micro stepping\n\
 gamma.microstepping = 1,1 # settings for gamma micro stepping pins ms1,ms2 default 1/16\n\
 gamma.max_rate = 1800 # Maximum rate in mm/min\n\
-z.axis_max_speed = 1800 # Maximum speed in mm/min\n\
 gamma.acceleration = 500  # overrides the default acceleration for this axis\n\
 \n\
 # Delta is first extruder, we set common stuff here instead of in extruder section\n\
@@ -83,8 +83,8 @@ delta.pin      = PB.1   # PWM pin for delta channel\n\
 fan.enable = false # Enable this module\n\
 fan.input_on_command = M106 # Command that will turn this switch on\n\
 fan.input_off_command = M107 # Command that will turn this switch off\n\
-fan.output_pin = p1.8 # Pin this module controls\n\
-fan.output_type = pwm # PWM output settable with S parameter in the input_on_comand\n\
+fan.output_pin = PB.0 # Pin this module controls\n\
+fan.output_type = sigmadeltapwm # PWM output settable with S parameter in the input_on_comand\n\
 \n\
 misc.enable = false             # Enable this module\n\
 misc.input_on_command = M42              # Command that will turn this switch on\n\

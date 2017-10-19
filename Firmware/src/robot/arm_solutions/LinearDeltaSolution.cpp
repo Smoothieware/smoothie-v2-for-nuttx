@@ -16,8 +16,8 @@
 #define tower2_angle_key       "delta_tower2_angle"
 #define tower3_angle_key       "delta_tower3_angle"
 
-#define SQ(x) (x*x)
-#define ROUND(x, y) (roundf(x * (float)(1e ## y)) / (float)(1e ## y))
+#define SQ(x) ((x)*(x))
+#define ROUND(x, y) (roundf((x) * (float)(1e ## y)) / (float)(1e ## y))
 #define PIOVER180   0.01745329251994329576923690768489F
 
 LinearDeltaSolution::LinearDeltaSolution(ConfigReader& cr)
