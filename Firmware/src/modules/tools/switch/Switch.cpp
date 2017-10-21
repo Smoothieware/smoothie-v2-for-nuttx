@@ -213,7 +213,8 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         // SIGMADELTA tick
         // TODO We should probably have one timer for all sigmadelta pins, and sigma delta should have its own fast timer
         // or piggy back off of the StepTicker
-        SlowTicker::getInstance()->attach(1000, std::bind(&SigmaDeltaPwm::on_tick, this->sigmadelta_pin));
+        // FIXME should be 1-2KHz, set to 100 while running from SPIFI which is slow
+        SlowTicker::getInstance()->attach(100, std::bind(&SigmaDeltaPwm::on_tick, this->sigmadelta_pin));
     }
 
     // for commands we may need to replace _ for space for old configs

@@ -25,7 +25,7 @@ const ADC_CHANNEL_T CHANNEL_LUT[] = {
     ADC_CH4,                /**< ADC channel 4 */
     ADC_CH5,                /**< ADC channel 5 */
     ADC_CH6,                /**< ADC channel 6 */
-    ADC_CH7                /**< ADC channel 7 */
+    ADC_CH7                 /**< ADC channel 7 */
 };
 
 Adc *Adc::instances[Adc::num_channels] = {nullptr};
@@ -67,14 +67,17 @@ bool Adc::setup()
     // ADC Init
     Chip_ADC_Init(_LPC_ADC_ID, &ADCSetup);
 
-    // We can't use burst mode as the minimum rate is 4.5Khz which is too fast for nuttx interrupts
-    Chip_ADC_SetBurstCmd(_LPC_ADC_ID, DISABLE);
-
     // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
     // even though there maybe 32 samples we only need one new one within the polling time
     // Set sample rate to 4.5KHz (That is as slow as it will go)
-    // As this is a lot of IRQ overhead so we need to trigger it from a slow timer instead
+    // As this is a lot of IRQ overhead we can't use interrupts in burst mode
+    // so we need to sample it from a slow timer instead
     Chip_ADC_SetSampleRate(_LPC_ADC_ID, &ADCSetup, 4500);
+
+    // We use burst mode so samples are always ready when we sample the ADC values
+    // NOTE we would like to just trigger a sample after we sample, but that seemed to only work for the first channel
+    // the second channel was never ready
+    Chip_ADC_SetBurstCmd(_LPC_ADC_ID, ENABLE);
 
     // init instances array
     for (int i = 0; i < num_channels; ++i) {
@@ -88,7 +91,7 @@ bool Adc::setup()
 bool Adc::start()
 {
 #ifndef NO_ADC_INTERRUPTS
-    // setup to interrupt
+    // setup to interrupt, FIXME
     int ret = irq_attach(LPC43M4_IRQ_ADC0, Adc::sample_isr, NULL);
     if (ret == OK) {
         up_enable_irq(LPC43M4_IRQ_ADC0);
@@ -101,10 +104,10 @@ bool Adc::start()
         return false;
     }
 #else
-    // kick start it
-    Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+    // No need to start it as we are in BURST mode
+    //Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
     running= true;
-    // start conversion every 10ms
+    // read conversion every 10ms
     SlowTicker::getInstance()->attach(100, Adc::on_tick);
 #endif
     return true;
@@ -113,14 +116,16 @@ bool Adc::start()
 void Adc::on_tick()
 {
 #ifndef NO_ADC_INTERRUPTS
+    // FIXME
     if(running){
         Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
     }
 #else
-    // we need to run the sampling irq and setoff another sample
+    // we need to run the sampling irq
     if(running) {
         sample_isr(0, 0, 0);
-        Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
+        // No need to start it as we are in burst mode so it should always be ready
+        //Chip_ADC_SetStartMode(_LPC_ADC_ID, ADC_START_NOW, ADC_TRIGGERMODE_RISING);
     }
 #endif
 }
@@ -214,6 +219,8 @@ _ramfunc_ int Adc::sample_isr(int irq, void *context, FAR void *arg)
         uint16_t dataADC = 0;
         if(Chip_ADC_ReadStatus(_LPC_ADC_ID, CHANNEL_LUT[ch], ADC_DR_DONE_STAT) == SET && Chip_ADC_ReadValue(_LPC_ADC_ID, CHANNEL_LUT[ch], &dataADC) == SUCCESS) {
             adc->new_sample(dataADC);
+        }else{
+            adc->not_ready_error++;
         }
     }
 

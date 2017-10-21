@@ -252,7 +252,7 @@ void Thermistor::get_raw(OutputStream& os)
     float r = r2 / (((float)max_adc_value / adc_value) - 1.0F);
     if (r1 > 0.0F) r = (r1 * r) / (r1 - r);
 
-    os.printf("adc= %d, resistance= %f\n", adc_value, r);
+    os.printf("adc= %d, resistance= %f, errors: %d\n", adc_value, r, thermistor_pin->get_errors());
 
     float t;
     if(this->use_steinhart_hart) {

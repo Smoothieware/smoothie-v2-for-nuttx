@@ -95,8 +95,8 @@ bool TemperatureControl::load_controls(ConfigReader& cr)
                 // make sure the first (or only) heater is selected
                 if(tc->tool_id == 0) tc->active = true;
                 if(tc->tool_id == 255) {
-                    // config did not set a toold id but we need a unique one so...
-                    tc->tool_id = 255 - cnt;
+                    // config did not set a tool id (eg bed) but we need a unique one so...
+                    tc->tool_id = 254 - cnt;
                     tc->active = true; // and they are always active
                 }
                 ++cnt;
@@ -128,7 +128,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
     this->get_m_code          = cr.get_int(m, get_m_code_key, 105);
     this->readings_per_second = cr.get_int(m, readings_per_second_key, 20);
     this->designator          = cr.get_string(m, designator_key, "T");
-    this->tool_id             = cr.get_int(m, tool_id_key, 255); // set to 255 by default whichis a bad and not controlled by Tx, other extruders should be 0 or 1 etc
+    this->tool_id             = cr.get_int(m, tool_id_key, 255); // set to 255 by default which is a bed and not controlled by Tx, other extruders should be 0 or 1 etc
 
     // Runaway parameters
     uint32_t n = cr.get_int(m, runaway_range_key, 20);

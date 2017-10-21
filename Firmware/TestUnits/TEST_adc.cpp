@@ -130,7 +130,7 @@ REGISTER_TEST(ADCTest, adc_class_interrupts)
     const uint32_t max_adc_value = Adc::get_max_value();
     printf("Max ADC= %d\n", max_adc_value);
 
-    // give it time to accumalte the 32 samples
+    // give it time to accumulate the 32 samples
     usleep(500000);
     // fill up moving average buffer
     adc->read();

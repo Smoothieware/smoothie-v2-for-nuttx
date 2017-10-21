@@ -1,6 +1,6 @@
 static const char *string_config= "\
 [general]\n\
-grbl_mode = true\n\
+grbl_mode = false\n\
 \n\
 [motion control]\n\
 default_feed_rate = 4000 # Default speed (mm/minute) for G1/G2/G3 moves\n\
@@ -80,7 +80,7 @@ delta.current  = 1.5    # First extruder stepper motor current\n\
 delta.pin      = PB.1   # PWM pin for delta channel\n\
 \n\
 [switch]\n\
-fan.enable = false # Enable this module\n\
+fan.enable = true # Enable this module\n\
 fan.input_on_command = M106 # Command that will turn this switch on\n\
 fan.input_off_command = M107 # Command that will turn this switch off\n\
 fan.output_pin = PB.0 # Pin this module controls\n\
@@ -111,7 +111,7 @@ led1.output_type       = digital\n\
 #but1.input_pin_behavior = toggle\n\
 \n\
 [extruder]\n\
-hotend.enable = false             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
+hotend.enable = true             # Whether to activate the extruder module at all. All configuration is ignored if false\n\
 hotend.tool_id = 0               # T0 will select\n\
 hotend.default_feed_rate = 600   # Default rate ( mm/minute ) for moves where only the extruder moves\n\
 hotend.max_speed = 50            # Maximum speed in mm/s\n\
@@ -126,7 +126,7 @@ hotend2.y_offset = 25.0          # y offset from origin in mm\n\
 hotend2.z_offset = 0             # z offset from origin in mm\n\
 \n\
 [temperature control]\n\
-hotend.enable = false             # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend.tool_id = 0               # T0 will select\n\
 hotend.thermistor_pin = ADC0_1     # Pin for the thermistor to read\n\
 hotend.heater_pin = P7.1         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
@@ -145,8 +145,7 @@ hotend2.set_m_code = 104          # M-code to set the temperature for this modul
 hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
 \n\
-bed.enable = false # Whether to activate this module at all.\n\
-bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
+bed.enable = true # Whether to activate this module at all.\n\
 bed.thermistor_pin = ADC0_2 # Pin for the thermistor to read\n\
 bed.heater_pin = P7.5     # Pin that controls the heater\n\
 bed.thermistor = Honeywell100K # See http://smoothieware.org/temperaturecontrol#thermistor\n\
@@ -167,7 +166,7 @@ idle_led = gpio6_13    # flashes when running but idle\n\
 [pwm]\n\
 frequency=10000        # PWM frequency\n\
 [laser]\n\
-enable = true # Whether to activate the laser module at all\n\
+enable = false # Whether to activate the laser module at all\n\
 pwm_pin = P1.8 # This pin will be PWMed to control the laser.\n\
 #inverted_pwm = false # set to true to invert the pwm\n\
 #ttl_pin = P1.30  # This pin turns on when the laser turns on, and off when the laser turns off.\n\

@@ -26,6 +26,7 @@ public:
     uint32_t read();
     int get_channel() const { return channel; }
     bool connected() const { return enabled; }
+    uint32_t get_errors() const { return not_ready_error; }
 
     // return the maximum ADC value, base is 10bits 1024.
 #ifdef OVERSAMPLE
@@ -54,6 +55,8 @@ private:
     static bool running;
     int channel;
     int instance_idx{-1};
+    uint32_t not_ready_error{0};
+
     // buffer storing the last num_samples readings for each channel instance
     uint16_t sample_buffer[num_samples];
     uint16_t ave_buf[4]{0};
