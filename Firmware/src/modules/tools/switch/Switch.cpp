@@ -97,6 +97,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
                 //set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
             }
         } else {
+            printf("configure-switch: Selected sigmadelta pin invalid - disabled\n");
             this->output_type = NONE;
             delete this->sigmadelta_pin;
             this->sigmadelta_pin = nullptr;
@@ -113,6 +114,7 @@ bool Switch::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
                 //set_low_on_debug(digital_pin->port_number, digital_pin->pin);
             }
         } else {
+            printf("configure-switch: Selected digital pin invalid - disabled\n");
             this->output_type = NONE;
             delete this->digital_pin;
             this->digital_pin = nullptr;
