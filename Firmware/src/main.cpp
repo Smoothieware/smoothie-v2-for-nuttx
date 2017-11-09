@@ -553,10 +553,13 @@ void safe_sleep(uint32_t ms)
 void configureSPIFI();
 float get_pll1_clk();
 
+#define SD_CONFIG
+
+#ifndef SD_CONFIG
 #include STRING_CONFIG_H
 static std::string str(string_config);
 static std::stringstream ss(str);
-
+#endif
 
 static int smoothie_startup(int, char **)
 {
@@ -587,7 +590,7 @@ static int smoothie_startup(int, char **)
 
     // open the config file
     do {
-#if 0
+#ifdef SD_CONFIG
         int ret = mount("/dev/mmcsd0", "/sd", "vfat", 0, nullptr);
         if(0 != ret) {
             std::cout << "Error mounting: " << "/dev/mmcsd0: " << ret << "\n";
@@ -595,7 +598,7 @@ static int smoothie_startup(int, char **)
         }
 
         std::fstream fs;
-        fs.open("/sd/test-config.ini", std::fstream::in);
+        fs.open("/sd/config.ini", std::fstream::in);
         if(!fs.is_open()) {
             std::cout << "Error opening file: " << "/sd/config.ini" << "\n";
             // unmount sdcard
@@ -738,11 +741,13 @@ static int smoothie_startup(int, char **)
         // end of module creation and configuration
         ////////////////////////////////////////////////////////////////
 
+#ifdef SD_CONFIG
         // close the file stream
-        //fs.close();
+        fs.close();
 
         // unmount sdcard
-        //umount("/sd");
+        umount("/sd");
+#endif
 
         // initialize planner before conveyor this is when block queue is created
         // which needs to know how many actuators there are, which it gets from robot
