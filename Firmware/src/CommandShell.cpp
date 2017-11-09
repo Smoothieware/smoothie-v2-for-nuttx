@@ -8,6 +8,7 @@
 #include "StepperMotor.h"
 #include "main.h"
 #include "TemperatureControl.h"
+#include "ConfigWriter.h"
 
 #include <functional>
 #include <set>
@@ -16,6 +17,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <iostream>
+#include <fstream>
 
 #define HELP(m) if(params == "-h") { os.printf("%s\n", m); return true; }
 
@@ -31,12 +34,17 @@ bool CommandShell::initialize()
     using std::placeholders::_2;
 
     THEDISPATCHER->add_handler( "help", std::bind( &CommandShell::help_cmd, this, _1, _2) );
+
+    THEDISPATCHER->add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "ls", std::bind( &CommandShell::ls_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "rm", std::bind( &CommandShell::rm_cmd, this, _1, _2) );
-    THEDISPATCHER->add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
-    THEDISPATCHER->add_handler( "mount", std::bind( &CommandShell::mount_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "mv", std::bind( &CommandShell::mv_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "cat", std::bind( &CommandShell::cat_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
+
+    THEDISPATCHER->add_handler( "config-set", std::bind( &CommandShell::config_set_cmd, this, _1, _2) );
+
+    THEDISPATCHER->add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "gpio", std::bind( &CommandShell::gpio_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "modules", std::bind( &CommandShell::modules_cmd, this, _1, _2) );
@@ -119,6 +127,16 @@ bool CommandShell::rm_cmd(std::string& params, OutputStream& os)
     std::string fn = stringutils::shift_parameter( params );
     int s = remove(fn.c_str());
     if (s != 0) os.printf("Could not delete %s\n", fn.c_str());
+    return true;
+}
+
+bool CommandShell::mv_cmd(std::string& params, OutputStream& os)
+{
+    HELP("rename file");
+    std::string fn1 = stringutils::shift_parameter( params );
+    std::string fn2 = stringutils::shift_parameter( params );
+    int s = rename(fn1.c_str(), fn2.c_str());
+    if (s != 0) os.printf("Could not rename %s to %s\n", fn1.c_str(), fn2.c_str());
     return true;
 }
 
@@ -697,5 +715,67 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 {
     os.printf("Smoothie Version2 for Mini Alpha: build 0.1\n");
+    return true;
+}
+
+bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
+{
+    HELP("config-set section key value");
+
+    std::string sectionstr = stringutils::shift_parameter( params );
+    std::string keystr = stringutils::shift_parameter( params );
+    std::string valuestr = stringutils::shift_parameter( params );
+
+    if(sectionstr.empty() || keystr.empty() || valuestr.empty()) {
+        os.printf("Usage: config-set section key value\n");
+        return true;
+    }
+
+    std::fstream fsin;
+    std::fstream fsout;
+    fsin.open("/sd/config.ini", std::fstream::in);
+    if(!fsin.is_open()) {
+        os.printf("Error opening file /sd/config.ini\n");
+        return true;
+    }
+
+    fsout.open("/sd/config.tmp", std::fstream::out);
+    if(!fsout.is_open()) {
+        os.printf("Error opening file /sd/config.tmp\n");
+        fsin.close();
+        return true;
+    }
+
+    ConfigWriter cw(fsin, fsout);
+
+    const char *section = sectionstr.c_str();
+    const char *key = keystr.c_str();
+    const char *value = valuestr.c_str();
+
+    if(cw.write(section, key, value)) {
+        os.printf("config changed ok\n");
+
+    } else {
+        os.printf("failed to change config\n");
+        #if 1
+        os.printf("fsin: good()=%d\n", fsin.good());
+        os.printf(" eof()=%d\n", fsin.eof());
+        os.printf(" fail()=%d\n", fsin.fail());
+        os.printf(" bad()=%d\n", fsin.bad());
+
+        os.printf("fsout: good()=%d\n", fsout.good());
+        os.printf(" eof()=%d\n", fsout.eof());
+        os.printf(" fail()=%d\n", fsout.fail());
+        os.printf(" bad()=%d\n", fsout.bad());
+        #endif
+        return true;
+    }
+
+    fsin.close();
+    fsout.close();
+
+    // now rename the config.ini file to config.bak and config.tmp file to config.ini
+    rename("/sd/config.ini", "/sd/config.bak");
+    rename("/sd/config.tmp", "/sd/config.ini");
     return true;
 }
