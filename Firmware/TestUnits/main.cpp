@@ -103,3 +103,22 @@ extern "C" int smoothie_main(int argc, char *argv[])
 
     return 1;
 }
+
+void safe_sleep(uint32_t ms)
+{
+    // here we need to sleep (and yield) for 10ms then check if we need to handle the query command
+    while(ms > 0) {
+        usleep(10000); // 10 ms sleep (minimum anyway due to thread slice time)
+
+        if(ms > 10) {
+            ms -= 10;
+        }else{
+            break;
+        }
+    }
+}
+
+void print_to_all_consoles(const char *str)
+{
+    printf("%s", str);
+}

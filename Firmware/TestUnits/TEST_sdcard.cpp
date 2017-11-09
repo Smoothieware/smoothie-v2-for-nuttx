@@ -26,29 +26,6 @@ REGISTER_TEST(SDCardTest, mount)
     TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
-REGISTER_TEST(SDCardTest, directory)
-{
-    DIR *dirp;
-
-    /* Open the directory */
-    dirp = opendir(g_target);
-    TEST_ASSERT_NOT_NULL(dirp);
-
-    /* Read each directory entry */
-    int cnt= 0;
-    for (; ; ) {
-        struct dirent *entryp = readdir(dirp);
-        if (entryp == NULL) {
-            /* Finished with this directory */
-            break;
-        }
-
-        printf("%s\n", entryp->d_name);
-        cnt++;
-    }
-    closedir(dirp);
-    TEST_ASSERT_TRUE(cnt > 0);
-}
 
 REGISTER_TEST(SDCardTest, write_read)
 {
@@ -91,11 +68,83 @@ REGISTER_TEST(SDCardTest, write_read)
     fclose(fp);
 }
 
+REGISTER_TEST(SDCardTest, directory)
+{
+    DIR *dirp;
+
+    /* Open the directory */
+    dirp = opendir(g_target);
+    TEST_ASSERT_NOT_NULL(dirp);
+
+    /* Read each directory entry */
+    int cnt= 0;
+    for (; ; ) {
+        struct dirent *entryp = readdir(dirp);
+        if (entryp == NULL) {
+            /* Finished with this directory */
+            break;
+        }
+
+        printf("%s\n", entryp->d_name);
+        cnt++;
+    }
+    closedir(dirp);
+    TEST_ASSERT_TRUE(cnt > 0);
+}
+
 REGISTER_TEST(SDCardTest,read_config_init)
 {
     TEST_IGNORE();
 }
 
+
+REGISTER_TEST(SDCardTest, time_read_write)
+{
+    char fn[64];
+    strcpy(fn, g_target);
+    strcat(fn, "/test_large_file.tst");
+
+    // delete it if it was there
+    unlink(fn);
+
+    FILE *fp;
+    fp = fopen(fn, "w");
+    TEST_ASSERT_NOT_NULL(fp);
+
+    systime_t st = clock_systimer();
+
+    uint32_t n= 1000;
+    for (uint32_t i = 1; i <= n; ++i) {
+        char buf[100];
+        size_t x= fwrite(buf, 1, sizeof(buf), fp);
+        if(x != sizeof(buf)) {
+            TEST_FAIL();
+        }
+    }
+
+    systime_t en = clock_systimer();
+    printf("elapsed time %d us for writing %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*100, (n*100.0F) / (TICK2USEC(en-st)/1e6F));
+
+    fclose(fp);
+
+    // Open file
+    fp = fopen(fn, "r");
+    TEST_ASSERT_NOT_NULL(fp);
+
+    // read back data
+    st = clock_systimer();
+    for (uint32_t i = 1; i <= n; ++i) {
+        char buf[100];
+        size_t x= fread(buf, 1, sizeof(buf), fp);
+        if(x != sizeof(buf)) {
+            TEST_FAIL();
+        }
+    }
+    en = clock_systimer();
+    printf("elapsed time %d us for reading %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*100, (n*100.0F) / (TICK2USEC(en-st)/1e6F));
+
+    fclose(fp);
+}
 
 REGISTER_TEST(SDCardTest,unmount)
 {
