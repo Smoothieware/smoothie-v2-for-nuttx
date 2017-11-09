@@ -775,7 +775,13 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
     fsout.close();
 
     // now rename the config.ini file to config.bak and config.tmp file to config.ini
-    rename("/sd/config.ini", "/sd/config.bak");
-    rename("/sd/config.tmp", "/sd/config.ini");
+    int s = rename("/sd/config.ini", "/sd/config.bak");
+    if(s == 0) {
+        s= rename("/sd/config.tmp", "/sd/config.ini");
+        if(s != 0) os.printf("Failed to rename config.tmp to config.ini\n");
+
+    }else{
+        os.printf("Failed to rename config.ini to config.bak - aborting\n");
+    }
     return true;
 }
