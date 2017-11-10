@@ -113,7 +113,7 @@ REGISTER_TEST(SDCardTest, time_read_write)
 
     systime_t st = clock_systimer();
 
-    uint32_t n= 1000;
+    uint32_t n= 10000;
     for (uint32_t i = 1; i <= n; ++i) {
         char buf[100];
         size_t x= fwrite(buf, 1, sizeof(buf), fp);
