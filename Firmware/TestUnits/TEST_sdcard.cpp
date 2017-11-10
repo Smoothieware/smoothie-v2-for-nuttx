@@ -113,9 +113,9 @@ REGISTER_TEST(SDCardTest, time_read_write)
 
     systime_t st = clock_systimer();
 
-    uint32_t n= 10000;
+    uint32_t n= 5000;
     for (uint32_t i = 1; i <= n; ++i) {
-        char buf[100];
+        char buf[512];
         size_t x= fwrite(buf, 1, sizeof(buf), fp);
         if(x != sizeof(buf)) {
             TEST_FAIL();
@@ -123,7 +123,7 @@ REGISTER_TEST(SDCardTest, time_read_write)
     }
 
     systime_t en = clock_systimer();
-    printf("elapsed time %d us for writing %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*100, (n*100.0F) / (TICK2USEC(en-st)/1e6F));
+    printf("elapsed time %d us for writing %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*512, (n*512.0F) / (TICK2USEC(en-st)/1e6F));
 
     fclose(fp);
 
@@ -134,14 +134,14 @@ REGISTER_TEST(SDCardTest, time_read_write)
     // read back data
     st = clock_systimer();
     for (uint32_t i = 1; i <= n; ++i) {
-        char buf[100];
+        char buf[512];
         size_t x= fread(buf, 1, sizeof(buf), fp);
         if(x != sizeof(buf)) {
             TEST_FAIL();
         }
     }
     en = clock_systimer();
-    printf("elapsed time %d us for reading %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*100, (n*100.0F) / (TICK2USEC(en-st)/1e6F));
+    printf("elapsed time %d us for reading %d bytes, %1.4f bytes/sec\n", TICK2USEC(en-st), n*512, (n*512.0F) / (TICK2USEC(en-st)/1e6F));
 
     fclose(fp);
 }
