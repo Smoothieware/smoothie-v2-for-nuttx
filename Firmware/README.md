@@ -6,19 +6,18 @@ To make the Firmware do ```rake target=Bambino```
 Firmware currently runs on UART at 115200 baud and on USB serial at ttyACM0.
 On USB Serial you need to hit Enter to get it to start.
 
-The config file will be config.ini an example is shown here...
-https://gist.github.com/8996097730ba1f17413e3aad1c98eaaf
+The config file is called config.ini on the sdcard and examples are shown in the ConfigSamples diretory, config-3d.ini is for a 3d printer, and config-laser.ini is for laser, these would be renamed config.ini and copied to the sdcard.
 
-Currently the config.ini is builtin and defined in string-config-bambino.h
+The config.ini may also be builtin and is defined in string-config-bambino.h, a #define is needed in the main.cpp to use the builtin config.ini.
 
 Currently Robot is ported and should allow XYZ motors to work as expected at 100Khz max step rate.
-Also enough is ported to run a 3D printer, Hotends, extruders etc
+Also enough modues are ported to run a 3D printer, Hotends, extruders etc, also a laser is supported.
 
 NOTE for the smooothiev2 mini alpha replace Bambino above with Minialpha...
 
 ```rake target=Minialpha```
 
-config is in string-config-minialpha.h
+builtin config would be called string-config-minialpha.h (but the default is to read the config.ini on sdcard).
 
 The Mini Alpha is currently working quite well.
 
