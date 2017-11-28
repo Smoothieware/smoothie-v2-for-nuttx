@@ -29,8 +29,21 @@ void GCode::dump(OutputStream &o) const
 	}
 	o.printf(" ");
 	for(auto& i : args) {
-		o.printf("%c:%f ", i.first, i.second);
+		o.printf("%c:%1.5f ", i.first, i.second);
 	}
 	o.printf("\n");
+}
+
+void GCode::dump(FILE *fp) const
+{
+	fprintf(fp, "%s%u", is_g?"G":is_m?"M":"", code);
+	if(subcode != 0) {
+		fprintf(fp, ".%u",  subcode);
+	}
+	fprintf(fp, " ");
+	for(auto& i : args) {
+		fprintf(fp, "%c:%1.5f ", i.first, i.second);
+	}
+	fprintf(fp, "\n");
 }
 

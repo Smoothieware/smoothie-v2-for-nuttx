@@ -68,7 +68,7 @@ static bool setup_CDC(int& rfd, int& wfd)
     // we think we had a connection but due to a bug in Nuttx we may or may not
     // but it doesn't really seem to matter
 
-    rfd= fd;
+    rfd = fd;
 
     // now open for write
     fd = open("/dev/ttyACM0", O_WRONLY);
@@ -77,7 +77,7 @@ static bool setup_CDC(int& rfd, int& wfd)
         return false;
     }
 
-    wfd= fd;
+    wfd = fd;
     return true;
 }
 
@@ -180,13 +180,39 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
 #include "Dispatcher.h"
 #include "Robot.h"
 
+// set to true when M28 is in effect
+static bool uploading = false;
+static FILE *upload_fp = nullptr;
+
 // TODO maybe move to Dispatcher
 static GCodeProcessor gp;
 // can be called by modules when in command thread context
 bool dispatch_line(OutputStream& os, const char *line)
 {
-    // TODO map some special M codes to commands as they violate the gcode spec and pass a string parameter
+    // map some special M codes to commands as they violate the gcode spec and pass a string parameter
     // M23, M32, M117 => m23, m32, m117 and handle as a command
+    // if(strncmp(line, "M23 ", 4) == 0) line[0] = 'm';
+    // else if(strncmp(line, "M32 ", 4) == 0) line[0] = 'm';
+    // else if(strncmp(line, "M117 ", 5) == 0) line[0] = 'm';
+
+    // handle save to file M codes:- M28 filename, and M29
+    if(strncmp(line, "M28 ", 4) == 0) {
+        char upload_filename[128];
+        strncpy(upload_filename, &line[4], sizeof(upload_filename)); // rest of line is the filename
+        if(strncmp(upload_filename, "/sd/", 4) != 0) {
+            // prepend /sd/
+            strcpy(upload_filename, "/sd/");
+            strncat(upload_filename, &line[4], sizeof(upload_filename) - 4);
+        }
+        upload_fp = fopen(upload_filename, "w");
+        if(upload_fp != nullptr) {
+            uploading = true;
+            os.printf("Writing to file: %s\nok\n", upload_filename);
+        } else {
+            os.printf("open failed, File: %s.\nok\n", upload_filename);
+        }
+        return true;
+    }
 
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
@@ -232,13 +258,36 @@ bool dispatch_line(OutputStream& os, const char *line)
         return true;
     }
 
+    // if in M28 mode then just save all incoming lines to the file until we get M29
+    if(uploading && gcodes[0].has_m() && gcodes[0].get_code() == 29) {
+        // done uploading, close file
+        fclose(upload_fp);
+        upload_fp = nullptr;
+        uploading = false;
+        os.printf("Done saving file.\nok\n");
+        return true;
+    }
+
+
     // dispatch gcodes
     // NOTE return one ok per line instead of per GCode only works for regular gcodes like G0-G3, G92 etc
     // gcodes returning data like M114 should NOT be put on multi gcode lines.
-    int ngcodes= gcodes.size();
+    int ngcodes = gcodes.size();
     for(auto& i : gcodes) {
         //i.dump(os);
         if(i.has_m() || i.has_g()) {
+
+            if(uploading) {
+                // just save the gcodes to the file
+                if(upload_fp != nullptr) {
+                    // write out gcode
+                    i.dump(upload_fp);
+                }
+
+                os.printf("ok\n");
+                return true;
+            }
+
             // if this is a multi gcode line then dispatch must not send ok unless this is the last one
             if(!THEDISPATCHER->dispatch(i, os, ngcodes == 1)) {
                 // no handler processed this gcode, return ok - ignored
@@ -385,11 +434,11 @@ static void uart_comms()
                 query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
                 do_query = true;
 
-            // } else if(line[cnt] == '!') {
-            //     do_feed_hold(true);
+                // } else if(line[cnt] == '!') {
+                //     do_feed_hold(true);
 
-            // } else if(line[cnt] == '~') {
-            //     do_feed_hold(false);
+                // } else if(line[cnt] == '~') {
+                //     do_feed_hold(false);
 
             } else if(discard) {
                 // we discard long lines until we get the newline
@@ -444,7 +493,7 @@ void print_to_all_consoles(const char *str)
 #include "Pin.h"
 
 // Define the activity/idle indicator led
-static Pin *idle_led= nullptr;
+static Pin *idle_led = nullptr;
 
 /*
  * All commands must be executed in the context of this thread. It is equivalent to the main_loop in v1.
@@ -523,7 +572,7 @@ void safe_sleep(uint32_t ms)
 
         if(ms > 10) {
             ms -= 10;
-        }else{
+        } else {
             break;
         }
     }
@@ -618,9 +667,9 @@ static int smoothie_startup(int, char **)
             // get general system settings
             ConfigReader::section_map_t m;
             if(cr.get_section("general", m)) {
-                bool f= cr.get_bool(m, "grbl_mode", false);
+                bool f = cr.get_bool(m, "grbl_mode", false);
                 THEDISPATCHER->set_grbl_mode(f);
-                printf("grbl mode %s\n", f?"set":"not set");
+                printf("grbl mode %s\n", f ? "set" : "not set");
             }
         }
 
@@ -668,7 +717,7 @@ static int smoothie_startup(int, char **)
                 if(!tc.configure(cr)) {
                     printf("INFO: no Temperature Controls loaded\n");
                 }
-            }else{
+            } else {
                 printf("ERROR: ADC failed to setup\n");
             }
         }
@@ -691,10 +740,10 @@ static int smoothie_startup(int, char **)
 
         {
             // Pwm needs to be initialized, there can only be one frequency
-            float freq= 10000; // default is 10KHz
+            float freq = 10000; // default is 10KHz
             ConfigReader::section_map_t m;
             if(cr.get_section("pwm", m)) {
-                freq= cr.get_float(m, "frequency", 10000);
+                freq = cr.get_float(m, "frequency", 10000);
             }
             Pwm::setup(freq);
             printf("INFO: PWM frequency set to %f Hz\n", freq);
@@ -728,11 +777,11 @@ static int smoothie_startup(int, char **)
             // configure system leds (if any)
             ConfigReader::section_map_t m;
             if(cr.get_section("system leds", m)) {
-                std::string p= cr.get_string(m, "idle_led", "nc");
-                idle_led= new Pin(p.c_str(), Pin::AS_OUTPUT);
+                std::string p = cr.get_string(m, "idle_led", "nc");
+                idle_led = new Pin(p.c_str(), Pin::AS_OUTPUT);
                 if(!idle_led->connected()) {
                     delete idle_led;
-                    idle_led= nullptr;
+                    idle_led = nullptr;
                 }
             }
         }
