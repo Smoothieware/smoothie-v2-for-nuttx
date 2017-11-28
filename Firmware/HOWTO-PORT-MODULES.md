@@ -83,3 +83,4 @@ The slowticker is limited to 100Hz, there will eventually be a fastticker for ev
 
 Note all callbacks are of type std::function
 
+As the CPU has a FPU never use doubles always use floats.

@@ -10,10 +10,22 @@ The config file is called config.ini on the sdcard and examples are shown in the
 
 The config.ini may also be builtin and is defined in string-config-bambino.h, a #define is needed in the main.cpp to use the builtin config.ini.
 
-Currently Robot is ported and should allow XYZ motors to work as expected at 100Khz max step rate.
-Also enough modues are ported to run a 3D printer, Hotends, extruders etc, also a laser is supported.
+Currently the max stepping rate is limited to 100Khz as this seems the upper limit to handle the 10us interrupt.
 
-NOTE for the smooothiev2 mini alpha replace Bambino above with Minialpha...
+Enough modules have been ported to run a 3D printer, also a laser is supported.
+
+Modules that have been ported so far...
+
+* endstops
+* extruder
+* laser
+* switch
+* temperaturecontrol
+* zprobe
+* currentcontrol
+* killbutton
+
+*NOTE* for the smooothiev2 mini alpha replace Bambino above with Minialpha...
 
 ```rake target=Minialpha```
 
