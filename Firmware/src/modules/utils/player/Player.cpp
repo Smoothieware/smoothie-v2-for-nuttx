@@ -6,6 +6,9 @@
 #include "ConfigReader.h"
 #include "Dispatcher.h"
 #include "Conveyor.h"
+#include "StringUtils.h"
+#include "TemperatureControl.h"
+#include "main.h"
 
 #include <cstddef>
 #include <cmath>
@@ -21,16 +24,21 @@
 
 #define HELP(m) if(params == "-h") { os.printf("%s\n", m); return true; }
 
+Player *Player::instance= nullptr;
+
 Player::Player() : Module("player")
 {
     this->playing_file = false;
     this->current_file_handler = nullptr;
     this->booted = false;
     this->elapsed_secs = 0;
-    this->reply_stream = nullptr;
+    this->reply_os = nullptr;
+    this->current_os = nullptr;
     this->suspended = false;
     this->suspend_loops = 0;
     halted = false;
+    abort_thread= false;
+    instance = this;
 }
 
 bool Player::configure(ConfigReader& cr)
@@ -74,6 +82,9 @@ bool Player::configure(ConfigReader& cr)
     THEDISPATCHER->add_handler( "suspend", std::bind( &Player::suspend_command, this, _1, _2) );
     THEDISPATCHER->add_handler( "resume", std::bind( &Player::resume_command, this, _1, _2) );
 
+    // set this so the command ctx call back gets called
+    want_command_ctx = true;
+
     return true;
 }
 
@@ -116,7 +127,7 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
 
     // TODO this duplicates play()
     this->filename = "/sd/" + params; // filename is whatever is in params
-    this->current_stream = nullptr;
+    this->current_os = nullptr;
 
     if(this->current_file_handler != NULL) {
         this->playing_file = false;
@@ -153,7 +164,7 @@ bool Player::handle_m32(std::string& params, OutputStream& os)
     // TODO this duplicates play()
     // M32 select file and start print
     this->filename = "/sd/" + params; // filename is whatever is in params including spaces
-    this->current_stream = nullptr;
+    this->current_os = nullptr;
 
     if(this->current_file_handler != NULL) {
         this->playing_file = false;
@@ -193,10 +204,7 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
             case 24: // start print
                 if (this->current_file_handler != NULL) {
                     this->playing_file = true;
-                    // this would be a problem if the stream goes away before the file has finished,
-                    // so we attach it to the kernel stream, however network connections from pronterface
-                    // do not connect to the kernel streams so won't see this FIXME
-                    //this->reply_stream = THEKERNEL->streams; // TODO implement
+                    this->reply_os = &os;
                 }
                 break;
 
@@ -222,7 +230,7 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
                         } else {
                             this->filename = currentfn;
                             this->file_size = old_size;
-                            this->current_stream = nullptr;
+                            this->current_os = nullptr;
                         }
                     }
                 } else {
@@ -270,6 +278,13 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
     return true;
 }
 
+void Player::play_thread()
+{
+    instance->player_thread();
+    delete instance->play_thread_p;
+    instance->play_thread_p= nullptr;
+}
+
 // Play a gcode file by considering each line as if it was received on the serial console
 bool Player::play_command( std::string& params, OutputStream& os )
 {
@@ -277,13 +292,14 @@ bool Player::play_command( std::string& params, OutputStream& os )
 
     // extract any options from the line and terminate the line there
     std::string options = extract_options(params);
-    // Get filename which is the entire parameter line upto any options found or entire line
-    this->filename = params;
 
     if(this->playing_file || this->suspended) {
         os.printf("Currently printing, abort print first\n");
         return true;
     }
+
+    // Get filename which is the entire parameter line upto any options found or entire line
+    this->filename = params;
 
     if(this->current_file_handler != NULL) { // must have been a paused print
         fclose(this->current_file_handler);
@@ -301,10 +317,10 @@ bool Player::play_command( std::string& params, OutputStream& os )
 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == std::string::npos ) {
-        this->current_stream = nullptr;
+        this->current_os = nullptr;
     } else {
-        // we send to the kernels stream as it cannot go away
-        //this->current_stream = THEKERNEL->streams; // TODO may need to printf
+        // FIXME this os cannot go away, better check
+        this->current_os = &os;
     }
 
     // get size of file
@@ -319,6 +335,11 @@ bool Player::play_command( std::string& params, OutputStream& os )
 
     this->played_cnt = 0;
     this->elapsed_secs = 0;
+
+    // start play thread
+    play_thread_p = new std::thread(play_thread);
+
+    return true;
 }
 
 bool Player::progress_command( std::string& params, OutputStream& os )
@@ -326,7 +347,7 @@ bool Player::progress_command( std::string& params, OutputStream& os )
     HELP("Display progress of sdcard print")
 
     // get options
-    std::string options = shift_parameter( params );
+    std::string options = stringutils::shift_parameter( params );
     bool sdprinting = options.find_first_of("Bb") != std::string::npos;
 
     if(!playing_file && current_file_handler != NULL) {
@@ -370,18 +391,26 @@ bool Player::progress_command( std::string& params, OutputStream& os )
 
 bool Player::abort_command( std::string& params, OutputStream& os )
 {
+    HELP("abort playing file");
+
     if(!playing_file && current_file_handler == NULL) {
         os.printf("Not currently playing\n");
         return true;
     }
+    abort_thread= true;
+    // wait for the thread to exit
+    play_thread_p->join();
+
     suspended = false;
     playing_file = false;
     played_cnt = 0;
     file_size = 0;
     this->filename = "";
-    this->current_stream = NULL;
-    fclose(current_file_handler);
-    current_file_handler = NULL;
+    this->current_os = NULL;
+    if(current_file_handler != nullptr)
+        fclose(current_file_handler);
+
+    current_file_handler = nullptr;
     if(params.empty()) {
         // clear out the block queue, will wait until queue is empty
         // MUST be called in on_main_loop to make sure there are no blocked main loops waiting to put something on the queue
@@ -391,79 +420,104 @@ bool Player::abort_command( std::string& params, OutputStream& os )
         Robot::getInstance()->reset_position_from_current_actuator_position();
         os.printf("Aborted playing or paused file. Please turn any heaters off manually\n");
     }
+
+    return true;
 }
 
 // called when in command thread context, we can issue commands here
-// TODO this should be a thread as it is only called every 200ms
+// MOTE when idle only caled once every 200ms
 void Player::in_command_ctx()
 {
-    if(suspended && suspend_loops > 0) {
-        // if we are suspended we need to allow main loop to cycle a few times then finish off the suspend processing
-        if(--suspend_loops == 0) {
-            suspend_part2();
-            return;
-        }
-    }
-
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ) {
             OutputStream os; // null stream
             this->play_command(this->on_boot_gcode, os);
+
         } else {
-            //THEKERNEL->serial->printf("On boot gcode disabled! skipping...\n");
+            printf("player: On boot gcode disabled.\n");
         }
     }
 
-    if( this->playing_file ) {
-        if(Robot::getInstance()->is_halted()) {
+    if(suspended && suspend_loops > 0) {
+        // if we are suspended we need to allow the command thread to cycle a few times to flush the queus,
+        // then finish off the suspend processing
+        if(--suspend_loops == 0) {
+            suspend_part2();
             return;
         }
+    }
+}
 
-        char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
-        bool discard = false;
+void Player::player_thread()
+{
+    printf("DEBUG: Player thread starting\n");
 
-        while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
-            int len = strlen(buf);
-            if(len == 0) continue; // empty line? should not be possible
-            if(buf[len - 1] == '\n' || feof(this->current_file_handler)) {
-                if(discard) { // we are discarding a long line
-                    discard = false;
-                    continue;
-                }
-                if(len == 1) continue; // empty line
+    // get the message queue
+    mqd_t mqfd = get_message_queue(false);
+    OutputStream nullos;
 
-                // TODO not sure where to output if requested as original stream may have gone
-                // if(this->current_stream != nullptr) {
-                //     this->current_os.printf("%s", buf);
-                // }
 
-                // TODO only if running from command thread context, if in own thread then need to feed to message queue
-                dispatch_line(buf, os);
-                played_cnt += len;
-                return; // we feed one line per main loop
+    char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
+    bool discard = false;
 
-            } else {
-                // discard long line
-                if(this->current_stream != nullptr) { this->current_os.printf("Warning: Discarded long line\n"); }
-                discard = true;
-            }
+    while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
+        while(!playing_file && !abort_thread) {
+            // we must be paused
+            usleep(200000); // sleep and yeild
         }
 
-        this->playing_file = false;
-        this->filename = "";
-        played_cnt = 0;
-        file_size = 0;
-        fclose(this->current_file_handler);
-        current_file_handler = NULL;
-        this->current_stream = NULL;
+        // allows us to abort the thread
+        if(abort_thread) {
+            abort_thread= false;
+            break;
+        }
 
-        if(this->reply_stream != NULL) {
-            // if we were printing from an M command from pronterface we need to send this back
-            this->reply_os.printf("Done printing file\n");
-            this->reply_stream = NULL;
+        int len = strlen(buf);
+        if(len == 0) continue; // empty line? should not be possible
+        if(buf[len - 1] == '\n' || feof(this->current_file_handler)) {
+            if(discard) { // we are discarding a long line
+                discard = false;
+                continue;
+            }
+            if(len == 1) continue; // empty line
+
+            if(current_os != nullptr) {
+                current_os->puts(buf);
+            }
+
+            buf[len - 1] = '\0'; // remove the \n and nul terminate
+
+            // FIXME we do not want to alloc each time
+            char *l = strdup(buf);
+            send_message_queue(mqfd, l, &nullos);
+
+            played_cnt += len;
+
+        } else {
+            // discard long line
+            if(this->current_os != nullptr) { this->current_os->printf("Warning: Discarded long line\n"); }
+            discard = true;
         }
     }
+
+    // finished file
+    this->playing_file = false;
+    this->filename = "";
+    played_cnt = 0;
+    file_size = 0;
+    fclose(this->current_file_handler);
+    current_file_handler = nullptr;
+    this->current_os = nullptr;
+
+    if(this->reply_os != nullptr) {
+        // if we were printing from an M command from pronterface we need to send this back
+        this->reply_os->printf("Done printing file\n");
+        this->reply_os = nullptr;
+    }
+
+    mq_close(mqfd);
+    printf("DEBUG: Player thread exiting\n");
 }
 
 bool Player::request(const char *key, void *value)
@@ -478,11 +532,12 @@ bool Player::request(const char *key, void *value)
 
     } else if(strcmp("get_progress", key) == 0) {
         if(file_size > 0 && playing_file) {
-            struct pad_progress p;
-            p.elapsed_secs = this->elapsed_secs;
-            p.percent_complete = (this->file_size - (this->file_size - this->played_cnt)) * 100 / this->file_size;
-            p.filename = this->filename;
-            *(struct pad_progress *)value = p;
+            // TODO implement
+            // struct pad_progress p;
+            // p.elapsed_secs = this->elapsed_secs;
+            // p.percent_complete = (this->file_size - (this->file_size - this->played_cnt)) * 100 / this->file_size;
+            // p.filename = this->filename;
+            // *(struct pad_progress *)value = p;
             return true;
         }
 
@@ -515,7 +570,7 @@ bool Player::suspend_command(std::string& params, OutputStream& os )
 
     if(suspended) {
         os.printf("Already suspended\n");
-        return;
+        return true;
     }
 
     os.printf("Suspending print, waiting for queue to empty...\n");
@@ -534,25 +589,31 @@ bool Player::suspend_command(std::string& params, OutputStream& os )
         this->was_playing_file = false;
     }
 
-    // we need to allow main loop to cycle a few times to clear any buffered commands in the serial streams etc
+    // FIXME/TODO we do not have a main loop but there are queues that may be full of commands
+    // ... we need to allow main loop to cycle a few times to clear any buffered commands in the serial streams etc
     suspend_loops = 10;
+
+    return true;
 }
 
 // this completes the suspend
 void Player::suspend_part2()
 {
     //  need to use streams here as the original stream may have changed
-    printf("// Waiting for queue to empty (Host must stop sending)...\n");
+    print_to_all_consoles("// Waiting for queue to empty (Host must stop sending)...\n");
     // wait for queue to empty
     Conveyor::getInstance()->wait_for_idle();
 
-    printf("// Saving current state...\n");
+    print_to_all_consoles("// Saving current state...\n");
 
     // save current XYZ position
     Robot::getInstance()->get_axis_position(this->saved_position);
 
-    // save current extruder state
-    PublicData::set_value( extruder_key, save_state_key, nullptr );
+    // save current extruder state for all extruders
+    std::vector<Module*> extruders = Module::lookup_group("extruder");
+    for(auto m : extruders) {
+        m->request("save_state", nullptr);
+    }
 
     // save state use M120
     Robot::getInstance()->push_state();
@@ -561,32 +622,31 @@ void Player::suspend_part2()
 
     this->saved_temperatures.clear();
     if(!this->leave_heaters_on && !this->override_leave_heaters_on) {
-        // save current temperatures, get a vector of all the controllers data
-        std::vector<struct pad_temperature> controllers;
-        bool ok = PublicData::get_value(temperature_control_key, poll_controls_key, &controllers);
-        if (ok) {
+        // save current temperatures
+
+        // scan all temperature controls
+        std::vector<Module*> controllers = Module::lookup_group("temperature control");
+        for(auto m : controllers) {
             // query each heater and save the target temperature if on
-            for (auto &c : controllers) {
+            TemperatureControl::pad_temperature_t temp;
+            if(m->request("get_current_temperature", &temp)) {
+                //m->get_instance_name(), temp.designator.c_str(), temp.tool_id, temp.current_temperature, temp.target_temperature, temp.pwm);
                 // TODO see if in exclude list
-                if(c.target_temperature > 0) {
-                    this->saved_temperatures[c.id] = c.target_temperature;
+                if(temp.target_temperature > 0) {
+                    this->saved_temperatures[m] = temp.target_temperature;
+                    // turn off heaters that were on
+                    float t = 0;
+                    m->request("set_temperature", &t);
                 }
             }
-        }
-
-        // turn off heaters that were on
-        for(auto& h : this->saved_temperatures) {
-            float t = 0;
-            PublicData::set_value( temperature_control_key, h.first, &t );
         }
     }
 
     // execute optional gcode if defined
     if(!after_suspend_gcode.empty()) {
-        struct SerialMessage message;
-        message.message = after_suspend_gcode;
-        message.os = &(StreamOutput::NullStream);
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        OutputStream nullos;
+        dispatch_line(nullos, after_suspend_gcode.c_str());
+
     }
 
     printf("// Print Suspended, enter resume to continue printing\n");
@@ -605,7 +665,7 @@ bool Player::resume_command(std::string& params, OutputStream& os )
 
     if(!suspended) {
         os.printf("Not suspended\n");
-        return;
+        return true;
     }
 
     os.printf("resuming print...\n");
@@ -615,51 +675,46 @@ bool Player::resume_command(std::string& params, OutputStream& os )
         // set heaters to saved temps
         for(auto& h : this->saved_temperatures) {
             float t = h.second;
-            PublicData::set_value( temperature_control_key, h.first, &t );
+            h.first->request("set_temperature", &t);
         }
         os.printf("Waiting for heaters...\n");
         bool wait = true;
-        uint32_t tus = us_ticker_read(); // mbed call
+        int cnt = 0;
         while(wait) {
+            safe_sleep(100); // sleep for 100ms
             wait = false;
 
-            bool timeup = false;
-            if((us_ticker_read() - tus) >= 1000000) { // print every 1 second
-                timeup = true;
-                tus = us_ticker_read(); // mbed call
-            }
+            bool timeup = (cnt++ % 10) == 0; // every second
 
             for(auto& h : this->saved_temperatures) {
-                struct pad_temperature temp;
-                if(PublicData::get_value( temperature_control_key, current_temperature_key, h.first, &temp )) {
-                    if(timeup)
+                struct TemperatureControl::pad_temperature temp;
+                if(h.first->request("get_current_temperature", &temp)) {
+                    if(timeup) {
                         os.printf("%s:%3.1f /%3.1f @%d ", temp.designator.c_str(), temp.current_temperature, ((temp.target_temperature == -1) ? 0.0 : temp.target_temperature), temp.pwm);
+                    }
                     wait = wait || (temp.current_temperature < h.second);
                 }
             }
             if(timeup) os.printf("\n");
 
-            if(wait)
-                THEKERNEL->call_event(ON_IDLE, this);
-
-            if(THEKERNEL->is_halted()) {
+            if(is_halted()) {
                 // abort temp wait and rest of resume
-                THEKERNEL->streams->printf("Resume aborted by kill\n");
+                os.printf("Resume aborted by kill\n");
                 Robot::getInstance()->pop_state();
                 this->saved_temperatures.clear();
                 suspended = false;
-                return;
+                return true;
             }
         }
     }
 
+    OutputStream nullos;
+
     // execute optional gcode if defined
     if(!before_resume_gcode.empty()) {
         os.printf("Executing before resume gcode...\n");
-        struct SerialMessage message;
-        message.message = before_resume_gcode;
-        message.os = &(StreamOutput::NullStream);
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        dispatch_line(nullos, before_resume_gcode.c_str());
+        Conveyor::getInstance()->wait_for_idle();
     }
 
     // Restore position
@@ -668,31 +723,35 @@ bool Player::resume_command(std::string& params, OutputStream& os )
     bool abs_mode = Robot::getInstance()->absolute_mode; // what mode we were in
     // force absolute mode for restoring position, then set to the saved relative/absolute mode
     Robot::getInstance()->absolute_mode = true;
-    {
-        // NOTE position was saved in MCS so must use G53 to restore position
-        char buf[128];
-        snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
-        struct SerialMessage message;
-        message.message = buf;
-        message.os = &(StreamOutput::NullStream);
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-    }
+
+    // NOTE position was saved in MCS so must use G53 to restore position
+    Robot::getInstance()->next_command_is_MCS = true; // must use machine coordinates in case G92 or WCS is in effect
+    THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', saved_position[0], 'Y', saved_position[1], 'Z', saved_position[2], 0);
+    Conveyor::getInstance()->wait_for_idle();
+
     Robot::getInstance()->absolute_mode = abs_mode;
 
     // restore extruder state
-    PublicData::set_value( extruder_key, restore_state_key, nullptr );
+    std::vector<Module*> extruders = Module::lookup_group("extruder");
+    for(auto m : extruders) {
+        m->request("restore_state", nullptr);
+    }
 
     os.printf("Resuming print\n");
 
     if(this->was_playing_file) {
         this->playing_file = true;
         this->was_playing_file = false;
+
     } else {
         // Send resume to host
-        THEKERNEL->streams->printf("// action:resume\n");
+        os.printf("// action:resume\n");
     }
 
     // clean up
     this->saved_temperatures.clear();
     suspended = false;
+
+    return true;
 }
+

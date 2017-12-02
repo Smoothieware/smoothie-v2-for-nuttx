@@ -187,22 +187,25 @@ static FILE *upload_fp = nullptr;
 // TODO maybe move to Dispatcher
 static GCodeProcessor gp;
 // can be called by modules when in command thread context
-bool dispatch_line(OutputStream& os, const char *line)
+bool dispatch_line(OutputStream& os, const char *cl)
 {
+    // Don't like this, but we need a writable copy of the input line
+    char line[strlen(cl)+1];
+    strcpy(line, cl);
+
     // map some special M codes to commands as they violate the gcode spec and pass a string parameter
     // M23, M32, M117 => m23, m32, m117 and handle as a command
-    // if(strncmp(line, "M23 ", 4) == 0) line[0] = 'm';
-    // else if(strncmp(line, "M32 ", 4) == 0) line[0] = 'm';
-    // else if(strncmp(line, "M117 ", 5) == 0) line[0] = 'm';
+    if(strncmp(line, "M23 ", 4) == 0) line[0] = 'm';
+    else if(strncmp(line, "M32 ", 4) == 0) line[0] = 'm';
+    else if(strncmp(line, "M117 ", 5) == 0) line[0] = 'm';
 
     // handle save to file M codes:- M28 filename, and M29
     if(strncmp(line, "M28 ", 4) == 0) {
-        char upload_filename[128];
-        strncpy(upload_filename, &line[4], sizeof(upload_filename)); // rest of line is the filename
+        char *upload_filename= &line[4];
         if(strncmp(upload_filename, "/sd/", 4) != 0) {
-            // prepend /sd/
-            strcpy(upload_filename, "/sd/");
-            strncat(upload_filename, &line[4], sizeof(upload_filename) - 4);
+            // prepend /sd/ luckily we have exactly 4 characters before the filename
+            memcpy(line, "/sd/", 4);
+            upload_filename= line;
         }
         upload_fp = fopen(upload_filename, "w");
         if(upload_fp != nullptr) {
