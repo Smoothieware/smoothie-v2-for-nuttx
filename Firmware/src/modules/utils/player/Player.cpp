@@ -123,78 +123,42 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
 {
     HELP("M23 - select file")
 
-    // M23 select file
+    std::string cmd("-p /sd/");
+    cmd.append(params); // filename is whatever is in params including spaces
+    OutputStream nullos;
+    play_command(cmd, nullos);
 
-    // TODO this duplicates play()
-    this->filename = "/sd/" + params; // filename is whatever is in params
-    this->current_os = nullptr;
-
-    if(this->current_file_handler != NULL) {
-        this->playing_file = false;
-        fclose(this->current_file_handler);
-    }
-    this->current_file_handler = fopen( this->filename.c_str(), "r");
-
-    if(this->current_file_handler == NULL) {
+    if(this->current_file_handler == nullptr) {
         os.printf("file.open failed: %s\n", this->filename.c_str());
-        return true;
 
     } else {
-        // get size of file
-        int result = fseek(this->current_file_handler, 0, SEEK_END);
-        if (0 != result) {
-            this->file_size = 0;
-        } else {
-            this->file_size = ftell(this->current_file_handler);
-            fseek(this->current_file_handler, 0, SEEK_SET);
-        }
         os.printf("File opened:%s Size:%ld\n", this->filename.c_str(), this->file_size);
         os.printf("File selected\n");
     }
 
-
-    this->played_cnt = 0;
-    this->elapsed_secs = 0;
     return true;
 }
 
 bool Player::handle_m32(std::string& params, OutputStream& os)
 {
-    HELP("M32 - play file")
-    // TODO this duplicates play()
-    // M32 select file and start print
-    this->filename = "/sd/" + params; // filename is whatever is in params including spaces
-    this->current_os = nullptr;
+    HELP("M32 - select file and start print");
 
-    if(this->current_file_handler != NULL) {
-        this->playing_file = false;
-        fclose(this->current_file_handler);
+    std::string f("/sd/");
+    f.append(params); // filename is whatever is in params including spaces
+
+    OutputStream nullos;
+    play_command(f, nullos);
+
+    // we need to send back different messages for M32
+    if(this->current_file_handler == nullptr) {
+        os.printf("file.open failed: %s\n", f.c_str());
     }
 
-    this->current_file_handler = fopen( this->filename.c_str(), "r");
-    if(this->current_file_handler == NULL) {
-        os.printf("file.open failed: %s\n", this->filename.c_str());
-    } else {
-        this->playing_file = true;
-
-        // get size of file
-        int result = fseek(this->current_file_handler, 0, SEEK_END);
-        if (0 != result) {
-            file_size = 0;
-        } else {
-            file_size = ftell(this->current_file_handler);
-            fseek(this->current_file_handler, 0, SEEK_SET);
-        }
-    }
-
-    this->played_cnt = 0;
-    this->elapsed_secs = 0;
     return true;
 }
 
 bool Player::handle_gcode(GCode& gcode, OutputStream& os)
 {
-    //std::string args = get_arguments(gcode.get_command()); // TODO gcode cannot have string arguments how to fix?
     if (gcode.has_m()) {
         switch(gcode.get_code()) {
             case 21: // Dummy code; makes Octoprint happy -- supposed to initialize SD card
@@ -213,26 +177,22 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
                 break;
 
             case 26: // Reset print. Slightly different than M26 in Marlin and the rest
-                if(this->current_file_handler != NULL) {
+                if(this->current_file_handler != nullptr) {
                     std::string currentfn = this->filename.c_str();
-                    unsigned long old_size = this->file_size;
 
                     // abort the print
+                    OutputStream nullos;
                     std::string cmd;
-                    abort_command(cmd, os);
+                    abort_command(cmd, nullos);
 
                     if(!currentfn.empty()) {
-                        // reload the last file opened
-                        this->current_file_handler = fopen(currentfn.c_str() , "r");
+                        play_command(currentfn, nullos);
 
-                        if(this->current_file_handler == NULL) {
+                        if(this->current_file_handler == nullptr) {
                             os.printf("file.open failed: %s\n", currentfn.c_str());
-                        } else {
-                            this->filename = currentfn;
-                            this->file_size = old_size;
-                            this->current_os = nullptr;
                         }
                     }
+
                 } else {
                     os.printf("No file loaded\n");
                 }
@@ -288,7 +248,7 @@ void Player::play_thread()
 // Play a gcode file by considering each line as if it was received on the serial console
 bool Player::play_command( std::string& params, OutputStream& os )
 {
-    HELP("play [-v] file")
+    HELP("play [-v] [-p] file")
 
     // extract any options from the line and terminate the line there
     std::string options = extract_options(params);
@@ -301,19 +261,23 @@ bool Player::play_command( std::string& params, OutputStream& os )
     // Get filename which is the entire parameter line upto any options found or entire line
     this->filename = params;
 
-    if(this->current_file_handler != NULL) { // must have been a paused print
+    if(this->current_file_handler != nullptr) { // must have been a paused print
         fclose(this->current_file_handler);
     }
 
     this->current_file_handler = fopen( this->filename.c_str(), "r");
-    if(this->current_file_handler == NULL) {
+    if(this->current_file_handler == nullptr) {
         os.printf("File not found: %s\n", this->filename.c_str());
         return true;
     }
 
     os.printf("Playing %s\n", this->filename.c_str());
 
-    this->playing_file = true;
+    if( options.find_first_of("Pp") == std::string::npos ) {
+        this->playing_file = true;
+    }else{
+        this->playing_file = false; // start paused
+    }
 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == std::string::npos ) {
