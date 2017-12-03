@@ -59,6 +59,7 @@ class Player : public Module {
             bool override_leave_heaters_on:1;
             bool halted:1;
             bool abort_thread:1;
+            bool play_thread_exited:1;
             uint8_t suspend_loops:4;
         };
 };

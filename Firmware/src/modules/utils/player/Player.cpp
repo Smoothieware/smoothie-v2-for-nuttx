@@ -38,6 +38,8 @@ Player::Player() : Module("player")
     this->suspend_loops = 0;
     halted = false;
     abort_thread= false;
+    play_thread_exited= false;
+    play_thread_p= nullptr;
     instance = this;
 }
 
@@ -123,7 +125,7 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
 {
     HELP("M23 - select file")
 
-    std::string cmd("-p /sd/");
+    std::string cmd("-p /sd/"); // starts paused
     cmd.append(params); // filename is whatever is in params including spaces
     OutputStream nullos;
     play_command(cmd, nullos);
@@ -241,8 +243,6 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
 void Player::play_thread()
 {
     instance->player_thread();
-    delete instance->play_thread_p;
-    instance->play_thread_p= nullptr;
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
@@ -301,6 +301,7 @@ bool Player::play_command( std::string& params, OutputStream& os )
     this->elapsed_secs = 0;
 
     // start play thread
+    play_thread_exited= false;
     play_thread_p = new std::thread(play_thread);
 
     return true;
@@ -357,13 +358,16 @@ bool Player::abort_command( std::string& params, OutputStream& os )
 {
     HELP("abort playing file");
 
-    if(!playing_file && current_file_handler == NULL) {
+    if(!playing_file && current_file_handler == nullptr) {
         os.printf("Not currently playing\n");
         return true;
     }
     abort_thread= true;
     // wait for the thread to exit
     play_thread_p->join();
+    play_thread_exited= false;
+    delete play_thread_p;
+    play_thread_p= nullptr;
 
     suspended = false;
     playing_file = false;
@@ -410,6 +414,13 @@ void Player::in_command_ctx()
             suspend_part2();
             return;
         }
+    }
+
+    // clean up the play thread once it has finished normally
+    if(play_thread_exited && play_thread_p != nullptr) {
+        play_thread_exited= false;
+        delete play_thread_p;
+        play_thread_p= nullptr;
     }
 }
 
@@ -481,7 +492,11 @@ void Player::player_thread()
     }
 
     mq_close(mqfd);
+
     printf("DEBUG: Player thread exiting\n");
+
+    // indicates it is safe to delete the thread
+    play_thread_exited= true;
 }
 
 bool Player::request(const char *key, void *value)
