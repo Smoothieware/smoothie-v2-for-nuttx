@@ -454,7 +454,7 @@ bool TemperatureControl::handle_gcode(GCode & gcode, OutputStream & os)
 
 bool TemperatureControl::request(const char *key, void *value)
 {
-    if(strcmp(key, "get_current_temperature")) {
+    if(strcmp(key, "get_current_temperature") == 0) {
         // we are passed a pad_temperature
         pad_temperature_t *t = static_cast<pad_temperature_t *>(value);
 
@@ -467,7 +467,7 @@ bool TemperatureControl::request(const char *key, void *value)
         return true;
     }
 
-    if(strcmp(key, "set_temperature")) {
+    if(strcmp(key, "set_temperature") == 0) {
         // NOTE unlike the M code this will set the temp now not when the queue is empty
         float t = *static_cast<float *>(value);
         this->set_desired_temperature(t);
