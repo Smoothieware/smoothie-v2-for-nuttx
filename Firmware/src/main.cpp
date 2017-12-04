@@ -174,6 +174,10 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
     return true;
 }
 
+void delete_message_queue(mqd_t mqfd)
+{
+    mq_close(mqfd);
+}
 
 #include "GCode.h"
 #include "GCodeProcessor.h"

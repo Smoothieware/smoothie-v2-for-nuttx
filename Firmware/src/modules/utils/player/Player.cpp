@@ -125,8 +125,9 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
 {
     HELP("M23 - select file")
 
-    std::string cmd("-p /sd/"); // starts paused
+    std::string cmd("/sd/");
     cmd.append(params); // filename is whatever is in params including spaces
+    cmd.append(" -p"); // starts paused
     OutputStream nullos;
     play_command(cmd, nullos);
 
@@ -248,7 +249,7 @@ void Player::play_thread()
 // Play a gcode file by considering each line as if it was received on the serial console
 bool Player::play_command( std::string& params, OutputStream& os )
 {
-    HELP("play [-v] [-p] file")
+    HELP("play file [-v] [-p]")
 
     // extract any options from the line and terminate the line there
     std::string options = extract_options(params);
@@ -315,7 +316,7 @@ bool Player::progress_command( std::string& params, OutputStream& os )
     std::string options = stringutils::shift_parameter( params );
     bool sdprinting = options.find_first_of("Bb") != std::string::npos;
 
-    if(!playing_file && current_file_handler != NULL) {
+    if(!playing_file && current_file_handler != nullptr) {
         if(sdprinting)
             os.printf("SD printing byte %lu/%lu\n", played_cnt, file_size);
         else
@@ -381,7 +382,7 @@ bool Player::abort_command( std::string& params, OutputStream& os )
     current_file_handler = nullptr;
     if(params.empty()) {
         // clear out the block queue, will wait until queue is empty
-        // MUST be called in on_main_loop to make sure there are no blocked main loops waiting to put something on the queue
+        // MUST be called in command thread context to make sure there are no blocked messages waiting to put something on the queue
         Conveyor::getInstance()->flush_queue();
 
         // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
@@ -492,11 +493,11 @@ void Player::player_thread()
         this->reply_os = nullptr;
     }
 
-    mq_close(mqfd);
+    delete_message_queue(mqfd);
 
     printf("DEBUG: Player thread exiting\n");
 
-    // indicates it is safe to delete the thread
+    // indicates it is safe to delete the thread (after it has been joined)
     play_thread_exited= true;
 }
 

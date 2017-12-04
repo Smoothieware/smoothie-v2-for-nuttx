@@ -49,6 +49,11 @@ class Player : public Module {
         unsigned long elapsed_secs;
         float saved_position[3]; // only saves XYZ
         std::map<Module*, float> saved_temperatures;
+
+        volatile bool abort_thread;
+        volatile bool play_thread_exited;
+        volatile bool halted;
+
         struct {
             bool on_boot_gcode_enable:1;
             bool booted:1;
@@ -57,9 +62,6 @@ class Player : public Module {
             bool was_playing_file:1;
             bool leave_heaters_on:1;
             bool override_leave_heaters_on:1;
-            bool halted:1;
-            bool abort_thread:1;
-            bool play_thread_exited:1;
             uint8_t suspend_loops:4;
         };
 };
