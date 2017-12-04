@@ -42,7 +42,7 @@ void GCode::dump(FILE *fp) const
 	}
 	fprintf(fp, " ");
 	for(auto& i : args) {
-		fprintf(fp, "%c:%1.5f ", i.first, i.second);
+		fprintf(fp, "%c%1.5f ", i.first, i.second);
 	}
 	fprintf(fp, "\n");
 }

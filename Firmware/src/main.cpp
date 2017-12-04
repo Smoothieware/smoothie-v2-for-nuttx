@@ -194,8 +194,9 @@ bool dispatch_line(OutputStream& os, const char *cl)
     strcpy(line, cl);
 
     // map some special M codes to commands as they violate the gcode spec and pass a string parameter
-    // M23, M32, M117 => m23, m32, m117 and handle as a command
+    // M23, M32, M117, M30 => m23, m32, m117, rm and handle as a command
     if(strncmp(line, "M23 ", 4) == 0) line[0] = 'm';
+    else if(strncmp(line, "M30 ", 4) == 0) { strcpy(line, "rm /sd/"); strcpy(&line[7], &cl[4]); } // make into an rm command
     else if(strncmp(line, "M32 ", 4) == 0) line[0] = 'm';
     else if(strncmp(line, "M117 ", 5) == 0) line[0] = 'm';
 
@@ -597,6 +598,7 @@ void safe_sleep(uint32_t ms)
 #include "Laser.h"
 #include "Endstops.h"
 #include "ZProbe.h"
+#include "Player.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -776,6 +778,12 @@ static int smoothie_startup(int, char **)
             zprobe = nullptr;
         }
 
+        printf("configure player\n");
+        Player *player = new Player();
+        if(!player->configure(cr)) {
+            printf("WARNING: Failed to configure Player\n");
+        }
+
         {
             // configure system leds (if any)
             ConfigReader::section_map_t m;
@@ -798,7 +806,7 @@ static int smoothie_startup(int, char **)
         fs.close();
 
         // unmount sdcard
-        umount("/sd");
+        //umount("/sd");
 #endif
 
         // initialize planner before conveyor this is when block queue is created

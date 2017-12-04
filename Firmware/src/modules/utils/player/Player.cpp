@@ -131,10 +131,10 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
     play_command(cmd, nullos);
 
     if(this->current_file_handler == nullptr) {
-        os.printf("file.open failed: %s\n", this->filename.c_str());
+        os.printf("file.open failed: %s\n", params.c_str());
 
     } else {
-        os.printf("File opened:%s Size:%ld\n", this->filename.c_str(), this->file_size);
+        os.printf("File opened:%s Size:%ld\n", params.c_str(), this->file_size);
         os.printf("File selected\n");
     }
 
@@ -153,7 +153,7 @@ bool Player::handle_m32(std::string& params, OutputStream& os)
 
     // we need to send back different messages for M32
     if(this->current_file_handler == nullptr) {
-        os.printf("file.open failed: %s\n", f.c_str());
+        os.printf("file.open failed: %s\n", params.c_str());
     }
 
     return true;
@@ -418,6 +418,7 @@ void Player::in_command_ctx()
 
     // clean up the play thread once it has finished normally
     if(play_thread_exited && play_thread_p != nullptr) {
+        play_thread_p->join(); // make sure it has ended
         play_thread_exited= false;
         delete play_thread_p;
         play_thread_p= nullptr;
