@@ -10,10 +10,22 @@ The config file is called config.ini on the sdcard and examples are shown in the
 
 The config.ini may also be builtin and is defined in string-config-bambino.h, a #define is needed in the main.cpp to use the builtin config.ini.
 
-Currently Robot is ported and should allow XYZ motors to work as expected at 100Khz max step rate.
-Also enough modues are ported to run a 3D printer, Hotends, extruders etc, also a laser is supported.
+Currently the max stepping rate is limited to 100Khz as this seems the upper limit to handle the 10us interrupt.
 
-NOTE for the smooothiev2 mini alpha replace Bambino above with Minialpha...
+Enough modules have been ported to run a 3D printer, also a laser is supported.
+
+Modules that have been ported so far...
+
+* endstops
+* extruder
+* laser
+* switch
+* temperaturecontrol
+* zprobe
+* currentcontrol
+* killbutton
+
+*NOTE* for the smooothiev2 mini alpha replace Bambino above with Minialpha...
 
 ```rake target=Minialpha```
 
@@ -25,8 +37,8 @@ Make sure you follow the ../README.md file for creating the nuttx-export.Bambino
 
 on the Mini Alpha there are 4 leds..
 
-led1 - nuttx system led, on when nuttx is running ok
-led2 - nuttx syste led, flashes when there is interrupt activity, hard on when there is a crash.
-led3 - smoothie led, flashes slowly when idle, does not flash when busy
-led4 - smoothie led, TBD
+1. led1 - nuttx system led, on when nuttx is running ok
+2. led2 - nuttx syste led, flashes when there is interrupt activity, hard on when there is a crash.
+3. led3 - smoothie led, flashes slowly when idle, does not flash when busy
+4. led4 - smoothie led, TBD
 
