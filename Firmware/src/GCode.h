@@ -19,7 +19,7 @@ public:
 	bool has_arg(char c) const { return (argbitmap & (1<<(c-'A'))) != 0; }
 	bool has_no_args() const { return argbitmap == 0; }
 	float get_arg(char c) const { return args.at(c); }
-	float get_int_arg(char c) const { return (int)args.at(c); }
+	int get_int_arg(char c) const { return (int)args.at(c); }
 	const Args_t& get_args() const { return args; }
 	size_t get_num_args() const { return args.size(); }
 	bool has_g() const { return is_g; }

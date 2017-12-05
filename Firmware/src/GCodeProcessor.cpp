@@ -130,7 +130,7 @@ bool GCodeProcessor::parse(const char *line, GCodes_t& gcodes)
                 // TODO tool change will break when/if real tool change is added and will need to be re thought
                 gc.set_t();
                 gc.set_command('M', 6, 0);
-                gc.add_arg('T', std::get<0>(parse_code(p)));
+                gc.add_arg('T', std::get<0>(code));
 
             } else {
                 gc.set_command('G', group1.get_code(), group1.get_subcode()); // modal group1, copies G code and subcode for this line
