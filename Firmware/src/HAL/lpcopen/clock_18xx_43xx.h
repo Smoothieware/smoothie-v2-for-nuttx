@@ -33,6 +33,7 @@
 #define __CLOCK_18XX_43XX_H_
 
 #include "cguccu_18xx_43xx.h"
+#include "chip-defs.h"
 
 #ifdef __cplusplus
 extern "C" {

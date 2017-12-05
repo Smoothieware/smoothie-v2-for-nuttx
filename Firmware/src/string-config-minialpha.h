@@ -134,7 +134,6 @@ hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontro
 hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
 hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend.designator = T            # Designator letter for this module\n\
-hotend.pwm_frequency = 100       # FIXME slow for now when is SPIFI\n\
 \n\
 hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend2.tool_id = 1               # T1 will select\n\
@@ -205,3 +204,4 @@ miny.limit_enable = true            # enable hard limits\n\
 #probe.pin = gpio7_21\n\
 \n\
 \n";
+

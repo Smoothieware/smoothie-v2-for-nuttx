@@ -240,6 +240,7 @@ float Thermistor::get_temperature()
         if(t > max_temp) max_temp = t;
         if(t < min_temp) min_temp = t;
     }
+
     return t;
 }
 
@@ -278,6 +279,7 @@ void Thermistor::get_raw(OutputStream& os)
 float Thermistor::adc_value_to_temperature(uint32_t adc_value)
 {
     const uint32_t max_adc_value = Adc::get_max_value();
+
     if ((adc_value >= max_adc_value) || (adc_value == 0))
         return std::numeric_limits<float>::infinity();
 
@@ -295,7 +297,8 @@ float Thermistor::adc_value_to_temperature(uint32_t adc_value)
         // use Beta value
         t = (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
     }
-
+    float adc_voltage=((float)adc_value/(float)max_adc_value)*3.25;
+    printf("DEBUG: adc_value=%d max_adc_value=%d adc_voltage=%.3fV t=%.3fºC\n",adc_value,max_adc_value,adc_voltage,t);
     return t;
 }
 

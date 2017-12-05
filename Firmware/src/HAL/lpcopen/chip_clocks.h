@@ -36,6 +36,7 @@
 extern "C" {
 #endif
 
+#define CHIP_LPC43XX
 /** @ingroup CLOCK_18XX_43XX
  * @{
  */

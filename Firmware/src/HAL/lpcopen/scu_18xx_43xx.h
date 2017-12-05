@@ -35,8 +35,18 @@ extern "C" {
  * @ingroup CHIP_18XX_43XX_Drivers
  * @{
  */
+#include "chip-defs.h"
 
-
+#define __STATIC_INLINE static inline
+#define STATIC static
+#define INLINE inline
+#ifdef __cplusplus
+  #define   __I     volatile             /*!< Defines 'read only' permissions                 */
+#else
+  #define   __I     volatile const       /*!< Defines 'read only' permissions                 */
+#endif
+#define     __O     volatile             /*!< Defines 'write only' permissions                */
+#define     __IO    volatile             /*!< Defines 'read / write' permissions              */
 /**
  * @brief Array of pin definitions passed to Chip_SCU_SetPinMuxing() must be in this format
  */
