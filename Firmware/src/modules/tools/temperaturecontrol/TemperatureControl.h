@@ -46,7 +46,7 @@ private:
     void setPIDi(float i);
     void setPIDd(float d);
     void check_runaway();
-    bool handle_gcode(GCode& gcode, OutputStream& os);
+    bool handle_mcode(GCode& gcode, OutputStream& os);
     bool handle_M6(GCode& gcode, OutputStream& os);
 
     float target_temperature;
