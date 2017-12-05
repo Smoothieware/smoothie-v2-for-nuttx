@@ -239,7 +239,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
     if(!this->readonly) {
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 143, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 301, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
-        //Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 303, std::bind(&TemperatureControl::handle_autopid, this, _1, _2));
+        Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 303, std::bind(&TemperatureControl::handle_autopid, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 500, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, 503, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
 
@@ -276,23 +276,22 @@ bool TemperatureControl::handle_M6(GCode& gcode, OutputStream& os)
     return true;
 }
 
-#if 0
 // we no longer have abort auto pid so control X will abort it or kill button
 // Also the parameter to select the tool is P not E
 // if this is unacceptible then we will have to run autopid in a thread and it will get a lot more complex
 bool TemperatureControl::handle_autopid(GCode& gcode, OutputStream& os)
 {
     if (gcode.get_code() == 303 && gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id) {
-        AutoPID *autopid = new AutoPID();
+        os.printf("Running autopid on toolid %d, control X to abort\n", tool_id);
+        AutoPID *autopid = new AutoPID(this);
         // will not return until complete
-        autopid->start(gcode, os, this);
+        autopid->start(gcode, os);
         delete autopid;
         return true;
     }
 
     return false;
 }
-#endif
 
 bool TemperatureControl::handle_mcode(GCode & gcode, OutputStream & os)
 {
