@@ -15,11 +15,11 @@ class PID_Autotuner
 public:
     PID_Autotuner(TemperatureControl *);
     void start(GCode&, OutputStream&);
-    void abort();
 
 private:
-    void begin(float target, int ncycles);
-    void finishUp();
+    void run_auto_pid(OutputStream& os, float target, int ncycles);
+    void finishUp(OutputStream& os);
+    void abort();
 
     TemperatureControl *temp_control;
     float target_temperature;
@@ -37,10 +37,9 @@ private:
     float absMax, absMin;
     float oStep;
     int output;
-    volatile unsigned long tickCnt;
+    unsigned long tickCnt;
     struct {
         bool justchanged:1;
-        volatile bool tick:1;
         bool firstPeak:1;
     };
 };

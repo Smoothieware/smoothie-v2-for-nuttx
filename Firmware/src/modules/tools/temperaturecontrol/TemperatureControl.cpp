@@ -7,8 +7,7 @@
 #include "SlowTicker.h"
 #include "Dispatcher.h"
 #include "main.h"
-
-//#include "PID_Autotuner.h"
+#include "PID_Autotuner.h"
 
 #include <math.h>
 
@@ -281,9 +280,9 @@ bool TemperatureControl::handle_M6(GCode& gcode, OutputStream& os)
 // if this is unacceptible then we will have to run autopid in a thread and it will get a lot more complex
 bool TemperatureControl::handle_autopid(GCode& gcode, OutputStream& os)
 {
-    if (gcode.get_code() == 303 && gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id) {
-        os.printf("Running autopid on toolid %d, control X to abort\n", tool_id);
-        AutoPID *autopid = new AutoPID(this);
+    if (gcode.has_arg('P') && gcode.get_int_arg('P') == this->tool_id) {
+        //os.printf("Running autopid on toolid %d, control X to abort\n", tool_id);
+        PID_Autotuner *autopid = new PID_Autotuner(this);
         // will not return until complete
         autopid->start(gcode, os);
         delete autopid;

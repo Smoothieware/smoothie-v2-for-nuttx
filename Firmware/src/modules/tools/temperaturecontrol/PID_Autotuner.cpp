@@ -4,6 +4,7 @@
 #include "SigmaDeltaPwm.h"
 #include "OutputStream.h"
 #include "GCode.h"
+#include "main.h"
 
 #include <cmath>        // std::abs
 
@@ -12,9 +13,8 @@
 
 PID_Autotuner::PID_Autotuner(TemperatureControl *tc) : temp_control(tc)
 {
-    lastInputs = NULL;
-    peaks = NULL;
-    tick = false;
+    lastInputs = nullptr;
+    peaks = nullptr;
     tickCnt = 0;
     nLookBack = 10 * 20; // 10 seconds of lookback (fixed 20ms tick period)
 }
@@ -47,17 +47,20 @@ void PID_Autotuner::start(GCode& gcode, OutputStream& os)
 
             os.printf("%s: Starting PID Autotune, %d max cycles, control X aborts\n", temp_control->get_designator(), ncycles);
 
-            this->begin(target, ncycles);
+            this->run_auto_pid(os, target, ncycles);
 }
 
-void PID_Autotuner::begin(float target, int ncycles)
+/**
+ * this autopid is based on https://github.com/br3ttb/Arduino-PID-AutoTune-Library/blob/master/PID_AutoTune_v0/PID_AutoTune_v0.cpp
+ */
+void PID_Autotuner::run_auto_pid(OutputStream& os, float target, int ncycles)
 {
     noiseBand = 0.5;
     oStep = temp_control->heater_pin->max_pwm(); // use max pwm to cycle temp
     lookBackCnt = 0;
     tickCnt = 0;
 
-    if (lastInputs != NULL) delete[] lastInputs;
+    if (lastInputs != nullptr) delete[] lastInputs;
     lastInputs = new float[nLookBack + 1];
 
     temp_control->heater_pin->set(false);
@@ -66,7 +69,7 @@ void PID_Autotuner::begin(float target, int ncycles)
     target_temperature = target;
     requested_cycles = ncycles;
 
-    if (peaks != NULL) delete[] peaks;
+    if (peaks != nullptr) delete[] peaks;
     peaks = new float[ncycles];
 
     for (int i = 0; i < ncycles; i++) {
@@ -78,138 +81,110 @@ void PID_Autotuner::begin(float target, int ncycles)
     justchanged = false;
     firstPeak= false;
     output= 0;
-}
 
-void PID_Autotuner::abort()
-{
-    if (temp_control == NULL)
-        return;
+    // we run in a loop with a 50ms delay
+    while(true) {
+        safe_sleep(50);
+        tickCnt += 50;
 
-    temp_control->target_temperature = 0;
-    temp_control->heater_pin->set(false);
-    temp_control = NULL;
-
-    if (peaks != NULL)
-        delete[] peaks;
-    peaks = NULL;
-    if (lastInputs != NULL)
-        delete[] lastInputs;
-    lastInputs = NULL;
-}
-
-uint32_t PID_Autotuner::on_tick(uint32_t dummy)
-{
-    if (temp_control != NULL)
-        tick = true;
-
-    tickCnt += (1000 / 20); // millisecond tick count
-    return 0;
-}
-
-/**
- * this autopid is based on https://github.com/br3ttb/Arduino-PID-AutoTune-Library/blob/master/PID_AutoTune_v0/PID_AutoTune_v0.cpp
- */
-void PID_Autotuner::on_idle(void *)
-{
-    if (!tick)
-        return;
-
-    tick = false;
-
-    if (temp_control == NULL)
-        return;
-
-    if(peakCount >= requested_cycles) {
-        // NOTE we output to kernel::streams becuase it is out-of-band data and original stream may be closed
-        os.printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
-        finishUp();
-        return;
-    }
-
-    float refVal = temp_control->get_temperature();
-
-    // oscillate the output base on the input's relation to the setpoint
-    if (refVal > target_temperature + noiseBand) {
-        output = 0;
-        //temp_control->heater_pin->pwm(output);
-        temp_control->heater_pin->set(false);
-        if(!firstPeak) {
-            firstPeak= true;
-            absMax= refVal;
-            absMin= refVal;
-        }
-
-    } else if (refVal < target_temperature - noiseBand) {
-        output = oStep;
-        temp_control->heater_pin->pwm(output);
-    }
-
-    if ((tickCnt % 1000) == 0) {
-        os.printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
-    }
-
-    if(!firstPeak){
-        // we wait until we hit the first peak befire we do anything else,we need to ignore the itial warmup temperatures
-        return;
-    }
-
-    // find the peaks high and low
-    bool isMax = true, isMin = true;
-    for (int i = nLookBack - 1; i >= 0; i--) {
-        float val = lastInputs[i];
-        if (isMax) isMax = refVal > val;
-        if (isMin) isMin = refVal < val;
-        lastInputs[i + 1] = lastInputs[i];
-    }
-
-    lastInputs[0] = refVal;
-
-    //we don't want to trust the maxes or mins until the inputs array has been filled
-    if (lookBackCnt < nLookBack) {
-        lookBackCnt++; // count number of times we have filled lastInputs
-        return;
-    }
-
-    if (isMax) {
-        if(refVal > absMax) absMax= refVal;
-
-        if (peakType == 0) peakType = 1;
-        if (peakType == -1) {
-            peakType = 1;
-            justchanged = true;
-            peak2 = peak1;
-        }
-        peak1 = tickCnt;
-        peaks[peakCount] = refVal;
-
-    } else if (isMin) {
-        if(refVal < absMin) absMin= refVal;
-        if (peakType == 0) peakType = -1;
-        if (peakType == 1) {
-            peakType = -1;
-            peakCount++;
-            justchanged = true;
-        }
-
-        if (peakCount < requested_cycles) peaks[peakCount] = refVal;
-    }
-
-    if (justchanged && peakCount >= 4) {
-        // we've transitioned. check if we can autotune based on the last peaks
-        float avgSeparation = (fabsf(peaks[peakCount - 1] - peaks[peakCount - 2]) + fabsf(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
-        os.printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
-        if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
-            DEBUG_PRINTF("Stabilized\n");
-            finishUp();
+        if(temp_control->is_halted()) {
+            // control X breaks out
+            os.printf("Autopid aborted\n");
+            abort();
             return;
         }
-    }
 
-    if ((tickCnt % 1000) == 0) {
-        DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
-    }
+        if(peakCount >= requested_cycles) {
+            os.printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
+            finishUp(os);
+            return;
+        }
 
-    justchanged = false;
+        float refVal = temp_control->get_temperature();
+
+        // oscillate the output base on the input's relation to the setpoint
+        if (refVal > target_temperature + noiseBand) {
+            output = 0;
+            //temp_control->heater_pin->pwm(output);
+            temp_control->heater_pin->set(false);
+            if(!firstPeak) {
+                firstPeak= true;
+                absMax= refVal;
+                absMin= refVal;
+            }
+
+        } else if (refVal < target_temperature - noiseBand) {
+            output = oStep;
+            temp_control->heater_pin->pwm(output);
+        }
+
+        if ((tickCnt % 1000) == 0) {
+            os.printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
+        }
+
+        if(!firstPeak){
+            // we wait until we hit the first peak before we do anything else, we need to ignore the initial warmup temperatures
+            continue;
+        }
+
+        // find the peaks high and low
+        bool isMax = true, isMin = true;
+        for (int i = nLookBack - 1; i >= 0; i--) {
+            float val = lastInputs[i];
+            if (isMax) isMax = refVal > val;
+            if (isMin) isMin = refVal < val;
+            lastInputs[i + 1] = lastInputs[i];
+        }
+
+        lastInputs[0] = refVal;
+
+        // we don't want to trust the maxes or mins until the inputs array has been filled
+        if (lookBackCnt < nLookBack) {
+            lookBackCnt++; // count number of times we have filled lastInputs
+            continue;
+        }
+
+        if (isMax) {
+            if(refVal > absMax) absMax= refVal;
+
+            if (peakType == 0) peakType = 1;
+            if (peakType == -1) {
+                peakType = 1;
+                justchanged = true;
+                peak2 = peak1;
+            }
+            peak1 = tickCnt;
+            peaks[peakCount] = refVal;
+
+        } else if (isMin) {
+            if(refVal < absMin) absMin= refVal;
+            if (peakType == 0) peakType = -1;
+            if (peakType == 1) {
+                peakType = -1;
+                peakCount++;
+                justchanged = true;
+            }
+
+            if (peakCount < requested_cycles) peaks[peakCount] = refVal;
+        }
+
+        if (justchanged && peakCount >= 4) {
+            // we've transitioned. check if we can autotune based on the last peaks
+            float avgSeparation = (fabsf(peaks[peakCount - 1] - peaks[peakCount - 2]) + fabsf(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
+            os.printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
+            if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
+                DEBUG_PRINTF("Stabilized\n");
+                finishUp(os);
+                return;
+            }
+        }
+
+        if ((tickCnt % 1000) == 0) {
+            DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
+        }
+
+        justchanged = false;
+    }
 }
 
 
@@ -232,17 +207,23 @@ void PID_Autotuner::finishUp(OutputStream& os)
 
     os.printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
 
-
     // and clean up
+    abort();
+}
+
+void PID_Autotuner::abort()
+{
+    if (temp_control == nullptr)
+        return;
+
     temp_control->target_temperature = 0;
     temp_control->heater_pin->set(false);
-    temp_control = NULL;
+    temp_control = nullptr;
 
-    if (peaks != NULL)
+    if (peaks != nullptr)
         delete[] peaks;
-    peaks = NULL;
-
-    if (lastInputs != NULL)
+    peaks = nullptr;
+    if (lastInputs != nullptr)
         delete[] lastInputs;
-    lastInputs = NULL;
+    lastInputs = nullptr;
 }

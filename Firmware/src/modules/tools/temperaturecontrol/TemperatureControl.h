@@ -49,6 +49,7 @@ private:
     void check_runaway();
     bool handle_mcode(GCode& gcode, OutputStream& os);
     bool handle_M6(GCode& gcode, OutputStream& os);
+    bool handle_autopid(GCode& gcode, OutputStream& os);
 
     float target_temperature;
     float max_temp, min_temp;
