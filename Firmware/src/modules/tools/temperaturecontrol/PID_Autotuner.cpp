@@ -1,14 +1,16 @@
 #include "PID_Autotuner.h"
 #include "SlowTicker.h"
 #include "TemperatureControl.h"
+#include "SigmaDeltaPwm.h"
 #include "OutputStream.h"
+#include "GCode.h"
 
 #include <cmath>        // std::abs
 
 //#define DEBUG_PRINTF s->printf
 #define DEBUG_PRINTF(...)
 
-PID_Autotuner::PID_Autotuner(TemperatureControl *tc) : temp_control(tc) :
+PID_Autotuner::PID_Autotuner(TemperatureControl *tc) : temp_control(tc)
 {
     lastInputs = NULL;
     peaks = NULL;
@@ -51,14 +53,14 @@ void PID_Autotuner::start(GCode& gcode, OutputStream& os)
 void PID_Autotuner::begin(float target, int ncycles)
 {
     noiseBand = 0.5;
-    oStep = temp_control->heater_pin.max_pwm(); // use max pwm to cycle temp
+    oStep = temp_control->heater_pin->max_pwm(); // use max pwm to cycle temp
     lookBackCnt = 0;
     tickCnt = 0;
 
     if (lastInputs != NULL) delete[] lastInputs;
     lastInputs = new float[nLookBack + 1];
 
-    temp_control->heater_pin.set(0);
+    temp_control->heater_pin->set(false);
     temp_control->target_temperature = 0.0;
 
     target_temperature = target;
@@ -84,7 +86,7 @@ void PID_Autotuner::abort()
         return;
 
     temp_control->target_temperature = 0;
-    temp_control->heater_pin.set(0);
+    temp_control->heater_pin->set(false);
     temp_control = NULL;
 
     if (peaks != NULL)
@@ -129,8 +131,8 @@ void PID_Autotuner::on_idle(void *)
     // oscillate the output base on the input's relation to the setpoint
     if (refVal > target_temperature + noiseBand) {
         output = 0;
-        //temp_control->heater_pin.pwm(output);
-        temp_control->heater_pin.set(0);
+        //temp_control->heater_pin->pwm(output);
+        temp_control->heater_pin->set(false);
         if(!firstPeak) {
             firstPeak= true;
             absMax= refVal;
@@ -139,7 +141,7 @@ void PID_Autotuner::on_idle(void *)
 
     } else if (refVal < target_temperature - noiseBand) {
         output = oStep;
-        temp_control->heater_pin.pwm(output);
+        temp_control->heater_pin->pwm(output);
     }
 
     if ((tickCnt % 1000) == 0) {
@@ -233,7 +235,7 @@ void PID_Autotuner::finishUp(OutputStream& os)
 
     // and clean up
     temp_control->target_temperature = 0;
-    temp_control->heater_pin.set(0);
+    temp_control->heater_pin->set(false);
     temp_control = NULL;
 
     if (peaks != NULL)
