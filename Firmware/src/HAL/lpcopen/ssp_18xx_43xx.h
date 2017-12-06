@@ -40,9 +40,6 @@ extern "C" {
  * @ingroup CHIP_18XX_43XX_Drivers
  * @{
  */
-#include "lpc_types.h"
-#include "clock_18xx_43xx.h"
-#include "chip-defs.h"
 
 #ifdef __cplusplus
   #define   __I     volatile             /*!< Defines 'read only' permissions                 */
@@ -51,6 +48,8 @@ extern "C" {
 #endif
 #define     __O     volatile             /*!< Defines 'write only' permissions                */
 #define     __IO    volatile             /*!< Defines 'read / write' permissions              */
+
+#define CHIP_LPC43XX
 
 /**
  * @brief SSP register block structure
@@ -75,9 +74,9 @@ typedef struct {			/*!< SSPn Structure         */
 /** SSP data size select, must be 4 bits to 16 bits */
 #define SSP_CR0_DSS(n)          ((uint32_t) ((n) & 0xF))
 /** SSP control 0 Motorola SPI mode */
-//#define SSP_CR0_FRF_SPI         ((uint32_t) (0 << 4))
+#define SSP_CR0_FRF_SPI         ((uint32_t) (0 << 4))
 /** SSP control 0 TI synchronous serial mode */
-//#define SSP_CR0_FRF_TI          ((uint32_t) (1 << 4))
+#define SSP_CR0_FRF_TI          ((uint32_t) (1 << 4))
 /** SSP control 0 National Micro-wire mode */
 #define SSP_CR0_FRF_MICROWIRE   ((uint32_t) (2 << 4))
 /** SPI clock polarity bit (used in SPI mode only), (1) = maintains the
@@ -597,6 +596,10 @@ void Chip_SSP_SetMaster(LPC_SSP_T *pSSP, bool master);
  * @return	Nothing
  */
 void Chip_SSP_SetBitRate(LPC_SSP_T *pSSP, uint32_t bitRate);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

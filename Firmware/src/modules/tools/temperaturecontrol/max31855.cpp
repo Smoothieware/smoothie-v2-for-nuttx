@@ -6,13 +6,7 @@
 */
 
 #include <math.h>
-#include <limits>
-#include <unistd.h>
-#include "Pin.h"
-#include "ConfigReader.h"
 #include "max31855.h"
-#include "Spi.h"
-
 
 #define spi_channel_key "spi_channel"
 #define chip_select_pin_key "chip_select_pin"
@@ -20,11 +14,7 @@
 #define miso_pin_key "miso_pin"
 #define sclk_pin_key "sclk_pin"
 
-Max31855::Max31855() :
-    spi(nullptr)
-{
-    this->read_flag=true;
-}
+Max31855::Max31855():spi(nullptr){}
 
 // Get configuration from the config file
 bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
@@ -38,7 +28,7 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
         printf("WARNING: Invalid SPI channel %d\n",spi_channel);
         return false;
     }
-
+    delete spi;
     spi = new Spi(spi_channel);
 
     //Chip select can be configured to any GPIO pin
@@ -68,9 +58,7 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 // returns an average of the last few temperature values we've read
 float Max31855::get_temperature()
 {
-	   // this rate limits SPI access
-	    //if(!this->read_flag) return;
-
+        //Initiate SPI transmission
 	    this->spi_cs_pin.set(false);
 
 	    //TODO usleep() causes hardfault to the board, but data is successfully acquired without delay
@@ -79,10 +67,10 @@ float Max31855::get_temperature()
 	    // Read 16 bits (writing something as well is required by the api)
 	    uint16_t data = spi->write(0);
 	    //  Read next 16 bits (diagnostics)
-	    uint16_t data2 = spi->write(0);
+	    //uint16_t data2 = spi->write(0);
 
 	    this->spi_cs_pin.set(true);
-	    printf("data=%d data2=%d data=%b data2=%b\n",data,data2,data,data2);
+	    //printf("data=%d data2=%d data=%b data2=%b\n",data,data2,data,data2);
 	    float temperature;
 
 	    //Process temp
@@ -101,7 +89,7 @@ float Max31855::get_temperature()
 	            data = ~data;
 	            temperature = ((data & 0x1FFF) + 1) / -4.f;
 	        }
-	        printf("temperature=%d\n",temperature);
+	        //printf("temperature=%d\n",temperature);
 	    }
 
 	    if (readings.size() >= readings.capacity()) {

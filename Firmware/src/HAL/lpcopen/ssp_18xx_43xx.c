@@ -29,8 +29,11 @@
  * this code.
  */
 
-#include "chip.h"
+#include "lpc_types.h"
+#include "chip-defs.h"
 #include "ssp_18xx_43xx.h"
+#include "clock_18xx_43xx.h"
+
 /*****************************************************************************
  * Private types/enumerations/variables
  ****************************************************************************/
@@ -451,10 +454,12 @@ void Chip_SSP_Init(LPC_SSP_T *pSSP)
 {
 	Chip_Clock_Enable(Chip_SSP_GetClockIndex(pSSP));
 	Chip_Clock_Enable(Chip_SSP_GetPeriphClockIndex(pSSP));
-
+	//changed default mode to 16bit
+	//TODO if other modules require different modes, add the necessary arguments
+	//or create methods to configure post init
 	Chip_SSP_Set_Mode(pSSP, SSP_MODE_MASTER);
 	Chip_SSP_SetFormat(pSSP, SSP_BITS_16, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_CPHA0_CPOL0);
-	Chip_SSP_SetBitRate(pSSP, 1000000);
+	Chip_SSP_SetBitRate(pSSP, 100000);
 }
 
 /* De-initializes the SSP peripheral */

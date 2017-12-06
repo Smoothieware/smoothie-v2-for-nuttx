@@ -29,9 +29,10 @@
  * this code.
  */
 
-#include "chip.h"
+#include "lpc_types.h"
+#include "chip-defs.h"
 #include "spi_18xx_43xx.h"
-#include "chip_clocks.h"
+#include "clock_18xx_43xx.h"
 
 #if defined(CHIP_LPC43XX)
 
@@ -137,10 +138,9 @@ rw_end:
 /* Clean all data in RX FIFO of SPI */
 void Chip_SPI_Int_FlushData(LPC_SPI_T *pSPI)
 {
-	volatile uint32_t tmp;
-	Chip_SPI_GetStatus(pSPI);
-	tmp = Chip_SPI_ReceiveFrame(pSPI);
-	Chip_SPI_Int_ClearStatus(pSPI, SPI_INT_SPIF);
+    Chip_SPI_GetStatus(pSPI);
+    Chip_SPI_ReceiveFrame(pSPI);
+    Chip_SPI_Int_ClearStatus(pSPI, SPI_INT_SPIF);
 }
 
 /* SPI Interrupt Read/Write with 8-bit frame width */

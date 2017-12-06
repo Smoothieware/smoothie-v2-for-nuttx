@@ -1,6 +1,22 @@
 #include "Spi.h"
 
+#include <string>
+#include <cctype>
+#include <tuple>
+#include <vector>
+
+#include "lpc_types.h"
+#include "chip-defs.h"
+#include "spi_18xx_43xx.h"
+#include "ssp_18xx_43xx.h"
+#include "scu_18xx_43xx.h"
+
+LPC_SPI_T* spi;
+LPC_SSP_T* ssp;
+
 static const std::vector<std::tuple<uint8_t, uint8_t, uint8_t, const char*>> spi_pins {
+
+    //{port number, pin number, function number, label (type + channel number)}
 
     //SPI_MISO
     {0x03, 6,  1,  "miso0"},
@@ -88,23 +104,22 @@ bool Spi::from_string(int channel,const char *name, const char *type)
     uint16_t pin = strtol(str.substr(pos + 1).c_str(), nullptr, 10);
 
     // now map to a SPI output
-    uint8_t func_num, modefunc;
-    std::string str_type_channel = type + std::to_string(channel); //append the channel number to the type name
-    if(!lookup_pin(port, pin, func_num, str_type_channel)) {
+    uint8_t func, mode;
+    std::string type_channel = type + std::to_string(channel); //append the channel number to the type name
+    if(!lookup_pin(port, pin, func, type_channel)) {
         printf("WARNING: Invalid %s pin number (%s) for SPI channel %d\n",type,name,channel);
         return false;
     }
 
     // TODO check if pin is already in use
 
-    // setup pin for the SPI function
     // Set the pins for low-slew high speed output.
     if(tolower(type[0])=='m') //MISO or MOSI pins
-        modefunc = SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS;
+        mode = SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS;
     if(tolower(type[0])=='s') //SCLK or SSEL pins
-        modefunc = SCU_PINIO_FAST;
-
-    Chip_SCU_PinMuxSet(port, pin, func_num|modefunc);
+        mode = SCU_PINIO_FAST;
+    // setup pin for the SPI function
+    Chip_SCU_PinMuxSet(port, pin, func|mode);
 
     return true;
 }
@@ -119,7 +134,7 @@ Spi::Spi(int spi_channel)
             this->is_spi=true;
             break;
         case 1:
-            ssp= LPC_SSP0;
+            ssp = LPC_SSP0;
             Chip_SSP_Init(ssp);
             Chip_SSP_Enable(ssp);
             break;
@@ -137,7 +152,7 @@ int Spi::write(int value)
 	if(this->is_spi) //get data via SPI
 	{
 		while (!(spi->SR & (1 << 1)));
-		spi->DR = value; //write dummy value to get data
+		spi->DR = value; //write value to get data
 
 		while (!(spi->SR & (1 << 2)));
 		data= spi->DR; //read 16-bit data
@@ -145,7 +160,7 @@ int Spi::write(int value)
 	else //get data via SSP
 	{
 		while (!(ssp->SR & (1 << 1)));
-		ssp->DR = value; //write dummy value to get data
+		ssp->DR = value; //write value to get data
 
 		while (!(ssp->SR & (1 << 2)));
 		data = ssp->DR; //read 16-bit data

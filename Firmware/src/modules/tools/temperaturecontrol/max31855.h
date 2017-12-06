@@ -30,7 +30,6 @@ public:
     const char* spi_miso_pin;
     const char* spi_sclk_pin;
 private:
-    struct { bool read_flag:1; } ; //when true, the next call to on_idle will read a new temperature value
     Spi *spi;
     RingBuffer<float,16> readings;
 };

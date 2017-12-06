@@ -42,12 +42,6 @@ extern "C" {
  * @{
  */
 
-#include "lpc_types.h"
-#include "clock_18xx_43xx.h"
-#include "chip-defs.h"
-#include "chip_clocks.h"
-
-
 #ifdef __cplusplus
   #define   __I     volatile             /*!< Defines 'read only' permissions                 */
 #else
@@ -57,7 +51,6 @@ extern "C" {
 #define     __IO    volatile             /*!< Defines 'read / write' permissions              */
 
 #define CHIP_LPC43XX
-
 
 #if defined(CHIP_LPC43XX)
 
