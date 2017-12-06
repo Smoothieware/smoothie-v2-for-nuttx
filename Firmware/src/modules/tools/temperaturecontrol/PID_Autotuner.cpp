@@ -16,7 +16,7 @@ PID_Autotuner::PID_Autotuner(TemperatureControl *tc) : temp_control(tc)
     lastInputs = nullptr;
     peaks = nullptr;
     tickCnt = 0;
-    nLookBack = 10 * 20; // 10 seconds of lookback (fixed 20ms tick period)
+    nLookBack = 10 * 20; // 10 seconds of lookback (fixed 50ms tick period, 20/sec)
 }
 
 void PID_Autotuner::start(GCode& gcode, OutputStream& os)
