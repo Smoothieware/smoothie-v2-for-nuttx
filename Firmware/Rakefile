@@ -67,7 +67,8 @@ Rake.application.add_loader('d', DfileLoader.new)
 
 ARMVERSION = ENV['ARMVERSION'].nil? ? '6.3.1' :  ENV['ARMVERSION']
 #TOOLSDIR = '/home/morris/work/reprap/Smoothie/gcc-arm-none-eabi/bin'
-TOOLSDIR = ENV['ARMTOOLS'].nil? ? '/usr/bin' :  ENV['ARMTOOLS']
+#TOOLSDIR = ENV['ARMTOOLS'].nil? ? '/usr/bin' :  ENV['ARMTOOLS']
+TOOLSDIR = '/home/talmeida/OneDrive/Programs/toolchains/gcc-arm-6.3.1/gcc-arm-none-eabi-6-2017-q2-update/bin'
 TOOLSBIN = "#{TOOLSDIR}/arm-none-eabi-"
 LIBSDIR = "#{TOOLSDIR}/../lib"
 CC = "#{TOOLSBIN}gcc"
