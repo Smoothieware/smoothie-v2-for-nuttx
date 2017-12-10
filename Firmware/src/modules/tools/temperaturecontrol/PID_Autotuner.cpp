@@ -85,6 +85,7 @@ void PID_Autotuner::run_auto_pid(OutputStream& os, float target, int ncycles)
     // we run in a loop with a 50ms delay
     while(true) {
         safe_sleep(50);
+        // TODO may want to use clock systimer to get a more accurate time
         tickCnt += 50;
 
         if(temp_control->is_halted()) {

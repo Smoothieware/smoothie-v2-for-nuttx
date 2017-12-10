@@ -39,6 +39,7 @@ std::vector<std::string> stringutils::split(const char *str, char sep)
 }
 
 // Get the first parameter, and remove it from the original string
+// if a quoted parameter extract it as one paramter including spaces
 std::string stringutils::shift_parameter( std::string &parameters )
 {
     size_t beginning = parameters.find_first_of(" ");
@@ -47,10 +48,27 @@ std::string stringutils::shift_parameter( std::string &parameters )
         parameters = "";
         return temp;
     }
+
     std::string temp = parameters.substr( 0, beginning );
+    if(temp[0] == '\"') {
+        // if it is quoted then return up to the closing quote
+        size_t o= parameters.find_first_of("\"", beginning);
+        if( o != std::string::npos ) {
+            temp= temp.substr(1); // remove leading "
+            temp.append(parameters.substr(beginning, o-beginning)); // add rest of string until the last "
+            size_t n= parameters.find_first_of(" ", o);
+            if(n != std::string::npos) {
+                beginning= n;
+            }else{
+                beginning= o;
+            }
+        }
+
+    }
     parameters = parameters.substr(beginning + 1, parameters.size());
     return temp;
 }
+
 
 // parse a number list "1.1,2.2,3.3" and return the numbers in a std::vector of floats
 std::vector<float> stringutils::parse_number_list(const char *str)

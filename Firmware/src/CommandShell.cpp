@@ -737,7 +737,7 @@ bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
 {
-    HELP("config-set section key value");
+    HELP("config-set \"section name\" key value");
 
     std::string sectionstr = stringutils::shift_parameter( params );
     std::string keystr = stringutils::shift_parameter( params );
