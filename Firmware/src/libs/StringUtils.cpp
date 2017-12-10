@@ -39,7 +39,7 @@ std::vector<std::string> stringutils::split(const char *str, char sep)
 }
 
 // Get the first parameter, and remove it from the original string
-// if a quoted parameter extract it as one paramter including spaces
+// if a quoted parameter extract it as one parameter including spaces but excluding quotes
 std::string stringutils::shift_parameter( std::string &parameters )
 {
     size_t beginning = parameters.find_first_of(" ");

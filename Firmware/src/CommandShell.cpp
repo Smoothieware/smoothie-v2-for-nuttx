@@ -9,6 +9,7 @@
 #include "main.h"
 #include "TemperatureControl.h"
 #include "ConfigWriter.h"
+#include "Conveyor.h"
 
 #include <functional>
 #include <set>
@@ -731,7 +732,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 {
-    os.printf("Smoothie Version2 for Mini Alpha: build 0.1\n");
+    os.printf("Smoothie Version2 for Mini Alpha: build 0.5\n");
     return true;
 }
 
@@ -774,17 +775,6 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
 
     } else {
         os.printf("failed to change config\n");
-#if 1
-        os.printf("fsin: good()=%d\n", fsin.good());
-        os.printf(" eof()=%d\n", fsin.eof());
-        os.printf(" fail()=%d\n", fsin.fail());
-        os.printf(" bad()=%d\n", fsin.bad());
-
-        os.printf("fsout: good()=%d\n", fsout.good());
-        os.printf(" eof()=%d\n", fsout.eof());
-        os.printf(" fail()=%d\n", fsout.fail());
-        os.printf(" bad()=%d\n", fsout.bad());
-#endif
         return true;
     }
 
@@ -802,3 +792,37 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
     }
     return true;
 }
+
+// Special hack that switches the input comms to send everything here until we finish.
+bool CommandShell::upload_command(std::string& params, OutputStream& os)
+{
+    HELP("upload filename - upload a file and save to sd");
+
+    if(!Conveyor::getInstance()->is_idle()) {
+        os.printf("upload not allowed while printing or busy\n");
+        return true;
+    }
+
+    // open file to upload to
+    std::string upload_filename = stringutils::shift_parameter(params);
+    FILE *fd = fopen(upload_filename.c_str(), "w");
+    if(fd != NULL) {
+        os.printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
+    } else {
+        os.printf("failed to open file: %s.\r\n", upload_filename.c_str());
+        return true;
+    }
+
+    volatile bool uploading = true;
+    int cnt = 0;
+    set_capture([&uploading, fd, &cnt](char c){if( c == 4 || c == 26) uploading = false; else { fputc(c, fd); ++cnt; } });
+    while(uploading) {
+        usleep(10000);
+    }
+    set_capture(nullptr);
+    fclose(fd);
+    os.printf("uploaded %d bytes\n", cnt);
+
+    return true;
+}
+

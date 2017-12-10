@@ -312,8 +312,15 @@ bool dispatch_line(OutputStream& os, const char *cl)
     return true;
 }
 
+#include <functional>
+static std::function<void(char)> capture_fnc;
+void set_capture(std::function<void(char)> cf)
+{
+    capture_fnc= cf;
+}
+
 #include <vector>
-std::vector<OutputStream*> output_streams;
+static std::vector<OutputStream*> output_streams;
 
 static void usb_comms()
 {
@@ -360,6 +367,11 @@ static void usb_comms()
     for(;;) {
         n = read(rfd, &line[cnt], 1);
         if(n == 1) {
+            if(capture_fnc) {
+                capture_fnc(line[cnt]);
+                continue;
+            }
+
             if(line[cnt] == 24) { // ^X
                 if(!Module::is_halted()) {
                     Module::broadcast_halt(true);
@@ -430,6 +442,11 @@ static void uart_comms()
         n = read(0, &line[cnt], 1);
 
         if(n == 1) {
+            if(capture_fnc) {
+                capture_fnc(line[cnt]);
+                continue;
+            }
+
             if(line[cnt] == 24) { // ^X
                 if(!Module::is_halted()) {
                     Module::broadcast_halt(true);
