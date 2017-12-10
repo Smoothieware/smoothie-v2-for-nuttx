@@ -44,6 +44,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler( "config-set", std::bind( &CommandShell::config_set_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "upload", std::bind( &CommandShell::upload_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
@@ -794,7 +795,9 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
 }
 
 // Special hack that switches the input comms to send everything here until we finish.
-bool CommandShell::upload_command(std::string& params, OutputStream& os)
+// unfortunately due to bugs in nuttx we cannot use this as it drops characters on USB serial
+// due to lack of flow control, considered a "feature" in nuttx what BS! (SmoothieV1 had USB serial flow control done properly)
+bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
 {
     HELP("upload filename - upload a file and save to sd");
 
