@@ -90,14 +90,14 @@ bool Spi::lookup_pin(uint8_t port, uint8_t pin, uint8_t& func, std::string type)
 bool Spi::from_string(int channel,const char *name, const char *type)
 {
     // check if the pin is mappable to a SPI channel
-    if(name==nullptr) //If the SPI pin is not defined
+    if(name==nullptr) { //If the SPI pin is not defined
         return false;
-
+    }
     // pin specification
     std::string str(name);
     uint16_t port = strtol(str.substr(1).c_str(), nullptr, 16);
     size_t pos = str.find_first_of("._", 1);
-    if(tolower(name[0]) != 'p' || pos == std::string::npos){
+    if(tolower(name[0]) != 'p' || pos == std::string::npos) {
         printf("WARNING: Bad %s pin format (%s) for SPI channel %d, format is (p*_*) or (p*.*)\n",type,name,channel);
         return false;
     }
@@ -114,10 +114,12 @@ bool Spi::from_string(int channel,const char *name, const char *type)
     // TODO check if pin is already in use
 
     // Set the pins for low-slew high speed output.
-    if(tolower(type[0])=='m') //MISO or MOSI pins
+    if(tolower(type[0])=='m') { //MISO or MOSI pins
         mode = SCU_MODE_INACT | SCU_MODE_INBUFF_EN | SCU_MODE_ZIF_DIS;
-    if(tolower(type[0])=='s') //SCLK or SSEL pins
+    }
+    if(tolower(type[0])=='s') { //SCLK or SSEL pins
         mode = SCU_PINIO_FAST;
+    }
     // setup pin for the SPI function
     Chip_SCU_PinMuxSet(port, pin, func|mode);
 
@@ -126,7 +128,7 @@ bool Spi::from_string(int channel,const char *name, const char *type)
 
 Spi::Spi(int spi_channel)
 {
-    switch(spi_channel){
+    switch(spi_channel) {
         case 0:
             spi = LPC_SPI;
             Chip_SPI_Init(spi);
@@ -149,16 +151,13 @@ Spi::Spi(int spi_channel)
 int Spi::write(int value)
 {
 	uint16_t data;
-	if(this->is_spi) //get data via SPI
-	{
+	if(this->is_spi) { //get data via SPI
 		while (!(spi->SR & (1 << 1)));
 		spi->DR = value; //write value to get data
 
 		while (!(spi->SR & (1 << 2)));
 		data= spi->DR; //read 16-bit data
-	}
-	else //get data via SSP
-	{
+	} else { //get data via SSP
 		while (!(ssp->SR & (1 << 1)));
 		ssp->DR = value; //write value to get data
 

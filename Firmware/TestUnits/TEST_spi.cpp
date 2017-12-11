@@ -27,23 +27,23 @@ REGISTER_TEST(SPITest, from_string)
     TEST_ASSERT_TRUE(spi->from_string(1,"p3.0","sclk"));
     TEST_ASSERT_TRUE(spi->from_string(1,"p1.0","ssel"));
 
-    TEST_ASSERT_TRUE(spi->from_string(1,"P9.1","miso"));
+    //TEST_ASSERT_TRUE(spi->from_string(1,"P9.1","miso"));
     TEST_ASSERT_TRUE(spi->from_string(1,"P9.2","mosi"));
     TEST_ASSERT_TRUE(spi->from_string(1,"P3_0","sclk"));
     TEST_ASSERT_TRUE(spi->from_string(1,"P9.0","ssel"));
 
-    TEST_ASSERT_TRUE(spi->from_string(1,"pf_2","miso"));
+    //TEST_ASSERT_TRUE(spi->from_string(1,"pf_2","miso"));
     TEST_ASSERT_TRUE(spi->from_string(1,"pf_3","mosi"));
     TEST_ASSERT_TRUE(spi->from_string(1,"pf_0","sclk"));
     TEST_ASSERT_TRUE(spi->from_string(1,"pf_1","ssel"));
 
     //Set of examples that initialize SSP1
-    TEST_ASSERT_TRUE(spi->from_string(2,"p0.0","miso"));
+    //TEST_ASSERT_TRUE(spi->from_string(2,"p0.0","miso"));
     TEST_ASSERT_TRUE(spi->from_string(2,"p0.1","mosi"));
     TEST_ASSERT_TRUE(spi->from_string(2,"p1.19","sclk"));
     TEST_ASSERT_TRUE(spi->from_string(2,"p1.20","ssel"));
 
-    TEST_ASSERT_TRUE(spi->from_string(2,"pF_6","miso"));
+    //TEST_ASSERT_TRUE(spi->from_string(2,"pF_6","miso"));
     TEST_ASSERT_TRUE(spi->from_string(2,"pF_7","mosi"));
     TEST_ASSERT_TRUE(spi->from_string(2,"pF_4","sclk"));
     TEST_ASSERT_TRUE(spi->from_string(2,"pF_5","ssel"));
@@ -62,19 +62,17 @@ REGISTER_TEST(SPITest, from_string)
     TEST_ASSERT_FALSE(spi->from_string(2,"pC_4","miso")); //changed to unsupported pin name
     TEST_ASSERT_FALSE(spi->from_string(2,"pF_7","nc")); //changed to nc (not connected)
     TEST_ASSERT_FALSE(spi->from_string(2,"pF_4","")); //no pin name is set
-    TEST_ASSERT_FALSE(spi->from_string(2,"pF_4","ssel")); //changed to unsupported type*/
+    TEST_ASSERT_FALSE(spi->from_string(2,"pF_4","ssel")); //changed to unsupported type
 }
 
 REGISTER_TEST(SPITest, write)
 {
-    Spi *spi=new Spi(1);
-    //TEST_ASSERT_TRUE(spi->from_string(1,"p1_1","miso"));
-    //TEST_ASSERT_TRUE(spi->from_string(1,"p3_0","sclk"));
-
-    //Pin *spi_cs_pin = new Pin("p1_5"); //SPI SSEL
+    Spi *spi=new Spi(2);
+    //TEST_ASSERT_TRUE(spi->from_string(2,"p1_3","miso"));
+    //TEST_ASSERT_TRUE(spi->from_string(2,"pF_4","sclk"));
 
     Pin *spi_cs_pin=new Pin();
-    TEST_ASSERT_TRUE(spi_cs_pin->from_string("p1_0"));
+    TEST_ASSERT_TRUE(spi_cs_pin->from_string("p1_5"));
     spi_cs_pin->set(true);
     spi_cs_pin->as_output();
 

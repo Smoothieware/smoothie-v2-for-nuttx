@@ -7,6 +7,8 @@
 
 #include <math.h>
 #include "max31855.h"
+#include "Spi.h"
+#include "Pin.h"
 
 #define spi_channel_key "spi_channel"
 #define chip_select_pin_key "chip_select_pin"
@@ -39,16 +41,16 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     //Check if the specified pin has SPI function
     this->spi_miso_pin=cr.get_string(m, miso_pin_key,"nc");//SPI MISO
     if (!(spi->from_string(spi_channel,this->spi_miso_pin,"miso"))) {
-            delete spi;
-            return false;
-        }
+        delete spi;
+        return false;
+    }
 
     //Check if the specified pin has SPI function
     this->spi_sclk_pin=cr.get_string(m, sclk_pin_key,"nc"); //SPI SCLK
     if (!(spi->from_string(spi_channel,this->spi_sclk_pin,"sclk"))) {
-            delete spi;
-            return false;
-        }
+        delete spi;
+        return false;
+    }
     //Only miso and sclk pins are needed to be initialized by the SPI mode
 
     //the module is loaded successfully
@@ -58,49 +60,44 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 // returns an average of the last few temperature values we've read
 float Max31855::get_temperature()
 {
-        //Initiate SPI transmission
-	    this->spi_cs_pin.set(false);
+    //Initiate SPI transmission
+    this->spi_cs_pin.set(false);
 
-	    //TODO usleep() causes hardfault to the board, but data is successfully acquired without delay
-	    //usleep(1); // Must wait for first bit valid
+    //TODO usleep() causes hardfault to the board, but data is successfully acquired without delay
+    //usleep(1); // Must wait for first bit valid
 
-	    // Read 16 bits (writing something as well is required by the api)
-	    uint16_t data = spi->write(0);
-	    //  Read next 16 bits (diagnostics)
-	    //uint16_t data2 = spi->write(0);
+    // Read 16 bits (writing something as well is required by the api)
+    uint16_t data = spi->write(0);
+    //  Read next 16 bits (diagnostics)
+    //uint16_t data2 = spi->write(0);
 
-	    this->spi_cs_pin.set(true);
-	    //printf("data=%d data2=%d data=%b data2=%b\n",data,data2,data,data2);
-	    float temperature;
+    this->spi_cs_pin.set(true);
+    //printf("data=%d data2=%d data=%b data2=%b\n",data,data2,data,data2);
+    float temperature;
 
-	    //Process temp
-	    if (data & 0x0001)
-	    {
-	        // Error flag.
-	        temperature = std::numeric_limits<float>::infinity();
-	        // Todo: Interpret data2 for more diagnostics.
-	    }
-	    else
-	    {
-	        data = data >> 2;
-	        temperature = (data & 0x1FFF) / 4.f;
-	        if (data & 0x2000)
-	        {
-	            data = ~data;
-	            temperature = ((data & 0x1FFF) + 1) / -4.f;
-	        }
-	        //printf("temperature=%d\n",temperature);
-	    }
+    //Process temp
+    if (data & 0x0001) {
+        // Error flag.
+        temperature = std::numeric_limits<float>::infinity();
+        // Todo: Interpret data2 for more diagnostics.
+    } else {
+        data = data >> 2;
+        temperature = (data & 0x1FFF) / 4.f;
+        if (data & 0x2000) {
+            data = ~data;
+            temperature = ((data & 0x1FFF) + 1) / -4.f;
+        }
+        //printf("temperature=%d\n",temperature);
+    }
 
-	    if (readings.size() >= readings.capacity()) {
-	        readings.delete_tail();
-	    }
+    if (readings.size() >= readings.capacity()) {
+        readings.delete_tail();
+    }
 
-	    // Discard occasional errors...
-	    if(!isinf(temperature))
-	    {
-	        readings.push_back(temperature);
-	    }
+    // Discard occasional errors...
+    if(!isinf(temperature)) {
+        readings.push_back(temperature);
+    }
 
     // Return an average of the last readings
     if(readings.size()==0) return std::numeric_limits<float>::infinity();

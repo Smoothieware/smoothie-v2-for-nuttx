@@ -13,9 +13,10 @@
 #include "TempSensor.h"
 #include <string>
 
-#include "Spi.h"
 #include "Pin.h"
 #include "RingBuffer.h"
+
+class Spi;
 
 class Max31855 : public TempSensor
 {
