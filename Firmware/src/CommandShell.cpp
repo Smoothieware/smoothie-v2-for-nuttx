@@ -9,6 +9,7 @@
 #include "main.h"
 #include "TemperatureControl.h"
 #include "ConfigWriter.h"
+#include "Conveyor.h"
 
 #include <functional>
 #include <set>
@@ -43,6 +44,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "md5sum", std::bind( &CommandShell::md5sum_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler( "config-set", std::bind( &CommandShell::config_set_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "upload", std::bind( &CommandShell::upload_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler( "mem", std::bind( &CommandShell::mem_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "switch", std::bind( &CommandShell::switch_cmd, this, _1, _2) );
@@ -55,6 +57,8 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
 
+    THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 20, std::bind(&CommandShell::m20_cmd, this, _1, _2));
+
     return true;
 }
 
@@ -62,7 +66,7 @@ bool CommandShell::initialize()
 bool CommandShell::help_cmd(std::string& params, OutputStream& os)
 {
     HELP("Show available commands");
-    auto cmds= THEDISPATCHER->get_commands();
+    auto cmds = THEDISPATCHER->get_commands();
     for(auto& i : cmds) {
         os.printf("%s\n", i.c_str());
         // Display the help string for each command
@@ -72,6 +76,18 @@ bool CommandShell::help_cmd(std::string& params, OutputStream& os)
     }
     os.puts("\nuse cmd -h to get help on that command\n");
 
+    return true;
+}
+
+
+bool CommandShell::m20_cmd(GCode& gcode, OutputStream& os)
+{
+    if(THEDISPATCHER->is_grbl_mode()) return false;
+
+    os.printf("Begin file list\n");
+    std::string cmd("/sd");
+    ls_cmd(cmd, os);
+    os.printf("End file list\n");
     return true;
 }
 
@@ -162,7 +178,7 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
     if(mounted) {
         os.printf("Already mounted, unmounting\n");
         umount(g_target);
-        mounted= false;
+        mounted = false;
         return true;
     }
 
@@ -178,7 +194,7 @@ bool CommandShell::mount_cmd(std::string& params, OutputStream& os)
         mounted = true;
         os.printf("Mounted %s on %s\n", g_source, g_target);
 
-    }else{
+    } else {
         os.printf("Failed to mount sdcard\n");
     }
     return true;
@@ -205,7 +221,7 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
         char buffer[132];
         int newlines = 0;
         // Print each line of the file
-        while (fgets (buffer, sizeof(buffer)-1, lp) != nullptr) {
+        while (fgets (buffer, sizeof(buffer) - 1, lp) != nullptr) {
             os.puts(buffer);
             if ( limit > 0 && ++newlines >= limit ) {
                 break;
@@ -213,7 +229,7 @@ bool CommandShell::cat_cmd(std::string& params, OutputStream& os)
         };
         fclose(lp);
 
-    }else{
+    } else {
         os.printf("File not found: %s\n", filename.c_str());
     }
 
@@ -231,14 +247,14 @@ bool CommandShell::md5sum_cmd(std::string& params, OutputStream& os)
         MD5 md5;
         uint8_t buf[64];
         do {
-            size_t n= fread(buf, 1, sizeof buf, lp);
+            size_t n = fread(buf, 1, sizeof buf, lp);
             if(n > 0) md5.update(buf, n);
         } while(!feof(lp));
 
         os.printf("%s %s\n", md5.finalize().hexdigest().c_str(), params.c_str());
         fclose(lp);
 
-    }else{
+    } else {
         os.printf("File not found: %s\n", params.c_str());
     }
 
@@ -259,18 +275,18 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
         std::vector<Module*> mv = Module::lookup_group("switch");
         if(mv.size() > 0) {
             for(auto m : mv) {
-                Switch *s= static_cast<Switch*>(m);
+                Switch *s = static_cast<Switch*>(m);
                 os.printf("%s:\n", m->get_instance_name());
                 os.printf(" %s\n", s->get_info().c_str());
             }
-        }else{
+        } else {
             os.printf("No switches found\n");
         }
 
         return true;
     }
 
-    Module *m= Module::lookup("switch", name.c_str());
+    Module *m = Module::lookup("switch", name.c_str());
     if(m == nullptr) {
         os.printf("no such switch: %s\n", name.c_str());
         return true;
@@ -280,24 +296,24 @@ bool CommandShell::switch_cmd(std::string& params, OutputStream& os)
     if(value.empty()) {
         // get switch state
         bool state;
-        ok= m->request("state", &state);
+        ok = m->request("state", &state);
         if (!ok) {
             os.printf("unknown command %s.\n", "state");
             return true;
         }
         os.printf("switch %s is %d\n", name.c_str(), state);
 
-    }else{
+    } else {
         const char *cmd;
         // set switch state
         if(value == "on" || value == "off") {
             bool b = value == "on";
-            cmd= "set-state";
+            cmd = "set-state";
             ok =  m->request(cmd, &b);
 
         } else {
             float v = strtof(value.c_str(), NULL);
-            cmd= "set-value";
+            cmd = "set-value";
             ok = m->request(cmd, &v);
         }
 
@@ -341,7 +357,7 @@ bool CommandShell::gpio_cmd(std::string& params, OutputStream& os)
             os.printf("Not a valid GPIO\n");
             return true;
         }
-        bool b= (v == "on");
+        bool b = (v == "on");
         pin.set(b);
         os.printf("%s: set to %d\n", pin.to_string().c_str(), pin.get());
         return true;
@@ -354,7 +370,7 @@ bool CommandShell::modules_cmd(std::string& params, OutputStream& os)
 {
     HELP("List all registered modules\n");
 
-    std::vector<std::string> l= Module::print_modules();
+    std::vector<std::string> l = Module::print_modules();
 
     if(l.empty()) {
         os.printf("No modules found\n");
@@ -372,24 +388,27 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
 {
     HELP("get pos|wcs|state|status|temp")
     std::string what = stringutils::shift_parameter( params );
-    bool handled= true;
+    bool handled = true;
     if (what == "temp") {
         std::string type = stringutils::shift_parameter( params );
         if(type.empty()) {
             // scan all temperature controls
-            std::vector<Module*> controllers= Module::lookup_group("temperature control");
+            std::vector<Module*> controllers = Module::lookup_group("temperature control");
             for(auto m : controllers) {
                 TemperatureControl::pad_temperature_t temp;
-                m->request("get_current_temperature", &temp);
-                os.printf("%s: %s (%d) temp: %f/%f @%d\r\n", m->get_instance_name(), temp.designator.c_str(), temp.tool_id, temp.current_temperature, temp.target_temperature, temp.pwm);
+                if(m->request("get_current_temperature", &temp)) {
+                    os.printf("%s: %s (%d) temp: %f/%f @%d\n", m->get_instance_name(), temp.designator.c_str(), temp.tool_id, temp.current_temperature, temp.target_temperature, temp.pwm);
+                }else{
+                    os.printf("temo request failed\n");
+                }
             }
 
-        }else{
-            Module *m= Module::lookup("temperature control", type.c_str());
+        } else {
+            Module *m = Module::lookup("temperature control", type.c_str());
             if(m == nullptr) {
                 os.printf("%s is not a known temperature control", type.c_str());
 
-            }else{
+            } else {
                 TemperatureControl::pad_temperature_t temp;
                 m->request("get_current_temperature", &temp);
                 os.printf("%s temp: %f/%f @%d\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
@@ -443,7 +462,7 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
         //     THECONVEYOR->wait_for_idle();
         // }
 
-   } else if (what == "pos") {
+    } else if (what == "pos") {
         // convenience to call all the various M114 variants, shows ABC axis where relevant
         std::string buf;
         Robot::getInstance()->print_position(0, buf); os.printf("last %s\n", buf.c_str()); buf.clear();
@@ -462,16 +481,16 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
         // also $G
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
         os.printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f S%1.4f]\n",
-            1, // Dispatcher.getInstance()->get_modal_command(),
-            stringutils::wcs2gcode(Robot::getInstance()->get_current_wcs()).c_str(),
-            Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Y_AXIS && Robot::getInstance()->plane_axis_2 == Z_AXIS ? 17 :
-              Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == Y_AXIS ? 18 :
-              Robot::getInstance()->plane_axis_0 == Y_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == X_AXIS ? 19 : 17,
-            Robot::getInstance()->inch_mode ? 20 : 21,
-            Robot::getInstance()->absolute_mode ? 90 : 91,
-            0, //get_active_tool(),
-            Robot::getInstance()->from_millimeters(Robot::getInstance()->get_feed_rate()),
-            Robot::getInstance()->get_s_value());
+                  1, // Dispatcher.getInstance()->get_modal_command(),
+                  stringutils::wcs2gcode(Robot::getInstance()->get_current_wcs()).c_str(),
+                  Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Y_AXIS && Robot::getInstance()->plane_axis_2 == Z_AXIS ? 17 :
+                  Robot::getInstance()->plane_axis_0 == X_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == Y_AXIS ? 18 :
+                  Robot::getInstance()->plane_axis_0 == Y_AXIS && Robot::getInstance()->plane_axis_1 == Z_AXIS && Robot::getInstance()->plane_axis_2 == X_AXIS ? 19 : 17,
+                  Robot::getInstance()->inch_mode ? 20 : 21,
+                  Robot::getInstance()->absolute_mode ? 90 : 91,
+                  0, //get_active_tool(),
+                  Robot::getInstance()->from_millimeters(Robot::getInstance()->get_feed_rate()),
+                  Robot::getInstance()->get_s_value());
 
     } else if (what == "status") {
         // also ? on serial and usb
@@ -481,7 +500,7 @@ bool CommandShell::get_cmd(std::string& params, OutputStream& os)
 
     } else {
 
-        handled= false;
+        handled = false;
     }
 
     return handled;
@@ -497,7 +516,7 @@ bool CommandShell::grblDH_cmd(std::string& params, OutputStream& os)
 {
     if(THEDISPATCHER->is_grbl_mode()) {
         return THEDISPATCHER->dispatch(os, 'G', 28, 2, 0); // G28.2 to home
-    }else{
+    } else {
         return THEDISPATCHER->dispatch(os, 'G', 28, 0); // G28 to home
     }
 }
@@ -522,41 +541,41 @@ bool CommandShell::grblDP_cmd(std::string& params, OutputStream& os)
 
     bool verbose = stringutils::shift_parameter( params ).find_first_of("Vv") != std::string::npos;
 
-    std::vector<Robot::wcs_t> v= Robot::getInstance()->get_wcs_state();
+    std::vector<Robot::wcs_t> v = Robot::getInstance()->get_wcs_state();
     if(verbose) {
-        char current_wcs= std::get<0>(v[0]);
+        char current_wcs = std::get<0>(v[0]);
         os.printf("[current WCS: %s]\n", stringutils::wcs2gcode(current_wcs).c_str());
     }
 
-    int n= std::get<1>(v[0]);
+    int n = std::get<1>(v[0]);
     for (int i = 1; i <= n; ++i) {
-        os.printf("[%s:%1.4f,%1.4f,%1.4f]\n", stringutils::wcs2gcode(i-1).c_str(),
-            Robot::getInstance()->from_millimeters(std::get<0>(v[i])),
-            Robot::getInstance()->from_millimeters(std::get<1>(v[i])),
-            Robot::getInstance()->from_millimeters(std::get<2>(v[i])));
+        os.printf("[%s:%1.4f,%1.4f,%1.4f]\n", stringutils::wcs2gcode(i - 1).c_str(),
+                  Robot::getInstance()->from_millimeters(std::get<0>(v[i])),
+                  Robot::getInstance()->from_millimeters(std::get<1>(v[i])),
+                  Robot::getInstance()->from_millimeters(std::get<2>(v[i])));
     }
 
-    float rd[]{0,0,0};
+    float rd[] {0, 0, 0};
     //PublicData::get_value( endstops_checksum, saved_position_checksum, &rd ); TODO use request
     os.printf("[G28:%1.4f,%1.4f,%1.4f]\n",
-        Robot::getInstance()->from_millimeters(rd[0]),
-        Robot::getInstance()->from_millimeters(rd[1]),
-        Robot::getInstance()->from_millimeters(rd[2]));
+              Robot::getInstance()->from_millimeters(rd[0]),
+              Robot::getInstance()->from_millimeters(rd[1]),
+              Robot::getInstance()->from_millimeters(rd[2]));
 
     os.printf("[G30:%1.4f,%1.4f,%1.4f]\n",  0.0F, 0.0F, 0.0F); // not implemented
 
     os.printf("[G92:%1.4f,%1.4f,%1.4f]\n",
-        Robot::getInstance()->from_millimeters(std::get<0>(v[n+1])),
-        Robot::getInstance()->from_millimeters(std::get<1>(v[n+1])),
-        Robot::getInstance()->from_millimeters(std::get<2>(v[n+1])));
+              Robot::getInstance()->from_millimeters(std::get<0>(v[n + 1])),
+              Robot::getInstance()->from_millimeters(std::get<1>(v[n + 1])),
+              Robot::getInstance()->from_millimeters(std::get<2>(v[n + 1])));
 
     if(verbose) {
         os.printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n",
-            Robot::getInstance()->from_millimeters(std::get<0>(v[n+2])),
-            Robot::getInstance()->from_millimeters(std::get<1>(v[n+2])),
-            Robot::getInstance()->from_millimeters(std::get<2>(v[n+2])));
-    }else{
-        os.printf("[TL0:%1.4f]\n", Robot::getInstance()->from_millimeters(std::get<2>(v[n+2])));
+                  Robot::getInstance()->from_millimeters(std::get<0>(v[n + 2])),
+                  Robot::getInstance()->from_millimeters(std::get<1>(v[n + 2])),
+                  Robot::getInstance()->from_millimeters(std::get<2>(v[n + 2])));
+    } else {
+        os.printf("[TL0:%1.4f]\n", Robot::getInstance()->from_millimeters(std::get<2>(v[n + 2])));
     }
 
     // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
@@ -589,36 +608,36 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
             os.printf("usage: jog axis distance iterations [feedrate]\n");
             return true;
         }
-        float d= strtof(dist.c_str(), NULL);
-        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
-        uint32_t n= strtol(iters.c_str(), NULL, 10);
+        float d = strtof(dist.c_str(), NULL);
+        float f = speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n = strtol(iters.c_str(), NULL, 10);
 
-        bool toggle= false;
-        Robot::getInstance()->absolute_mode= false;
+        bool toggle = false;
+        Robot::getInstance()->absolute_mode = false;
         for (uint32_t i = 0; i < n; ++i) {
-            THEDISPATCHER->dispatch(nullos, 'G', 0, 'F', f, toupper(axis[0]), toggle?-d:d, 0);
+            THEDISPATCHER->dispatch(nullos, 'G', 0, 'F', f, toupper(axis[0]), toggle ? -d : d, 0);
             if(Module::is_halted()) break;
-            toggle= !toggle;
+            toggle = !toggle;
         }
         os.printf("done\n");
 
-    }else if (what == "circle") {
+    } else if (what == "circle") {
         // draws a circle around origin. usage: radius iterations [feedrate]
         std::string radius = stringutils::shift_parameter( params );
         std::string iters = stringutils::shift_parameter( params );
         std::string speed = stringutils::shift_parameter( params );
-         if(radius.empty() || iters.empty()) {
+        if(radius.empty() || iters.empty()) {
             os.printf("usage: circle radius iterations [feedrate]\n");
             return true;
         }
 
-        float r= strtof(radius.c_str(), NULL);
-        uint32_t n= strtol(iters.c_str(), NULL, 10);
-        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+        float r = strtof(radius.c_str(), NULL);
+        uint32_t n = strtol(iters.c_str(), NULL, 10);
+        float f = speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
 
-        Robot::getInstance()->absolute_mode= false;
+        Robot::getInstance()->absolute_mode = false;
         THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', -r, 'F', f, 0);
-        Robot::getInstance()->absolute_mode= true;
+        Robot::getInstance()->absolute_mode = true;
 
         for (uint32_t i = 0; i < n; ++i) {
             if(Module::is_halted()) break;
@@ -627,14 +646,14 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
         // leave it where it started
         if(!Module::is_halted()) {
-            Robot::getInstance()->absolute_mode= false;
+            Robot::getInstance()->absolute_mode = false;
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', r, 'F', f, 0);
-            Robot::getInstance()->absolute_mode= true;
+            Robot::getInstance()->absolute_mode = true;
         }
 
         os.printf("done\n");
 
-    }else if (what == "square") {
+    } else if (what == "square") {
         // draws a square usage: size iterations [feedrate]
         std::string size = stringutils::shift_parameter( params );
         std::string iters = stringutils::shift_parameter( params );
@@ -643,11 +662,11 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
             os.printf("usage: square size iterations [fedrate]\n");
             return true;
         }
-        float d= strtof(size.c_str(), NULL);
-        float f= speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
-        uint32_t n= strtol(iters.c_str(), NULL, 10);
+        float d = strtof(size.c_str(), NULL);
+        float f = speed.empty() ? Robot::getInstance()->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n = strtol(iters.c_str(), NULL, 10);
 
-        Robot::getInstance()->absolute_mode= false;
+        Robot::getInstance()->absolute_mode = false;
 
         for (uint32_t i = 0; i < n; ++i) {
             THEDISPATCHER->dispatch(nullos, 'G', 0, 'X', d, 'F', f, 0);
@@ -658,7 +677,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
         }
         os.printf("done\n");
 
-    }else if (what == "raw") {
+    } else if (what == "raw") {
 
         // issues raw steps to the specified axis usage: axis steps steps/sec
         std::string axis = stringutils::shift_parameter( params );
@@ -669,11 +688,11 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
             return true;
         }
 
-        char ax= toupper(axis[0]);
-        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
-        int steps= strtol(stepstr.c_str(), NULL, 10);
-        bool dir= steps >= 0;
-        steps= std::abs(steps);
+        char ax = toupper(axis[0]);
+        uint8_t a = ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
+        int steps = strtol(stepstr.c_str(), NULL, 10);
+        bool dir = steps >= 0;
+        steps = std::abs(steps);
 
         if(a > C_AXIS) {
             os.printf("error: axis must be x, y, z, a, b, c\n");
@@ -685,16 +704,16 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
             return true;
         }
 
-        uint32_t sps= strtol(stepspersec.c_str(), NULL, 10);
-        sps= std::max(sps, (uint32_t)1);
+        uint32_t sps = strtol(stepspersec.c_str(), NULL, 10);
+        sps = std::max(sps, (uint32_t)1);
 
         os.printf("issuing %d steps at a rate of %d steps/sec on the %c axis\n", steps, sps, ax);
-        uint32_t delayus= 1000000.0F / sps;
-        for(int s= 0;s<steps;s++) {
+        uint32_t delayus = 1000000.0F / sps;
+        for(int s = 0; s < steps; s++) {
             if(Module::is_halted()) break;
             Robot::getInstance()->actuators[a]->manual_step(dir);
             // delay (note minimum is 10ms due to nuttx)
-            safe_sleep(delayus/1000);
+            safe_sleep(delayus / 1000);
         }
 
         // reset the position based on current actuator position
@@ -702,7 +721,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
         os.printf("done\n");
 
-    }else {
+    } else {
         os.printf("usage:\n test jog axis distance iterations [feedrate]\n");
         os.printf(" test square size iterations [feedrate]\n");
         os.printf(" test circle radius iterations [feedrate]\n");
@@ -714,13 +733,13 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 {
-    os.printf("Smoothie Version2 for Mini Alpha: build 0.1\n");
+    os.printf("Smoothie Version2 for Mini Alpha: build 0.5\n");
     return true;
 }
 
 bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
 {
-    HELP("config-set section key value");
+    HELP("config-set \"section name\" key value");
 
     std::string sectionstr = stringutils::shift_parameter( params );
     std::string keystr = stringutils::shift_parameter( params );
@@ -757,17 +776,6 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
 
     } else {
         os.printf("failed to change config\n");
-        #if 1
-        os.printf("fsin: good()=%d\n", fsin.good());
-        os.printf(" eof()=%d\n", fsin.eof());
-        os.printf(" fail()=%d\n", fsin.fail());
-        os.printf(" bad()=%d\n", fsin.bad());
-
-        os.printf("fsout: good()=%d\n", fsout.good());
-        os.printf(" eof()=%d\n", fsout.eof());
-        os.printf(" fail()=%d\n", fsout.fail());
-        os.printf(" bad()=%d\n", fsout.bad());
-        #endif
         return true;
     }
 
@@ -777,11 +785,47 @@ bool CommandShell::config_set_cmd(std::string& params, OutputStream& os)
     // now rename the config.ini file to config.bak and config.tmp file to config.ini
     int s = rename("/sd/config.ini", "/sd/config.bak");
     if(s == 0) {
-        s= rename("/sd/config.tmp", "/sd/config.ini");
+        s = rename("/sd/config.tmp", "/sd/config.ini");
         if(s != 0) os.printf("Failed to rename config.tmp to config.ini\n");
 
-    }else{
+    } else {
         os.printf("Failed to rename config.ini to config.bak - aborting\n");
     }
     return true;
 }
+
+// Special hack that switches the input comms to send everything here until we finish.
+// unfortunately due to bugs in nuttx we cannot use this as it drops characters on USB serial
+// due to lack of flow control, considered a "feature" in nuttx what BS! (SmoothieV1 had USB serial flow control done properly)
+bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
+{
+    HELP("upload filename - upload a file and save to sd");
+
+    if(!Conveyor::getInstance()->is_idle()) {
+        os.printf("upload not allowed while printing or busy\n");
+        return true;
+    }
+
+    // open file to upload to
+    std::string upload_filename = stringutils::shift_parameter(params);
+    FILE *fd = fopen(upload_filename.c_str(), "w");
+    if(fd != NULL) {
+        os.printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
+    } else {
+        os.printf("failed to open file: %s.\r\n", upload_filename.c_str());
+        return true;
+    }
+
+    volatile bool uploading = true;
+    int cnt = 0;
+    set_capture([&uploading, fd, &cnt](char c){if( c == 4 || c == 26) uploading = false; else { fputc(c, fd); ++cnt; } });
+    while(uploading) {
+        usleep(10000);
+    }
+    set_capture(nullptr);
+    fclose(fd);
+    os.printf("uploaded %d bytes\n", cnt);
+
+    return true;
+}
+

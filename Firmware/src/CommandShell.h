@@ -3,6 +3,7 @@
 #include <string>
 
 class OutputStream;
+class GCode;
 
 class CommandShell
 {
@@ -31,6 +32,8 @@ private:
     bool grblDH_cmd(std::string& params, OutputStream& os);
     bool test_cmd(std::string& params, OutputStream& os);
     bool version_cmd(std::string& params, OutputStream& os);
+    bool m20_cmd(GCode& gcode, OutputStream& os);
+    bool upload_cmd(std::string& params, OutputStream& os);
 
     bool mounted;
 };

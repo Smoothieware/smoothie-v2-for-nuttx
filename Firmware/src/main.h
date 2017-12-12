@@ -5,6 +5,10 @@
 
 mqd_t get_message_queue(bool read);
 bool send_message_queue(mqd_t mqfd, const char *pline, OutputStream *pos);
+void delete_message_queue(mqd_t mqfd);
+
+// sets a callback for all incoming data
+void set_capture(std::function<void(char)> cf);
 
 // TODO may move to Dispatcher
 bool dispatch_line(OutputStream& os, const char *line);

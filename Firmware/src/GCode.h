@@ -2,6 +2,7 @@
 
 #include <map>
 #include <stdint.h>
+#include <stdio.h>
 
 class OutputStream;
 
@@ -18,7 +19,7 @@ public:
 	bool has_arg(char c) const { return (argbitmap & (1<<(c-'A'))) != 0; }
 	bool has_no_args() const { return argbitmap == 0; }
 	float get_arg(char c) const { return args.at(c); }
-	float get_int_arg(char c) const { return (int)args.at(c); }
+	int get_int_arg(char c) const { return (int)args.at(c); }
 	const Args_t& get_args() const { return args; }
 	size_t get_num_args() const { return args.size(); }
 	bool has_g() const { return is_g; }
@@ -35,7 +36,9 @@ public:
 
 	GCode& set_command(char c, uint16_t cd, uint16_t scode=0) { is_g= c=='G'; is_m= c=='M'; this->code= cd; this->subcode= scode; return *this; }
 	GCode& add_arg(char c, float f) { args[c]= f; set_arg(c); return *this; }
+
 	void dump(OutputStream&) const;
+	void dump(FILE*) const;
 	//friend std::ostream& operator<<(std::ostream& o, const GCode& f) { f.dump(); return o; }
 
 private:

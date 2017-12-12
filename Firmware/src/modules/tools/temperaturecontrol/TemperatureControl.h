@@ -24,6 +24,7 @@ public:
 
     void set_desired_temperature(float desired_temperature);
     float get_temperature();
+    const char *get_designator() const { return designator.c_str(); }
 
     using pad_temperature_t = struct pad_temperature {
         float current_temperature;
@@ -46,8 +47,9 @@ private:
     void setPIDi(float i);
     void setPIDd(float d);
     void check_runaway();
-    bool handle_gcode(GCode& gcode, OutputStream& os);
+    bool handle_mcode(GCode& gcode, OutputStream& os);
     bool handle_M6(GCode& gcode, OutputStream& os);
+    bool handle_autopid(GCode& gcode, OutputStream& os);
 
     float target_temperature;
     float max_temp, min_temp;

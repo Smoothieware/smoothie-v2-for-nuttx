@@ -68,7 +68,7 @@ static bool setup_CDC(int& rfd, int& wfd)
     // we think we had a connection but due to a bug in Nuttx we may or may not
     // but it doesn't really seem to matter
 
-    rfd= fd;
+    rfd = fd;
 
     // now open for write
     fd = open("/dev/ttyACM0", O_WRONLY);
@@ -77,7 +77,7 @@ static bool setup_CDC(int& rfd, int& wfd)
         return false;
     }
 
-    wfd= fd;
+    wfd = fd;
     return true;
 }
 
@@ -174,19 +174,53 @@ static bool receive_message_queue(mqd_t mqfd, const char **ppline, OutputStream 
     return true;
 }
 
+void delete_message_queue(mqd_t mqfd)
+{
+    mq_close(mqfd);
+}
 
 #include "GCode.h"
 #include "GCodeProcessor.h"
 #include "Dispatcher.h"
 #include "Robot.h"
 
+// set to true when M28 is in effect
+static bool uploading = false;
+static FILE *upload_fp = nullptr;
+
 // TODO maybe move to Dispatcher
 static GCodeProcessor gp;
 // can be called by modules when in command thread context
-bool dispatch_line(OutputStream& os, const char *line)
+bool dispatch_line(OutputStream& os, const char *cl)
 {
-    // TODO map some special M codes to commands as they violate the gcode spec and pass a string parameter
-    // M23, M32, M117 => m23, m32, m117 and handle as a command
+    // Don't like this, but we need a writable copy of the input line
+    char line[strlen(cl)+1];
+    strcpy(line, cl);
+
+    // map some special M codes to commands as they violate the gcode spec and pass a string parameter
+    // M23, M32, M117, M30 => m23, m32, m117, rm and handle as a command
+    if(strncmp(line, "M23 ", 4) == 0) line[0] = 'm';
+    else if(strncmp(line, "M30 ", 4) == 0) { strcpy(line, "rm /sd/"); strcpy(&line[7], &cl[4]); } // make into an rm command
+    else if(strncmp(line, "M32 ", 4) == 0) line[0] = 'm';
+    else if(strncmp(line, "M117 ", 5) == 0) line[0] = 'm';
+
+    // handle save to file M codes:- M28 filename, and M29
+    if(strncmp(line, "M28 ", 4) == 0) {
+        char *upload_filename= &line[4];
+        if(strncmp(upload_filename, "/sd/", 4) != 0) {
+            // prepend /sd/ luckily we have exactly 4 characters before the filename
+            memcpy(line, "/sd/", 4);
+            upload_filename= line;
+        }
+        upload_fp = fopen(upload_filename, "w");
+        if(upload_fp != nullptr) {
+            uploading = true;
+            os.printf("Writing to file: %s\nok\n", upload_filename);
+        } else {
+            os.printf("open failed, File: %s.\nok\n", upload_filename);
+        }
+        return true;
+    }
 
     // see if a command
     if(islower(line[0]) || line[0] == '$') {
@@ -232,13 +266,36 @@ bool dispatch_line(OutputStream& os, const char *line)
         return true;
     }
 
+    // if in M28 mode then just save all incoming lines to the file until we get M29
+    if(uploading && gcodes[0].has_m() && gcodes[0].get_code() == 29) {
+        // done uploading, close file
+        fclose(upload_fp);
+        upload_fp = nullptr;
+        uploading = false;
+        os.printf("Done saving file.\nok\n");
+        return true;
+    }
+
+
     // dispatch gcodes
     // NOTE return one ok per line instead of per GCode only works for regular gcodes like G0-G3, G92 etc
     // gcodes returning data like M114 should NOT be put on multi gcode lines.
-    int ngcodes= gcodes.size();
+    int ngcodes = gcodes.size();
     for(auto& i : gcodes) {
         //i.dump(os);
         if(i.has_m() || i.has_g()) {
+
+            if(uploading) {
+                // just save the gcodes to the file
+                if(upload_fp != nullptr) {
+                    // write out gcode
+                    i.dump(upload_fp);
+                }
+
+                os.printf("ok\n");
+                return true;
+            }
+
             // if this is a multi gcode line then dispatch must not send ok unless this is the last one
             if(!THEDISPATCHER->dispatch(i, os, ngcodes == 1)) {
                 // no handler processed this gcode, return ok - ignored
@@ -255,8 +312,15 @@ bool dispatch_line(OutputStream& os, const char *line)
     return true;
 }
 
+#include <functional>
+static std::function<void(char)> capture_fnc;
+void set_capture(std::function<void(char)> cf)
+{
+    capture_fnc= cf;
+}
+
 #include <vector>
-std::vector<OutputStream*> output_streams;
+static std::vector<OutputStream*> output_streams;
 
 static void usb_comms()
 {
@@ -303,6 +367,11 @@ static void usb_comms()
     for(;;) {
         n = read(rfd, &line[cnt], 1);
         if(n == 1) {
+            if(capture_fnc) {
+                capture_fnc(line[cnt]);
+                continue;
+            }
+
             if(line[cnt] == 24) { // ^X
                 if(!Module::is_halted()) {
                     Module::broadcast_halt(true);
@@ -373,6 +442,11 @@ static void uart_comms()
         n = read(0, &line[cnt], 1);
 
         if(n == 1) {
+            if(capture_fnc) {
+                capture_fnc(line[cnt]);
+                continue;
+            }
+
             if(line[cnt] == 24) { // ^X
                 if(!Module::is_halted()) {
                     Module::broadcast_halt(true);
@@ -385,11 +459,11 @@ static void uart_comms()
                 query_os = &os; // we need to let it know where to send response back to TODO maybe a race condition if both USB and uart send ?
                 do_query = true;
 
-            // } else if(line[cnt] == '!') {
-            //     do_feed_hold(true);
+                // } else if(line[cnt] == '!') {
+                //     do_feed_hold(true);
 
-            // } else if(line[cnt] == '~') {
-            //     do_feed_hold(false);
+                // } else if(line[cnt] == '~') {
+                //     do_feed_hold(false);
 
             } else if(discard) {
                 // we discard long lines until we get the newline
@@ -444,7 +518,7 @@ void print_to_all_consoles(const char *str)
 #include "Pin.h"
 
 // Define the activity/idle indicator led
-static Pin *idle_led= nullptr;
+static Pin *idle_led = nullptr;
 
 /*
  * All commands must be executed in the context of this thread. It is equivalent to the main_loop in v1.
@@ -523,7 +597,7 @@ void safe_sleep(uint32_t ms)
 
         if(ms > 10) {
             ms -= 10;
-        }else{
+        } else {
             break;
         }
     }
@@ -545,6 +619,7 @@ void safe_sleep(uint32_t ms)
 #include "Laser.h"
 #include "Endstops.h"
 #include "ZProbe.h"
+#include "Player.h"
 
 #include "main.h"
 #include <sys/mount.h>
@@ -618,9 +693,9 @@ static int smoothie_startup(int, char **)
             // get general system settings
             ConfigReader::section_map_t m;
             if(cr.get_section("general", m)) {
-                bool f= cr.get_bool(m, "grbl_mode", false);
+                bool f = cr.get_bool(m, "grbl_mode", false);
                 THEDISPATCHER->set_grbl_mode(f);
-                printf("grbl mode %s\n", f?"set":"not set");
+                printf("grbl mode %s\n", f ? "set" : "not set");
             }
         }
 
@@ -668,7 +743,7 @@ static int smoothie_startup(int, char **)
                 if(!tc.configure(cr)) {
                     printf("INFO: no Temperature Controls loaded\n");
                 }
-            }else{
+            } else {
                 printf("ERROR: ADC failed to setup\n");
             }
         }
@@ -691,10 +766,10 @@ static int smoothie_startup(int, char **)
 
         {
             // Pwm needs to be initialized, there can only be one frequency
-            float freq= 10000; // default is 10KHz
+            float freq = 10000; // default is 10KHz
             ConfigReader::section_map_t m;
             if(cr.get_section("pwm", m)) {
-                freq= cr.get_float(m, "frequency", 10000);
+                freq = cr.get_float(m, "frequency", 10000);
             }
             Pwm::setup(freq);
             printf("INFO: PWM frequency set to %f Hz\n", freq);
@@ -724,15 +799,21 @@ static int smoothie_startup(int, char **)
             zprobe = nullptr;
         }
 
+        printf("configure player\n");
+        Player *player = new Player();
+        if(!player->configure(cr)) {
+            printf("WARNING: Failed to configure Player\n");
+        }
+
         {
             // configure system leds (if any)
             ConfigReader::section_map_t m;
             if(cr.get_section("system leds", m)) {
-                std::string p= cr.get_string(m, "idle_led", "nc");
-                idle_led= new Pin(p.c_str(), Pin::AS_OUTPUT);
+                std::string p = cr.get_string(m, "idle_led", "nc");
+                idle_led = new Pin(p.c_str(), Pin::AS_OUTPUT);
                 if(!idle_led->connected()) {
                     delete idle_led;
-                    idle_led= nullptr;
+                    idle_led = nullptr;
                 }
             }
         }
@@ -746,7 +827,7 @@ static int smoothie_startup(int, char **)
         fs.close();
 
         // unmount sdcard
-        umount("/sd");
+        //umount("/sd");
 #endif
 
         // initialize planner before conveyor this is when block queue is created
