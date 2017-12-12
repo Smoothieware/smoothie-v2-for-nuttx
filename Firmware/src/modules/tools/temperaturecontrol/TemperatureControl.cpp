@@ -202,7 +202,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
         this->heater_pin->set(0);
         //set_low_on_debug(heater_pin->port_number, heater_pin->pin);
         // TODO use single slowtimer for all sigma delta
-        SlowTicker::getInstance()->attach(cr.get_float(m, pwm_frequency_key, 1000), std::bind(&SigmaDeltaPwm::on_tick, this->heater_pin));
+        SlowTicker::getInstance()->attach(cr.get_float(m, pwm_frequency_key, 2000), std::bind(&SigmaDeltaPwm::on_tick, this->heater_pin));
     }
 
     // runaway timer
@@ -490,6 +490,7 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
     if (desired_temperature <= 0.0F) {
         // turning it off
         heater_pin->set((this->o = 0));
+
     } else if(last_target_temperature <= 0.0F) {
         // if it was off and we are now turning it on we need to initialize
         this->lastInput = last_reading;
@@ -511,7 +512,7 @@ float TemperatureControl::get_temperature()
 // called in an ISR, be nice!
 void TemperatureControl::thermistor_read_tick()
 {
-	float temperature = sensor->get_temperature();
+    float temperature = sensor->get_temperature();
     if(!this->readonly && target_temperature > 2) {
         if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
             target_temperature = UNDEFINED;
@@ -544,6 +545,7 @@ void TemperatureControl::pid_process(float temperature)
         if(temperature > (target_temperature + hysteresis) && this->o > 0) {
             heater_pin->set(false);
             this->o = 0; // for display purposes only
+
         } else if(temperature < (target_temperature - hysteresis) && this->o <= 0) {
             if(heater_pin->max_pwm() >= 255) {
                 // turn on full
@@ -573,15 +575,9 @@ void TemperatureControl::pid_process(float temperature)
     this->o = (this->p_factor * error) + new_I - (this->d_factor * d);
 
     if (this->o >= heater_pin->max_pwm())
-    {
         this->o = heater_pin->max_pwm();
-        printf("PWM=%d (MAX_DEFINED)\n",this->o);
-    }
     else if (this->o < 0)
-    {
         this->o = 0;
-        printf("PWM=0\n");
-    }
     else if(this->windup)
         this->iTerm = new_I; // Only update I term when output is not saturated.
 
