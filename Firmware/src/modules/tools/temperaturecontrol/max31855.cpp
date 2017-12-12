@@ -63,7 +63,7 @@ float Max31855::get_temperature()
     //Initiate SPI transmission
     this->spi_cs_pin.set(false);
 
-    //TODO usleep() causes hardfault to the board, but data is successfully acquired without delay
+    //FIXME usleep() causes hardfault to the board, although data is successfully acquired without delay
     //usleep(1); // Must wait for first bit valid
 
     // Read 16 bits (writing something as well is required by the api)
