@@ -807,7 +807,7 @@ bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
     }
 
     // open file to upload to
-    std::string upload_filename = stringutils::shift_parameter(params);
+    std::string upload_filename = params;
     FILE *fd = fopen(upload_filename.c_str(), "w");
     if(fd != NULL) {
         os.printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
