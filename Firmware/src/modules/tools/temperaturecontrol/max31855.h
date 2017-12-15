@@ -20,19 +20,46 @@ class Spi;
 
 class Max31855 : public TempSensor
 {
-public:
-    Max31855();
-    ~Max31855() {};
-    bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
-    float get_temperature();
-    Pin spi_cs_pin; //TODO perhaps put SPI pins inside an array or struct
-    const char* spi_ssel_pin;
-    const char* spi_mosi_pin;
-    const char* spi_miso_pin;
-    const char* spi_sclk_pin;
-private:
-    Spi *spi;
-    RingBuffer<float,16> readings;
+    public:
+
+        /**
+         * @brief   Initialize the module
+         * @param   Nothing
+         * @return  Nothing
+         * @note    The module is initialized with a null pointer
+         */
+        Max31855();
+
+        /**
+         * @brief   Deinitialize the module
+         * @param   Nothing
+         * @return  Nothing
+         */
+        ~Max31855() {};
+
+        /**
+         * @brief   Configure the module using the parameters from the config file
+         * @param   cr          : target config file object
+         * @param   m           : target section map of the config file
+         * @return  false       : the module failed to be configured
+         * @return  true        : the module is configured and loaded successfully
+         */
+        bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
+
+        /**
+         * @brief   Acquire temperature data of the sensor
+         * @param   Nothing
+         * @return  Average of the last acquired temperature values
+         * @note    Data is acquired and converted to temperature value
+         * and also depends on the readings per second parameter
+         */
+        float get_temperature();
+    private:
+        Spi *spi;                      //pointer to SPI
+        Pin spi_cs_pin;                //configure as GPIO pin
+        const char* spi_miso_pin;      //configure as SPI pin
+        const char* spi_sclk_pin;      //configure as SPI pin
+        RingBuffer<float,16> readings; //number of readings per second
 };
 
 #endif

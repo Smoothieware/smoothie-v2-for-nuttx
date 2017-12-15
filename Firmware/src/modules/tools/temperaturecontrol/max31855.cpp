@@ -10,22 +10,23 @@
 #include "Spi.h"
 #include "Pin.h"
 
+/* define keys for the module parameters of the config file */
 #define spi_channel_key "spi_channel"
 #define chip_select_pin_key "chip_select_pin"
-#define mosi_pin_key "mosi_pin"
 #define miso_pin_key "miso_pin"
 #define sclk_pin_key "sclk_pin"
 
+/* Initialize the module */
 Max31855::Max31855():spi(nullptr){}
 
-// Get configuration from the config file
+/* Configure the module using the parameters from the config file */
 bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 {
     /* select which SPI channel to use:
     	0: SPI
-    	1: SSP0
+    	1: SSP0   (default)
     	2: SSP1   */
-    int spi_channel = cr.get_int(m, spi_channel_key,0);
+    uint8_t spi_channel = cr.get_int(m, spi_channel_key,1);
     if(spi_channel < 0 || spi_channel > 2) {
         printf("WARNING: Invalid SPI channel %d\n",spi_channel);
         return false;
@@ -34,30 +35,29 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     spi = new Spi(spi_channel);
 
     //Chip select can be configured to any GPIO pin
-    this->spi_cs_pin=cr.get_string(m, chip_select_pin_key,"nc"); //SPI SSEL
+    //SPI SSEL
+    this->spi_cs_pin=cr.get_string(m, chip_select_pin_key,"p1_0");
     this->spi_cs_pin.set(true);
     this->spi_cs_pin.as_output();
 
-    //Check if the specified pin has SPI function
-    this->spi_miso_pin=cr.get_string(m, miso_pin_key,"nc");//SPI MISO
-    if (!(spi->from_string(spi_channel,this->spi_miso_pin,"miso"))) {
-        delete spi;
-        return false;
-    }
-
-    //Check if the specified pin has SPI function
-    this->spi_sclk_pin=cr.get_string(m, sclk_pin_key,"nc"); //SPI SCLK
-    if (!(spi->from_string(spi_channel,this->spi_sclk_pin,"sclk"))) {
-        delete spi;
-        return false;
-    }
+    //Check if the specified pins supports SPI or SSP
     //Only miso and sclk pins are needed to be initialized by the SPI mode
-
-    //the module is loaded successfully
+    //SPI MISO
+    this->spi_miso_pin=cr.get_string(m, miso_pin_key,"p1_1");
+    if (!(spi->from_string(spi_channel,this->spi_miso_pin,Spi::MISO))) {
+        delete spi;
+        return false;
+    }
+    //SPI SCLK
+    this->spi_sclk_pin=cr.get_string(m, sclk_pin_key,"p3_0");
+    if (!(spi->from_string(spi_channel,this->spi_sclk_pin,Spi::SCLK))) {
+        delete spi;
+        return false;
+    }
     return true;
 }
 
-// returns an average of the last few temperature values we've read
+/* Get temperature value of the sensor */
 float Max31855::get_temperature()
 {
     //Initiate SPI transmission
@@ -72,10 +72,9 @@ float Max31855::get_temperature()
     //uint16_t data2 = spi->write(0);
 
     this->spi_cs_pin.set(true);
-    //printf("data=%d data2=%d data=%b data2=%b\n",data,data2,data,data2);
     float temperature;
 
-    //Process temp
+    //Process temperature
     if (data & 0x0001) {
         // Error flag.
         temperature = std::numeric_limits<float>::infinity();
@@ -87,7 +86,6 @@ float Max31855::get_temperature()
             data = ~data;
             temperature = ((data & 0x1FFF) + 1) / -4.f;
         }
-        //printf("temperature=%d\n",temperature);
     }
 
     if (readings.size() >= readings.capacity()) {
