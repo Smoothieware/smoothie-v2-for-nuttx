@@ -65,7 +65,6 @@ end
 # Install the handler
 Rake.application.add_loader('d', DfileLoader.new)
 
-ARMVERSION = ENV['ARMVERSION'].nil? ? '6.3.1' :  ENV['ARMVERSION']
 #TOOLSDIR = '/home/morris/work/reprap/Smoothie/gcc-arm-none-eabi/bin'
 TOOLSDIR = ENV['ARMTOOLS'].nil? ? '/usr/bin' :  ENV['ARMTOOLS']
 TOOLSBIN = "#{TOOLSDIR}/arm-none-eabi-"
@@ -78,6 +77,10 @@ OBJCOPY = "#{TOOLSBIN}objcopy"
 OBJDUMP = "#{TOOLSBIN}objdump"
 SIZE = "#{TOOLSBIN}size"
 AR = "#{TOOLSBIN}ar"
+
+current_version= `#{CC} -dumpversion`.chomp
+puts "Current GCC version is #{current_version}"
+ARMVERSION = ENV['ARMVERSION'].nil? ? current_version :  ENV['ARMVERSION']
 
 ARFLAGS = 'cr'
 
