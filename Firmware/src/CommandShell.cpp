@@ -114,6 +114,7 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
     d = opendir(path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
+            if(Module::is_halted()) break;
             os.printf("%s", p->d_name);
             struct stat buf;
             std::string sp = path + "/" + p->d_name;

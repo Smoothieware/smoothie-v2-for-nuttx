@@ -371,15 +371,7 @@ bool Player::abort_command( std::string& params, OutputStream& os )
     play_thread_p= nullptr;
 
     suspended = false;
-    playing_file = false;
-    played_cnt = 0;
-    file_size = 0;
-    this->filename = "";
-    this->current_os = NULL;
-    if(current_file_handler != nullptr)
-        fclose(current_file_handler);
 
-    current_file_handler = nullptr;
     if(params.empty()) {
         // clear out the block queue, will wait until queue is empty
         // MUST be called in command thread context to make sure there are no blocked messages waiting to put something on the queue
@@ -478,7 +470,7 @@ void Player::player_thread()
         }
     }
 
-    // finished file
+    // finished file, clean up
     this->playing_file = false;
     this->filename = "";
     played_cnt = 0;
