@@ -24,7 +24,9 @@
 
 #define HELP(m) if(params == "-h") { os.printf("%s\n", m); return true; }
 
-Player *Player::instance= nullptr;
+Player *Player::instance = nullptr;
+// needs to be static as it may be used by a queued gcode after abort
+OutputStream Player::nullos;
 
 Player::Player() : Module("player")
 {
@@ -36,9 +38,10 @@ Player::Player() : Module("player")
     this->current_os = nullptr;
     this->suspended = false;
     this->suspend_loops = 0;
-    abort_thread= false;
-    play_thread_exited= false;
-    play_thread_p= -1;
+    abort_thread = false;
+    abort_flg= false;
+    play_thread_exited = false;
+    play_thread_p = -1;
     instance = this;
 }
 
@@ -117,7 +120,6 @@ bool Player::handle_m23(std::string& params, OutputStream& os)
     std::string cmd("/sd/");
     cmd.append(params); // filename is whatever is in params including spaces
     cmd.append(" -p"); // starts paused
-    OutputStream nullos;
     play_command(cmd, nullos);
 
     if(this->current_file_handler == nullptr) {
@@ -138,7 +140,6 @@ bool Player::handle_m32(std::string& params, OutputStream& os)
     std::string f("/sd/");
     f.append(params); // filename is whatever is in params including spaces
 
-    OutputStream nullos;
     play_command(f, nullos);
 
     // we need to send back different messages for M32
@@ -173,7 +174,6 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
                     std::string currentfn = this->filename.c_str();
 
                     // abort the print
-                    OutputStream nullos;
                     std::string cmd;
                     abort_command(cmd, nullos);
 
@@ -266,7 +266,7 @@ bool Player::play_command( std::string& params, OutputStream& os )
 
     if( options.find_first_of("Pp") == std::string::npos ) {
         this->playing_file = true;
-    }else{
+    } else {
         this->playing_file = false; // start paused
     }
 
@@ -292,7 +292,7 @@ bool Player::play_command( std::string& params, OutputStream& os )
     this->elapsed_secs = 0;
 
     // start play thread
-    play_thread_exited= false;
+    play_thread_exited = false;
 
     // We have to do this the long way as we want to set the stack size
     pthread_attr_t attr;
@@ -393,48 +393,57 @@ bool Player::abort_command( std::string& params, OutputStream& os )
 
     printf("DEBUG: aborting play, waiting for thread to exit..\n");
 
-    abort_thread= true;
+    abort_thread = true;
 
     // wait for the thread to exit
     void *result;
     pthread_join(play_thread_p, &result);
-    play_thread_exited= false;
-    play_thread_p= -1;
+    play_thread_exited = false;
+    play_thread_p = -1;
 
     suspended = false;
 
+    // there could be several gcodes queued after thread exits, we need to flush the message queue as well
+    // so we need to complete this in command thread context when it is idle
     if(params.empty()) {
-        // clear out the block queue, will wait until queue is empty
-        // MUST be called in command thread context to make sure there are no blocked messages waiting to put something on the queue
-        Conveyor::getInstance()->flush_queue();
-
-        // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
-        Robot::getInstance()->reset_position_from_current_actuator_position();
-        os.printf("Aborted playing or paused file. Please turn any heaters off manually\n");
+        abort_flg = true;
+        os.printf("Please wait for abort to complete. Turn any heaters off manually\n");
     }
 
     return true;
 }
 
 // called when in command thread context, we can issue commands here
-// MOTE when idle only caled once every 200ms
-void Player::in_command_ctx()
+// NOTE when idle only called once every 200ms
+void Player::in_command_ctx(bool idle)
 {
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ) {
-            OutputStream os; // null stream
-            this->play_command(this->on_boot_gcode, os);
+            this->play_command(this->on_boot_gcode, nullos);
 
         } else {
             printf("player: On boot gcode disabled.\n");
         }
     }
 
+    if(abort_flg && idle) {
+        // we need to abort but there will be gcodes in the message queue so wait until idle then clean up
+        abort_flg= false;
+        // clear out the block queue, will wait until queue is empty
+        // MUST be called in command thread context when idle to make sure there are no blocked messages waiting to put something on the queue
+        Conveyor::getInstance()->flush_queue();
+
+        // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
+        Robot::getInstance()->reset_position_from_current_actuator_position();
+        printf("DEBUG: Abort completed\n");
+        return;
+    }
+
     if(suspended && suspend_loops > 0) {
         // if we are suspended we need to allow the command thread to cycle a few times to flush the queus,
         // then finish off the suspend processing
-        if(--suspend_loops == 0) {
+        if(idle && --suspend_loops == 0) {
             suspend_part2();
             return;
         }
@@ -444,13 +453,11 @@ void Player::in_command_ctx()
     if(play_thread_exited && play_thread_p != -1) {
         void *result;
         pthread_join(play_thread_p, &result);
-        play_thread_exited= false;
-        play_thread_p= -1;
+        play_thread_exited = false;
+        play_thread_p = -1;
     }
 }
 
-// needs to be static as it may be used by a queued gcode after abort
-static OutputStream nullos;
 void Player::player_thread()
 {
     printf("DEBUG: Player thread starting\n");
@@ -470,7 +477,7 @@ void Player::player_thread()
 
         // allows us to abort the thread
         if(abort_thread || Module::is_halted()) {
-            abort_thread= false;
+            abort_thread = false;
             break;
         }
 
@@ -527,7 +534,7 @@ void Player::player_thread()
     printf("DEBUG: Player thread exiting\n");
 
     // indicates it is safe to delete the thread (after it has been joined)
-    play_thread_exited= true;
+    play_thread_exited = true;
 }
 
 bool Player::request(const char *key, void *value)
@@ -654,7 +661,6 @@ void Player::suspend_part2()
 
     // execute optional gcode if defined
     if(!after_suspend_gcode.empty()) {
-        //OutputStream nullos;
         dispatch_line(nullos, after_suspend_gcode.c_str());
 
     }
@@ -717,8 +723,6 @@ bool Player::resume_command(std::string& params, OutputStream& os )
             }
         }
     }
-
-    //OutputStream nullos;
 
     // execute optional gcode if defined
     if(!before_resume_gcode.empty()) {

@@ -548,6 +548,7 @@ static void *commandthrd(void *)
     for(;;) {
         const char *line;
         OutputStream *os;
+        bool idle= false;
 
         // This will timeout after 200 ms
         if(receive_message_queue(mqfd, &line, &os)) {
@@ -556,7 +557,7 @@ static void *commandthrd(void *)
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
         } else {
             // timed out or other error
-
+            idle= true;
             if(idle_led != nullptr) {
                 // toggle led to show we are alive, but idle
                 idle_led->set(!idle_led->get());
@@ -575,7 +576,7 @@ static void *commandthrd(void *)
         }
 
         // call in_command_ctx for all modules that want it
-        Module::broadcast_in_commmand_ctx();
+        Module::broadcast_in_commmand_ctx(idle);
 
         // we check the queue to see if it is ready to run
         // we specifically deal with this in append_block, but need to check for other places

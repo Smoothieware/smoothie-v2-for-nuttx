@@ -15,7 +15,7 @@ class Player : public Module {
         Player();
 
         bool configure(ConfigReader&);
-        void in_command_ctx();
+        void in_command_ctx(bool idle);
         bool request(const char *key, void *value);
 
     private:
@@ -32,7 +32,7 @@ class Player : public Module {
         void suspend_part2();
         static void* play_thread(void *);
         void player_thread();
-
+        static OutputStream nullos;
         static Player *instance;
         std::string filename;
         std::string after_suspend_gcode;
@@ -55,6 +55,7 @@ class Player : public Module {
         struct {
             bool on_boot_gcode_enable:1;
             bool booted:1;
+            bool abort_flg:1;
             bool playing_file:1;
             bool suspended:1;
             bool was_playing_file:1;
