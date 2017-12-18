@@ -533,7 +533,7 @@ void Player::player_thread()
 
     printf("DEBUG: Player thread exiting\n");
 
-    // indicates it is safe to delete the thread (after it has been joined)
+    // indicates that the thread has finished, used to clean up by joining it
     play_thread_exited = true;
 }
 
@@ -606,9 +606,10 @@ bool Player::suspend_command(std::string& params, OutputStream& os )
         this->was_playing_file = false;
     }
 
-    // FIXME/TODO we do not have a main loop but there are queues that may be full of commands
-    // ... we need to allow main loop to cycle a few times to clear any buffered commands in the serial streams etc
-    suspend_loops = 10;
+    // there are queues that may be full of commands so we need to allow command thread to cycle a few times
+    // to clear any buffered commands in the comms streams etc
+    // as we also check for the command thread to be idle we only need 2 iterations
+    suspend_loops = 2;
 
     return true;
 }
