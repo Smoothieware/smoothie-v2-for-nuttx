@@ -36,10 +36,9 @@ Player::Player() : Module("player")
     this->current_os = nullptr;
     this->suspended = false;
     this->suspend_loops = 0;
-    halted = false;
     abort_thread= false;
     play_thread_exited= false;
-    play_thread_p= nullptr;
+    play_thread_p= -1;
     instance = this;
 }
 
@@ -88,16 +87,6 @@ bool Player::configure(ConfigReader& cr)
     want_command_ctx = true;
 
     return true;
-}
-
-void Player::on_halt(bool flg)
-{
-    halted = flg;
-    if(flg && this->playing_file ) {
-        OutputStream os; // null stream
-        std::string cmd;
-        abort_command(cmd, os);
-    }
 }
 
 // TODO implement
@@ -241,9 +230,10 @@ bool Player::handle_gcode(GCode& gcode, OutputStream& os)
     return true;
 }
 
-void Player::play_thread()
+void* Player::play_thread(void*)
 {
     instance->player_thread();
+    return nullptr;
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
@@ -303,7 +293,44 @@ bool Player::play_command( std::string& params, OutputStream& os )
 
     // start play thread
     play_thread_exited= false;
-    play_thread_p = new std::thread(play_thread);
+
+    // We have to do this the long way as we want to set the stack size
+    pthread_attr_t attr;
+    struct sched_param sparam;
+    int status;
+
+    status = pthread_attr_init(&attr);
+    if (status != 0) {
+        printf("Player: pthread_attr_init failed, status=%d\n", status);
+    }
+
+    status = pthread_attr_setstacksize(&attr, 4000);
+    if (status != 0) {
+        printf("Player: pthread_attr_setstacksize failed, status=%d\n", status);
+        return true;
+    }
+
+    status = pthread_attr_setschedpolicy(&attr, SCHED_RR);
+    if (status != OK) {
+        printf("Player: pthread_attr_setschedpolicy failed, status=%d\n", status);
+        return true;
+    } else {
+        printf("Player: Set player thread policy to SCHED_RR\n");
+    }
+
+    sparam.sched_priority = 100; // set same as comms threads
+    status = pthread_attr_setschedparam(&attr, &sparam);
+    if (status != OK) {
+        printf("Player: pthread_attr_setschedparam failed, status=%d\n", status);
+        return true;
+    } else {
+        printf("Player: Set player thread priority to %d\n", sparam.sched_priority);
+    }
+
+    status = pthread_create(&play_thread_p, &attr, play_thread, NULL);
+    if (status != 0) {
+        printf("Player: pthread_create failed, status=%d\n", status);
+    }
 
     return true;
 }
@@ -359,16 +386,20 @@ bool Player::abort_command( std::string& params, OutputStream& os )
 {
     HELP("abort playing file");
 
-    if(!playing_file && current_file_handler == nullptr) {
+    if((!playing_file && current_file_handler == nullptr) || play_thread_p == -1) {
         os.printf("Not currently playing\n");
         return true;
     }
+
+    printf("DEBUG: aborting play, waiting for thread to exit..\n");
+
     abort_thread= true;
+
     // wait for the thread to exit
-    play_thread_p->join();
+    void *result;
+    pthread_join(play_thread_p, &result);
     play_thread_exited= false;
-    delete play_thread_p;
-    play_thread_p= nullptr;
+    play_thread_p= -1;
 
     suspended = false;
 
@@ -410,34 +441,35 @@ void Player::in_command_ctx()
     }
 
     // clean up the play thread once it has finished normally
-    if(play_thread_exited && play_thread_p != nullptr) {
-        play_thread_p->join(); // make sure it has ended
+    if(play_thread_exited && play_thread_p != -1) {
+        void *result;
+        pthread_join(play_thread_p, &result);
         play_thread_exited= false;
-        delete play_thread_p;
-        play_thread_p= nullptr;
+        play_thread_p= -1;
     }
 }
 
+// needs to be static as it may be used by a queued gcode after abort
+static OutputStream nullos;
 void Player::player_thread()
 {
     printf("DEBUG: Player thread starting\n");
 
     // get the message queue
     mqd_t mqfd = get_message_queue(false);
-    OutputStream nullos;
 
 
     char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
     bool discard = false;
 
     while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
-        while(!playing_file && !abort_thread) {
+        while(!playing_file && !abort_thread && !Module::is_halted()) {
             // we must be paused
-            usleep(200000); // sleep and yeild
+            usleep(200000); // sleep and yield
         }
 
         // allows us to abort the thread
-        if(abort_thread) {
+        if(abort_thread || Module::is_halted()) {
             abort_thread= false;
             break;
         }
@@ -457,11 +489,16 @@ void Player::player_thread()
 
             buf[len - 1] = '\0'; // remove the \n and nul terminate
 
+            // we do not want to fill the message queue and block so don't let planner stall on a full queue
+            Conveyor::getInstance()->wait_for_room();
+
             // FIXME we do not want to alloc each time
             char *l = strdup(buf);
             send_message_queue(mqfd, l, &nullos);
 
             played_cnt += len;
+
+            usleep(10); // yield to some other threads
 
         } else {
             // discard long line
@@ -617,7 +654,7 @@ void Player::suspend_part2()
 
     // execute optional gcode if defined
     if(!after_suspend_gcode.empty()) {
-        OutputStream nullos;
+        //OutputStream nullos;
         dispatch_line(nullos, after_suspend_gcode.c_str());
 
     }
@@ -670,7 +707,7 @@ bool Player::resume_command(std::string& params, OutputStream& os )
             }
             if(timeup) os.printf("\n");
 
-            if(is_halted()) {
+            if(Module::is_halted()) {
                 // abort temp wait and rest of resume
                 os.printf("Resume aborted by kill\n");
                 Robot::getInstance()->pop_state();
@@ -681,7 +718,7 @@ bool Player::resume_command(std::string& params, OutputStream& os )
         }
     }
 
-    OutputStream nullos;
+    //OutputStream nullos;
 
     // execute optional gcode if defined
     if(!before_resume_gcode.empty()) {

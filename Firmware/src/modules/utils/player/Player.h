@@ -15,7 +15,6 @@ class Player : public Module {
         Player();
 
         bool configure(ConfigReader&);
-        void on_halt(bool flg);
         void in_command_ctx();
         bool request(const char *key, void *value);
 
@@ -31,7 +30,7 @@ class Player : public Module {
         bool resume_command( std::string& parameters, OutputStream& os );
         std::string extract_options(std::string& args);
         void suspend_part2();
-        static void play_thread();
+        static void* play_thread(void *);
         void player_thread();
 
         static Player *instance;
@@ -41,7 +40,7 @@ class Player : public Module {
         std::string on_boot_gcode;
         OutputStream *current_os;
         OutputStream *reply_os;
-        std::thread *play_thread_p;
+        pthread_t play_thread_p;
 
         FILE* current_file_handler;
         long file_size;
@@ -52,7 +51,6 @@ class Player : public Module {
 
         volatile bool abort_thread;
         volatile bool play_thread_exited;
-        volatile bool halted;
 
         struct {
             bool on_boot_gcode_enable:1;

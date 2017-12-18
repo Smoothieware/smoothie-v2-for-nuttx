@@ -110,6 +110,9 @@ mqd_t get_message_queue(bool read)
     if (mqfd == (mqd_t) - 1) {
         printf("get_message_queue: ERROR mq_open failed\n");
     }
+    // else{
+    //     printf("get message_queue: ok %d\n", mqfd);
+    // }
 
     return mqfd;
 }
@@ -923,7 +926,7 @@ static int smoothie_startup(int, char **)
 
     int policy;
     status = pthread_getschedparam(usb_comms_thread.native_handle(), &policy, &sch_params);
-    printf("pthread get params: status= %d, policy= %d, priority= %d\n", status, policy, sch_params.sched_priority);
+    printf("usb_comms thread - pthread get params: status= %d, policy= %d, priority= %d\n", status, policy, sch_params.sched_priority);
 
     // Join the comms thread with the main thread
     usb_comms_thread.join();
