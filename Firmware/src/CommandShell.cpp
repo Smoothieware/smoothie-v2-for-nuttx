@@ -56,6 +56,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "$H", std::bind( &CommandShell::grblDH_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "reset", std::bind( &CommandShell::reset_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 20, std::bind(&CommandShell::m20_cmd, this, _1, _2));
 
@@ -734,6 +735,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 {
+    HELP("version - print version");
     os.printf("Smoothie Version2 for Mini Alpha: build 0.5\n");
     return true;
 }
@@ -830,3 +832,11 @@ bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
     return true;
 }
 
+bool CommandShell::reset_cmd(std::string& params, OutputStream& os)
+{
+    HELP("reset board");
+    os.printf("Reset will occur in 5 seconds, make sure to disconnect before that\n");
+    usleep(5000000);
+    *(volatile int*)0x40053100 = 1; // reset core
+    return true;
+}
