@@ -66,6 +66,7 @@ private:
     SigmaDeltaPwm *heater_pin{nullptr};
 
     std::string designator;
+    std::string sensor_type;
 
     float hysteresis;
     float iTerm;

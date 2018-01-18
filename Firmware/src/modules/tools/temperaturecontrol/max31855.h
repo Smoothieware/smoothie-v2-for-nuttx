@@ -11,19 +11,16 @@
 #define max31855_h
 
 #include "TempSensor.h"
-#include <string>
 
 #include "Pin.h"
 #include "RingBuffer.h"
-
-class Spi;
 
 class Max31855 : public TempSensor
 {
     public:
 
         /**
-         * @brief   Initialize the module
+         * @brief   Initialize target sensor
          * @param   Nothing
          * @return  Nothing
          * @note    The module is initialized with a null pointer
@@ -31,7 +28,7 @@ class Max31855 : public TempSensor
         Max31855();
 
         /**
-         * @brief   Deinitialize the module
+         * @brief   Deinitialize target sensor
          * @param   Nothing
          * @return  Nothing
          */
@@ -47,19 +44,33 @@ class Max31855 : public TempSensor
         bool configure(ConfigReader& cr, ConfigReader::section_map_t& m);
 
         /**
-         * @brief   Acquire temperature data of the sensor
+         * @brief   Output average temperature value of the sensor
          * @param   Nothing
          * @return  Average of the last acquired temperature values
-         * @note    Data is acquired and converted to temperature value
-         * and also depends on the readings per second parameter
          */
         float get_temperature();
+
+        /**
+         * @brief   Acquire temperature data from the sensor
+         * @param   os          : output stream
+         * @return  Nothing
+         * @note    Raw data is acquired and converted to temperature in Nuttx
+         */
+        void get_raw(OutputStream& os);
+
+        //The following variables need to be public as Nuttx functions need access to them
+        Pin spi_cs_pin;   //configure as GPIO pin
+        static Max31855* instance[];
+        static uint8_t instance_index;
     private:
-        Spi *spi;                      //pointer to SPI
-        Pin spi_cs_pin;                //configure as GPIO pin
-        const char* spi_miso_pin;      //configure as SPI pin
-        const char* spi_sclk_pin;      //configure as SPI pin
-        RingBuffer<float,16> readings; //number of readings per second
+        uint8_t spi_channel;
+        uint8_t index;
+        uint8_t tool_id;
+        std::string designator;
+        bool read_flag; //when true, the next call to get_raw will read a new temperature value
+        static RingBuffer *queue[]; //buffer to store last acquired temperature values
+        int fd; //handler for opening the reading file corresponding to the selected SPI channel
+
 };
 
 #endif

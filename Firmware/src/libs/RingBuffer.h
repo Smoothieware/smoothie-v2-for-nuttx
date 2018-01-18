@@ -1,121 +1,266 @@
-/*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
+//
+//  Simple fixed size ring buffer, modified from PlannerQueue header file.
+//  Thread safe for single Producer and single Consumer.
+//  Based on RoingBuffer by Dennis Lang http://home.comcast.net/~lang.dennis/code/ring/ring.html
+//  modified to allow in queue use of the objects without copying them, or doing memory allocation
 
-      With chucks taken from http://en.wikipedia.org/wiki/Circular_buffer, see licence there also
-*/
+#pragma once
 
-#ifndef RINGBUFFER_H
-#define RINGBUFFER_H
+#include <stddef.h>
 
-
-template<class kind, int length> class RingBuffer {
+class RingBuffer
+{
     public:
-        RingBuffer();
-        int          size();
-        int          capacity();
-        int          next_block_index(int index);
-        int          prev_block_index(int index);
-        void         push_back(kind object);
-        void         pop_front(kind &object);
-        kind*        get_head_ref();
-        kind*        get_tail_ref();
-        void         get( int index, kind &object);
-        kind*        get_ref( int index);
-        void         delete_tail();
+        /**
+         * @brief   Initialize ringbuffer
+         * @param   number of elements in buffer
+         * @return  Nothing
+         * @note    The module is initialized with head and tail indexes
+         * pointed to the first element and iter is a index used internally
+         */
+        RingBuffer(size_t length)
+        {
+            size=length;
+            tail = 0;
+            head = 0;
+            iter = 0;
+            buffer=(float*)malloc(sizeof(int) * size);
+        }
 
-        kind         buffer[length];
-        volatile int          tail;
-        volatile int          head;
+        /**
+         * @brief   Deinitialize ringbuffer
+         * @param   Nothing
+         * @return  Nothing
+         * @note    Deallocates the buffer from memory
+         */
+        ~RingBuffer()
+        {
+            delete [] buffer;
+        }
+
+        /**
+         * @brief   Get next index of the reference index
+         * @param   Reference index
+         * @return  Right index of the reference index
+         * @note    If reference index is the last of the buffer, returns first index instead
+         */
+        size_t next(size_t n) const
+        {
+            return (n + 1) % size;
+        }
+
+        /**
+         * @brief   Get previous index of the reference index
+         * @param   Reference index
+         * @return  Left index of the reference index
+         * @note    If reference index is the first of the buffer, returns last index instead
+         */
+        size_t prev(size_t n) const
+        {
+            if(n == 0) return size - 1;
+            return n - 1;
+        }
+
+        /**
+         * @brief   Check if the buffer is empty
+         * @param   Nothing
+         * @return  True if the buffer is empty
+         * @return  False if the buffer is not empty
+         */
+        bool empty() const
+        {
+            return (tail == head);
+        }
+
+        /**
+         * @brief   Check if the buffer is full
+         * @param   Nothing
+         * @return  True if the buffer is full
+         * @return  False if the buffer is not full
+         */
+        bool full() const
+        {
+            return (next(head) == tail);
+        }
+
+        /**
+         * @brief   Get head element
+         * @param   Nothing
+         * @return  Pointer to the element at the head of the queue
+         */
+        float* get_head()
+        {
+            return &buffer[head];
+        }
+
+        /**
+         * @brief   Commit the head element to the queue ready for fetching
+         * @param   Nothing
+         * @return  True if buffer is not full and head index gets to the next index
+         * @return  False if the buffer is full
+         */
+        bool queue_head()
+        {
+            if (full())
+                return false;
+
+            head = next(head);
+            return true;
+        }
+
+        /**
+         * @brief   Get tail element
+         * @param   Nothing
+         * @return  Pointer to the element at the tail of the queue
+         * @return  Null pointer if the buffer is empty
+         */
+        float* get_tail()
+        {
+            if (empty())
+                return nullptr;
+            return &buffer[tail];
+        }
+
+        /**
+         * @brief   Release tail element from buffer if the buffer is not empty
+         * @param   Nothing
+         * @return  Nothing
+         */
+        void release_tail()
+        {
+            if(empty()) return;
+            tail = next(tail);
+        }
+
+        /**
+         * @brief   Gets element from index previous to internal reference index, moving it to that index
+         * @param   Nothing
+         * @return  Pointer to the element at the specific index
+         */
+        float* tailward_get()
+        {
+            iter = prev(iter);
+            return &buffer[iter];
+        }
+
+        /**
+         * @brief   Gets element from index next to internal reference index, moving it to that index
+         * @param   Nothing
+         * @return  Pointer to the element at the specific index
+         */
+        float* headward_get()
+        {
+            iter = next(iter);
+            return &buffer[iter];
+        }
+
+        /**
+         * @brief   Check if internal reference is pointing to tail element
+         * @param   Nothing
+         * @return  True if internal reference index and tail index are equal
+         * @return  False if internal reference index and tail index are not equal
+         */
+        bool is_at_tail()
+        {
+            return iter == tail;
+        }
+
+        /**
+         * @brief   Check if internal reference is pointing to head element
+         * @param   Nothing
+         * @return  True if internal reference index and head index are equal
+         * @return  False if internal reference index and head index are not equal
+         */
+        bool is_at_head()
+        {
+            return iter == head;
+        }
+
+        /**
+         * @brief   Start iteration with internal reference pointing to the head element
+         * @return  Nothing
+         * @return  Nothing
+         */
+        void start_iteration()
+        {
+            iter = head;
+        }
+
+        /**
+         * @brief   End iteration with internal reference pointing to the tail element
+         * @return  Nothing
+         * @return  Nothing
+         */
+        void end_iteration()
+        {
+            iter = tail;
+        }
+
+        /**
+         * @brief   Next iteration with internal reference pointing to the next element
+         * @return  Nothing
+         * @return  Nothing
+         */
+        void next_iteration()
+        {
+            iter = next(iter);
+        }
+
+        /**
+         * @brief   Previous iteration with internal reference pointing to the previous element
+         * @return  Nothing
+         * @return  Nothing
+         */
+        void prev_iteration()
+        {
+            iter = prev(iter);
+        }
+
+        /**
+         * @brief   Get actual size of the buffer
+         * @param   Nothing
+         * @return  The number of elements between the head and tail elements
+         */
+        size_t get_size()
+        {
+            return (tail > head ? size : 0) + head - tail;
+        }
+
+        /**
+         * @brief   Stores object to the head position
+         * @param   New float object to be stored in the buffer
+         * @return  Nothing
+         */
+        void push_back(float object)
+        {
+            buffer[head] = object;
+            head = next(head);
+        }
+
+        /**
+         * @brief   Gets internal reference object
+         * @param   Nothing
+         * @return  Nothing
+         */
+        float* get_ref()
+        {
+            return &buffer[iter];
+        }
+
+        /**
+         * @brief   Resets the buffer by releasing all elements from the buffer
+         * @param   Nothing
+         * @return  Nothing
+         */
+        void reset()
+        {
+            if(empty()) return;
+            tail = head;
+        }
+    private:
+        float *buffer;
+        size_t iter;   //Internal pointer
+        size_t tail;   //Pointer to the oldest object
+        size_t head;   //Pointer to the newest object
+        size_t size;   //Fixed size of the buffer
 };
-
-//#include "sLPC17xx.h"
-//#include "chip-defs.h"
-
-template<class kind, int length> RingBuffer<kind, length>::RingBuffer(){
-    this->tail = this->head = 0;
-}
-
-template<class kind, int length>  int RingBuffer<kind, length>::capacity(){
-    return length-1;
-}
-
-template<class kind, int length>  int RingBuffer<kind, length>::size(){
-	return((this->tail>this->head)?length:0)+this->head-tail;
-	/*__disable_irq();
-	int i = head - tail + ((tail > head)?length:0);
-	__enable_irq();
-	return i;*/
-}
-
-template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index){
-    index++;
-    if (index == length) { index = 0; }
-    return(index);
-}
-
-template<class kind, int length> int RingBuffer<kind, length>::prev_block_index(int index){
-    if (index == 0) { index = length; }
-    index--;
-    return(index);
-}
-
-template<class kind, int length> void RingBuffer<kind, length>::push_back(kind object){
-    this->buffer[this->head] = object;
-    this->head = (head+1)&(length-1);
-}
-
-template<class kind, int length> kind* RingBuffer<kind, length>::get_head_ref(){
-    return &(buffer[head]);
-}
-
-template<class kind, int length> kind* RingBuffer<kind, length>::get_tail_ref(){
-    return &(buffer[tail]);
-}
-
-template<class kind, int length> void RingBuffer<kind, length>::get(int index, kind &object){
-    int j= 0;
-    int k= this->tail;
-    while (k != this->head){
-        if (j == index) break;
-        j++;
-        k= (k + 1) & (length - 1);
-    }
-    // TODO : this checks wether we are asked a value out of range
-    //if (k == this->head){
-    //    return NULL;
-    //}
-    object = this->buffer[k];
-}
-
-
-template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int index){
-    int j= 0;
-    int k= this->tail;
-    while (k != this->head){
-        if (j == index) break;
-        j++;
-        k= (k + 1) & (length - 1);
-    }
-    // TODO : this checks wether we are asked a value out of range
-    if (k == this->head){
-        return 0;
-    }
-    return &(this->buffer[k]);
-}
-
-template<class kind, int length> void RingBuffer<kind, length>::pop_front(kind &object){
-    object = this->buffer[this->tail];
-    this->tail = (this->tail+1)&(length-1);
-}
-
-template<class kind, int length> void RingBuffer<kind, length>::delete_tail(){
-    //kind dummy;
-    //this->pop_front(dummy);
-    this->tail = (this->tail+1)&(length-1);
-}
-
-
-#endif

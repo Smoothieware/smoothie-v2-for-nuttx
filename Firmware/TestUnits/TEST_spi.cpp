@@ -1,7 +1,9 @@
 #include "../Unity/src/unity.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 
+#include <unistd.h>
 #include <string>
 #include <map>
 #include <set>
@@ -9,41 +11,41 @@
 
 #include "TestRegistry.h"
 
-#include "Spi.h"
-#include "Pin.h"
-
-#include "lpc_types.h"
-#include "chip-defs.h"
-#include "spi_18xx_43xx.h"
-#include "ssp_18xx_43xx.h"
-#include "scu_18xx_43xx.h"
+#include "max31855.h"
 
 /* Read and print temperature data from max31855 sensor */
-REGISTER_TEST(SPITest, max31855_write)
+REGISTER_TEST(SPITest, read_max31855)
 {
-    //configure and enable SSP1
-    Spi *spi=new Spi(2);
-    TEST_ASSERT_TRUE(spi->from_string(2,"p1_3",Spi::MISO));
-    TEST_ASSERT_TRUE(spi->from_string(2,"pF_4",Spi::SCLK));
-    Pin *spi_cs_pin=new Pin();
-    TEST_ASSERT_TRUE(spi_cs_pin->from_string("p1_5"));
-    spi_cs_pin->set(true);
-    spi_cs_pin->as_output();
+    //open file in Nuttx corresponding to the selected SPI channel
+    uint8_t spi_channel=2;
+    std::string devpath="/dev/max31855_";
+    std::string str_spi_channel=std::to_string(spi_channel);
+    devpath+=str_spi_channel;
+    int fd = open(devpath.c_str(), O_RDONLY);
+
+    //Configure GPIO Chip select pin
+    Max31855::instance[Max31855::instance_index]=new Max31855();
+    TEST_ASSERT_TRUE(Max31855::instance[Max31855::instance_index]->spi_cs_pin.from_string("p1_5"));
+    Max31855::instance[Max31855::instance_index]->spi_cs_pin.set(true);
+    Max31855::instance[Max31855::instance_index]->spi_cs_pin.as_output();
 
     //read data n times (default: 1000 tests)
-    int n_tests=1000;
-    for(int i=0;i<n_tests;i++) {
-        spi_cs_pin->set(false);
-        //  Read first 16 bits
-        uint16_t data = spi->write(0);
-        //  Read last 16 bits
-        // uint16_t data2 = spi->write(0);
-        spi_cs_pin->set(true);
-        data = data >> 2;
-        float temperature = (data & 0x1FFF) / 4.f;
-        if (data & 0x2000) {
-            data = ~data;
-            temperature = ((data & 0x1FFF) + 1) / -4.f;
+    uint16_t data;
+    float temperature;
+    int n_measurements=1000;
+    for(int i=0;i<n_measurements;i++) {
+        //Obtain temp value from SPI
+        int ret=read(fd, &data, 2);
+
+        //Process temp
+        if (ret==-1) {
+            //Error
+            temperature = std::numeric_limits<float>::infinity();
+        } else {
+            temperature = (data & 0x1FFF) / 4.f;
+        }
+        if(!temperature) {
+            temperature = std::numeric_limits<float>::infinity();
         }
         printf("temperature = %0.1f ºC\n",temperature);
     }

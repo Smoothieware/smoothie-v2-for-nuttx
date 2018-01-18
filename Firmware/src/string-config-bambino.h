@@ -98,21 +98,18 @@ hotend2.y_offset = 25.0          # y offset from origin in mm\n\
 hotend2.z_offset = 0             # z offset from origin in mm\n\
 \n\
 [temperature control]\n\
-hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
-hotend.tool_id = 0               # T0 will select\n\
-hotend.thermistor_pin = P7.5     # Pin for the thermistor to read\n\
-hotend.heater_pin = P6.7         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
-hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
-hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
-hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
-hotend.designator = T            # Designator letter for this module\n\
-hotend.pwm_frequency = 10       # FIXME slow for now when is SPIFI\n\
-hotend.sensor = max31855        #max31855 implements SPI communication \n\
-hotend.chip_select_pin =   p1_5 \n\
-hotend.sclk_pin =   pf_4 \n\
-hotend.miso_pin =   p1_3 \n\
-hotend.spi_channel = 2         # SPI: 0 , SSP0: 1 , SSP1: 2\n\
-hotend.readings_per_second = 9 # should be 9 for the max31855 and 4 for the max6675\n\
+hotend.enable = true              # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend.tool_id = 0                # T0 will select\n\
+hotend.thermistor_pin = P7.5      # Pin for the thermistor to read\n\
+hotend.heater_pin = P6.7          # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
+hotend.thermistor = EPCOS100K     # See http://smoothieware.org/temperaturecontrol#toc5\n\
+hotend.set_m_code = 104           # M-code to set the temperature for this module\n\
+hotend.set_and_wait_m_code = 109  # M-code to set-and-wait for this module\n\
+hotend.designator = T             # Designator letter for this module\n\
+hotend.sensor = max31855          # Type of sensor\n\
+hotend.chip_select_pin = p1_5     # Pin for controlling sensor through SPI\n\
+hotend.spi_channel = 2            # SSP0: 1 , SSP1: 2\n\
+hotend.readings_per_second = 9    # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend2.tool_id = 1               # T1 will select\n\
@@ -122,6 +119,10 @@ hotend2.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontr
 hotend2.set_m_code = 104          # M-code to set the temperature for this module\n\
 hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
+hotend2.sensor = max31855         # Type of sensor\n\
+hotend2.chip_select_pin = p1_0    # Pin for controlling sensor through SPI\n\
+hotend2.spi_channel = 1           # SSP0: 1 , SSP1: 2\n\
+hotend2.readings_per_second = 9   # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
 bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\

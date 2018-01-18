@@ -163,18 +163,18 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
     }
 
     // For backward compatibility, default to a thermistor sensor.
-    std::string sensor_type = cr.get_string(m, sensor_key, "thermistor");
+    this->sensor_type = cr.get_string(m, sensor_key, "thermistor");
 
     // Instantiate correct sensor
     delete sensor;
     sensor = nullptr; // In case we fail to create a new sensor.
-    if(sensor_type.compare("thermistor") == 0) {
+    if(this->sensor_type.compare("thermistor") == 0) {
         sensor = new Thermistor();
-         } else if(sensor_type.compare("max31855") == 0) {
+         } else if(this->sensor_type.compare("max31855") == 0) {
              sensor = new Max31855();
-        // } else if(sensor_type.compare("ad8495") == 0) {
+        // } else if(this->sensor_type.compare("ad8495") == 0) {
         //     sensor = new AD8495();
-        // } else if(sensor_type.compare("pt100_e3d") == 0) {
+        // } else if(this->sensor_type.compare("pt100_e3d") == 0) {
         //     sensor = new PT100_E3D();
     } else {
         sensor = new TempSensor(); // A dummy implementation
@@ -182,7 +182,7 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
 
     // allow sensor to read the config
     if(!sensor->configure(cr, m)) {
-        printf("configure-temperature: %s sensor %s failed to configure\n", get_instance_name(), sensor_type.c_str());
+        printf("configure-temperature: %s sensor %s failed to configure\n", get_instance_name(), this->sensor_type.c_str());
         return false;
     }
 
@@ -245,6 +245,9 @@ bool TemperatureControl::configure(ConfigReader& cr, ConfigReader::section_map_t
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, set_m_code, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
         Dispatcher::getInstance()->add_handler(Dispatcher::MCODE_HANDLER, set_and_wait_m_code, std::bind(&TemperatureControl::handle_mcode, this, _1, _2));
     }
+
+	// we schedule a call back in command context to get raw data if max31855 is configured
+    want_command_ctx = true;
 
     return true;
 }
@@ -512,6 +515,8 @@ float TemperatureControl::get_temperature()
 // called in an ISR, be nice!
 void TemperatureControl::thermistor_read_tick()
 {
+	// we schedule a call back in command context to get raw data if max31855 is configured
+    want_command_ctx = true;
     float temperature = sensor->get_temperature();
     if(!this->readonly && target_temperature > 2) {
         if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
@@ -679,6 +684,11 @@ void TemperatureControl::setPIDd(float d)
 // called in command context
 void TemperatureControl::in_command_ctx(bool)
 {
+    if (this->sensor_type=="max31855")
+    {
+        OutputStream os(1);  //print error messages to uart
+        sensor->get_raw(os); //Obtain raw data from max31855
+    }
     if(error_msg[0] != 0) {
         print_to_all_consoles(error_msg);
         error_msg[0] = 0;
