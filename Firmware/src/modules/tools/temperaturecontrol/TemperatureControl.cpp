@@ -677,7 +677,7 @@ void TemperatureControl::setPIDd(float d)
 }
 
 // called in command context
-void TemperatureControl::in_command_ctx()
+void TemperatureControl::in_command_ctx(bool)
 {
     if(error_msg[0] != 0) {
         print_to_all_consoles(error_msg);

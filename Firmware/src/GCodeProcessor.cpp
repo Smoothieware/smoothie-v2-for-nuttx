@@ -46,17 +46,20 @@ bool GCodeProcessor::parse(const char *line, GCodes_t& gcodes)
     const char *eos = line + strlen(line);
     int ln = 0;
     int cs = 0;
-    int checksum;
+    int checksum= 0;
 
     // deal with line numbers and checksums before we parse
     if(*p == 'N') {
         char *pp;
 
         // Get linenumber
-        ln = strtol(p + 1, &pp, 10);
+        if(p+1 != eos) {
+            ln = strtol(p + 1, &pp, 10);
+        }
+
         // get checksum
         char *csp = strchr(pp, '*');
-        if(csp == nullptr) {
+        if(csp == nullptr || csp+1 == eos) {
             checksum = 0;
         } else {
             checksum = strtol(csp + 1, nullptr, 10);
@@ -64,7 +67,7 @@ bool GCodeProcessor::parse(const char *line, GCodes_t& gcodes)
         }
 
         // if it is M110: Set Current Line Number
-        if(strncmp(pp + 1, "M110", 4) == 0) {
+        if(pp+4>= eos && strncmp(pp + 1, "M110", 4) == 0) {
             line_no = ln;
             return true;
         }

@@ -13,7 +13,6 @@
 
 #include <math.h>
 
-#define default_feed_rate_key           "default_feed_rate"
 #define filament_diameter_key           "filament_diameter"
 #define x_offset_key                    "x_offset"
 #define y_offset_key                    "y_offset"

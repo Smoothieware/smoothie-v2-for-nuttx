@@ -26,7 +26,7 @@ public:
     virtual bool request(const char *key, void *value) { return false; }
 
     // sent in command thread context about every 200ms, or after every gcode processed
-    virtual void in_command_ctx() {};
+    virtual void in_command_ctx(bool idle) {};
 
     // module registry function, to look up an instance of a module
     // returns nullptr if not found, otherwise returns a pointer to the module
@@ -45,7 +45,7 @@ public:
     static bool is_halted() { return halted; }
 
     static std::vector<std::string> print_modules();
-    static void broadcast_in_commmand_ctx();
+    static void broadcast_in_commmand_ctx(bool idle);
 
     bool was_added() const { return added; }
 

@@ -104,7 +104,7 @@ void Module::broadcast_halt(bool flg)
     }
 }
 
-void Module::broadcast_in_commmand_ctx()
+void Module::broadcast_in_commmand_ctx(bool idle)
 {
     for(auto& i : registry) {
         // foreach entry in the registry
@@ -113,14 +113,14 @@ void Module::broadcast_in_commmand_ctx()
             // it is a map of modules in a group
             for(auto& j : *x.map) {
                 if(j.second->want_command_ctx) {
-                    j.second->in_command_ctx();
+                    j.second->in_command_ctx(idle);
                 }
             }
 
         } else if(x.module != nullptr) {
             // it is a single module
             if(x.module->want_command_ctx) {
-                x.module->in_command_ctx();
+                x.module->in_command_ctx(idle);
             }
 
         } else {

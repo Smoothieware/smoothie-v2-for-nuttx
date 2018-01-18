@@ -97,6 +97,13 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
     // returning now means that everything has totally finished
 }
 
+void Conveyor::wait_for_room()
+{
+    while (PQUEUE->full()) {
+        safe_sleep(10); // is 10ms ok?
+    }
+}
+
 // should be called when idle, it is called when the command loop runs
 void Conveyor::check_queue(bool force)
 {

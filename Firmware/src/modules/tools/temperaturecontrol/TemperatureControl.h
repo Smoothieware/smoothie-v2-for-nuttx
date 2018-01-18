@@ -20,7 +20,7 @@ public:
     bool configure(ConfigReader& cr);
     void on_halt(bool flg);
     bool request(const char *key, void *value);
-    void in_command_ctx();
+    void in_command_ctx(bool);
 
     void set_desired_temperature(float desired_temperature);
     float get_temperature();

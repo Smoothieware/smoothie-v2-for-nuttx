@@ -56,6 +56,7 @@ bool CommandShell::initialize()
     THEDISPATCHER->add_handler( "$H", std::bind( &CommandShell::grblDH_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "test", std::bind( &CommandShell::test_cmd, this, _1, _2) );
     THEDISPATCHER->add_handler( "version", std::bind( &CommandShell::version_cmd, this, _1, _2) );
+    THEDISPATCHER->add_handler( "reset", std::bind( &CommandShell::reset_cmd, this, _1, _2) );
 
     THEDISPATCHER->add_handler(Dispatcher::MCODE_HANDLER, 20, std::bind(&CommandShell::m20_cmd, this, _1, _2));
 
@@ -114,6 +115,7 @@ bool CommandShell::ls_cmd(std::string& params, OutputStream& os)
     d = opendir(path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
+            if(Module::is_halted()) break;
             os.printf("%s", p->d_name);
             struct stat buf;
             std::string sp = path + "/" + p->d_name;
@@ -733,6 +735,7 @@ bool CommandShell::test_cmd(std::string& params, OutputStream& os)
 
 bool CommandShell::version_cmd(std::string& params, OutputStream& os)
 {
+    HELP("version - print version");
     os.printf("Smoothie Version2 for Mini Alpha: build 0.5\n");
     return true;
 }
@@ -807,7 +810,7 @@ bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
     }
 
     // open file to upload to
-    std::string upload_filename = stringutils::shift_parameter(params);
+    std::string upload_filename = params;
     FILE *fd = fopen(upload_filename.c_str(), "w");
     if(fd != NULL) {
         os.printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
@@ -829,3 +832,11 @@ bool CommandShell::upload_cmd(std::string& params, OutputStream& os)
     return true;
 }
 
+bool CommandShell::reset_cmd(std::string& params, OutputStream& os)
+{
+    HELP("reset board");
+    os.printf("Reset will occur in 5 seconds, make sure to disconnect before that\n");
+    usleep(5000000);
+    *(volatile int*)0x40053100 = 1; // reset core
+    return true;
+}

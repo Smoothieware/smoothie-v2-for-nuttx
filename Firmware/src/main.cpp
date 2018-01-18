@@ -110,6 +110,9 @@ mqd_t get_message_queue(bool read)
     if (mqfd == (mqd_t) - 1) {
         printf("get_message_queue: ERROR mq_open failed\n");
     }
+    // else{
+    //     printf("get message_queue: ok %d\n", mqfd);
+    // }
 
     return mqfd;
 }
@@ -545,6 +548,7 @@ static void *commandthrd(void *)
     for(;;) {
         const char *line;
         OutputStream *os;
+        bool idle= false;
 
         // This will timeout after 200 ms
         if(receive_message_queue(mqfd, &line, &os)) {
@@ -553,7 +557,7 @@ static void *commandthrd(void *)
             free((void *)line); // was strdup'd, FIXME we don't want to have do this
         } else {
             // timed out or other error
-
+            idle= true;
             if(idle_led != nullptr) {
                 // toggle led to show we are alive, but idle
                 idle_led->set(!idle_led->get());
@@ -572,7 +576,7 @@ static void *commandthrd(void *)
         }
 
         // call in_command_ctx for all modules that want it
-        Module::broadcast_in_commmand_ctx();
+        Module::broadcast_in_commmand_ctx(idle);
 
         // we check the queue to see if it is ready to run
         // we specifically deal with this in append_block, but need to check for other places
@@ -923,7 +927,7 @@ static int smoothie_startup(int, char **)
 
     int policy;
     status = pthread_getschedparam(usb_comms_thread.native_handle(), &policy, &sch_params);
-    printf("pthread get params: status= %d, policy= %d, priority= %d\n", status, policy, sch_params.sched_priority);
+    printf("usb_comms thread - pthread get params: status= %d, policy= %d, priority= %d\n", status, policy, sch_params.sched_priority);
 
     // Join the comms thread with the main thread
     usb_comms_thread.join();
