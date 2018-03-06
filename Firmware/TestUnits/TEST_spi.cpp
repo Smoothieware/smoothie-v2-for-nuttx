@@ -13,40 +13,48 @@
 
 #include "max31855.h"
 
-/* Read and print temperature data from max31855 sensor */
+/* Read and print temperature data from single or multiple max31855 sensor */
 REGISTER_TEST(SPITest, read_max31855)
 {
-    //open file in Nuttx corresponding to the selected SPI channel
-    uint8_t spi_channel=2;
-    std::string devpath="/dev/max31855_";
-    std::string str_spi_channel=std::to_string(spi_channel);
-    devpath+=str_spi_channel;
-    int fd = open(devpath.c_str(), O_RDONLY);
-
-    //Configure GPIO Chip select pin
-    Max31855::instance[Max31855::instance_index]=new Max31855();
-    TEST_ASSERT_TRUE(Max31855::instance[Max31855::instance_index]->spi_cs_pin.from_string("p1_5"));
-    Max31855::instance[Max31855::instance_index]->spi_cs_pin.set(true);
-    Max31855::instance[Max31855::instance_index]->spi_cs_pin.as_output();
-
+ /* open file in Nuttx corresponding to the selected device ID:
+        dev_id 0: File /dev/temp0, Channel SSP0, Device 0
+        dev_id 1: File /dev/temp1, Channel SSP0, Device 1
+        dev_id 2: File /dev/temp2, Channel SSP1, Device 0
+        dev_id 3: File /dev/temp3, Channel SSP1, Device 1   */
+    
+    //Two sensors
+    int ninstances=2;
+    int fd[ninstances];
+    std::string devpath;
+    
+    //dev_id 2
+    devpath = "/dev/temp2";
+    fd[0] = open(devpath.c_str(), O_RDONLY);
+    
+    //dev_id 3
+    devpath = "/dev/temp3";
+    fd[1] = open(devpath.c_str(), O_RDONLY);    
+    
     //read data n times (default: 1000 tests)
     uint16_t data;
     float temperature;
-    int n_measurements=1000;
-    for(int i=0;i<n_measurements;i++) {
-        //Obtain temp value from SPI
-        int ret=read(fd, &data, 2);
+    int ntests=1000;
+    int test = 0; 
+    while (test < ntests) {
+        usleep(100000); // sleep thread during 100 ms
+    	for(int i = 0; i < ninstances; i++) {
+    	    //Obtain temp value from SPI
+     	    int ret = read(fd[i], &data, 2);
 
-        //Process temp
-        if (ret==-1) {
-            //Error
-            temperature = std::numeric_limits<float>::infinity();
-        } else {
-            temperature = (data & 0x1FFF) / 4.f;
+   	 	    //Process temp
+        	if (ret == -1) {
+            	//Error
+            	temperature = std::numeric_limits<float>::infinity();
+        	} else {
+            	temperature = (data & 0x1FFF) / 4.f;
+        	}
+        	printf("instance = %d temperature = %0.1f ºC\n", i, temperature);
+        	test++;
         }
-        if(!temperature) {
-            temperature = std::numeric_limits<float>::infinity();
-        }
-        printf("temperature = %0.1f ºC\n",temperature);
     }
 }

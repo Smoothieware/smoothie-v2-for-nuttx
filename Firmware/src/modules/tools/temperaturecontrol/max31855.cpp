@@ -8,144 +8,166 @@
 #include <math.h>
 #include <fcntl.h>
 
-#include "lpc43_ssp.h"
 #include "max31855.h"
 #include "OutputStream.h"
+#include "main.h"
 
-#define chip_select_pin_key "chip_select_pin"
-#define spi_channel_key         "spi_channel"
 #define designator_key           "designator"
 #define tool_id_key                 "tool_id"
+#define dev_id_key					 "dev_id"
 
-//Define maximum number of max31855 sensors which may be configured
-//TODO this defined number should be removed as we would like to configure any number of sensors
-#define NUM_MAX31855_SENSORS 2
-Max31855 *Max31855::instance[NUM_MAX31855_SENSORS];
-uint8_t Max31855::instance_index = 0;
-RingBuffer *Max31855::queue[NUM_MAX31855_SENSORS];
+Max31855 *Max31855::instances[Max31855::num_dev] = {nullptr};
+RingBuffer<float,16> *Max31855::queue[Max31855::num_dev] = {nullptr};
+int Max31855::ninstances = 0;
+bool Max31855::thread_flag = true;
 
-/* The following functions outside class are provided for Nuttx:
- * .select functions control GPIO Chip Select pin during data acquisition for target sensor
- * .status functions perform status operations (not currently used but need to be here)
- */
-
-// For enabled SSP0 channel
-void lpc43_ssp0select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool selected)
+/* Initialize target instance */
+Max31855::Max31855()
 {
-    Max31855::instance[Max31855::instance_index]->spi_cs_pin.set(!selected);
+    this->instance_idx = ninstances++;
+    instances[this->instance_idx] = this;
+    queue[this->instance_idx] = new RingBuffer<float,16>(); // buffer initialized with 16 float elements
+    this->error_flag = false;
 }
-uint8_t lpc43_ssp0status(FAR struct spi_dev_s *dev, enum spi_dev_e devid){return 0;}
 
-// For enabled SSP1 channel
-void lpc43_ssp1select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool selected)
+/* Deinitialize target instance */
+Max31855::~Max31855()
 {
-    Max31855::instance[Max31855::instance_index]->spi_cs_pin.set(!selected);
-}
-uint8_t lpc43_ssp1status(FAR struct spi_dev_s *dev, enum spi_dev_e devid){return 0;}
-
-/* Initialize target sensor */
-Max31855::Max31855(){
-    this->read_flag=true;
-    this->index=instance_index;
-    instance[instance_index] = this;
-    queue[instance_index++] = new RingBuffer(16); //buffer initialized with 16 elements
+    // remove target instance from instances array
+    instances[this->instance_idx] = nullptr;
+    for (int i = this->instance_idx; i < ninstances - 1; ++i) {
+        instances[i] = instances[i + 1];
+        queue[i] = queue[i + 1];
+    }
+    --ninstances;
+    this->error_flag=false;
 }
 
 /* Configure the module using the parameters from the config file */
 bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 {
-    /* select which SPI channel to use:
-        0: SPI
-        1: SSP0   (default)
-        2: SSP1   */
-    this->spi_channel = cr.get_int(m, spi_channel_key,1);
-    if(spi_channel < 0 || spi_channel > 2) {
-        printf("WARNING: Invalid SPI channel %d\n",spi_channel);
-        return false;
-    }
-
-    /* open file in Nuttx corresponding to the selected SPI channel
-        /dev/max31855_0: SPI
-        /dev/max31855_1: SSP0   (default)
-        /dev/max31855_2: SSP1   */
-    std::string devpath="/dev/max31855_";
-    std::string str_spi_channel=std::to_string(this->spi_channel);
-    devpath+=str_spi_channel;
+    /* open file in Nuttx corresponding to the selected device ID:
+        dev_id 0: File /dev/temp0, Channel SSP0, Device 0
+        dev_id 1: File /dev/temp1, Channel SSP0, Device 1
+        dev_id 2: File /dev/temp2, Channel SSP1, Device 0
+        dev_id 3: File /dev/temp3, Channel SSP1, Device 1   */
+    std::string devpath = "/dev/temp";
+    this->dev_id = cr.get_int(m, dev_id_key, 0);
+    devpath += std::to_string(this->dev_id);
     this->fd = open(devpath.c_str(), O_RDONLY);
-    //negative handler if can't successfully open, positive if it is open
+    // negative handler if can't successfully open, positive if it is open
     if (this->fd < 0) {
-        printf("WARNING: Could not open file %s\n",devpath);
+        printf("ERROR: Could not open file %s\n",devpath);
         return false;
     }
 
-    //Configure GPIO chip select pin
-    this->spi_cs_pin=cr.get_string(m, chip_select_pin_key,"p1_0");
-    this->spi_cs_pin.set(true);
-    this->spi_cs_pin.as_output();
+    // identifying tool
+    this->designator = cr.get_string(m, designator_key, "");
+    this->tool_id = cr.get_int(m, tool_id_key, 0);
 
-    //Identifying tool
-    this->designator=cr.get_string(m, designator_key,"");
-    this->tool_id=cr.get_int(m, tool_id_key,0);
+    // initialize sum of temp values in buffer for moving average calculation
+    this->sum = 0;
 
+    // we have to do this the long way as we want to set the stack size
+    if (thread_flag)
+    {
+    	// this flag is necessary since we want to launch this thread only once
+    	thread_flag = false;
+		pthread_attr_t attr;
+		struct sched_param sparam;
+		int status;
+
+		status = pthread_attr_init(&attr);
+		if (status != 0) {
+			printf("max31855: pthread_attr_init failed, status=%d\n", status);
+		}
+
+		status = pthread_attr_setstacksize(&attr, 2000);
+		if (status != 0) {
+			printf("max31855: pthread_attr_setstacksize failed, status=%d\n", status);
+			return true;
+		}
+
+		status = pthread_attr_setschedpolicy(&attr, SCHED_RR);
+		if (status != OK) {
+			printf("max31855: pthread_attr_setschedpolicy failed, status=%d\n", status);
+			return true;
+		} else {
+			printf("max31855: Set max31855 thread policy to SCHED_RR\n");
+		}
+
+		sparam.sched_priority = 90; // set lower than comms threads... 150; // (prio_min + prio_mid) / 2;
+		status = pthread_attr_setschedparam(&attr, &sparam);
+		if (status != OK) {
+			printf("max31855: pthread_attr_setschedparam failed, status=%d\n", status);
+			return true;
+		} else {
+			printf("max31855: Set max31855 thread priority to %d\n", sparam.sched_priority);
+		}
+
+		status = pthread_create(&temp_thread_p, &attr, temp_thread, NULL);
+		if (status != 0) {
+			printf("max31855: pthread_create failed, status=%d\n", status);
+		}
+    }
     return true;
 }
 
-/* Acquire temperature data from the sensor */
-void Max31855::get_raw(OutputStream& os)
+/* Thread launcher */
+void* Max31855::temp_thread(void*)
 {
-    //called in command thread context
+	// this runs indefinitely, first created instance represents the thread function
+    instances[0]->temperature_thread();
+    return nullptr;
+}
 
-    // this rate limits SPI access
-    if(!this->read_flag) return;
-
-    //Obtain temp value from SPI
+/* Thread for obtaining readings from all devices */
+void Max31855::temperature_thread()
+{
+    // called in thread context
+	int i;
     uint16_t data;
-    instance_index=this->index;
-    int ret=read(this->fd, &data, 2);
+    while (true)
+    {
+        usleep(100000); // sleep thread during 100 ms
+        for (i = 0; i < ninstances; i++) {
+			// obtain temp value from SPI
+			int ret = read(instances[i]->fd, &data, 2);
 
-    //Process temp
-    float temperature;
-    if (ret==-1) {
-        //Error
-        //If enabled, error messages from Nuttx are provided here
-        os.printf("On tool %s%d\n\n", this->designator.c_str(),this->tool_id);
-        temperature = std::numeric_limits<float>::infinity();
-        queue[instance_index]->reset();
-        //TODO: Max31855 needs more diagnostics from Nuttx context, mainly SPI related
-    } else {
-        temperature = (data & 0x1FFF) / 4.f;
+			// process temp
+			if (ret == -1) {
+				// error
+				// if enabled, debug error messages from Nuttx are provided at this point
+				printf("ERROR: On tool %s%d\n\n", instances[i]->designator.c_str(), instances[i]->tool_id);
+				instances[i]->error_flag = true;
+			} else {
+				if (queue[i]->full()) {
+					// when buffer is full, we remove the oldest element from it
+					instances[i]->sum -= queue[i]->pop_front();
+				}
+				float temperature = (data & 0x1FFF) / 4.f;
+				// get new element into the buffer
+				queue[i]->push_back(temperature);
+				instances[i]->sum += temperature;
+			}
+        }
     }
-    if (queue[instance_index]->full()) {
-        queue[instance_index]->release_tail();
-    }
-    if(!isinf(temperature)) {
-        queue[instance_index]->push_back(temperature);
-    }
-
-    // don't read again until get_temperature() is called
-    this->read_flag=false;
 }
 
 /* Output average temperature value of the sensor */
 float Max31855::get_temperature()
 {
-    //called in ISR context
-
-    // allow read from hardware via SPI on next call to get_raw()
-    this->read_flag=true;
-    instance_index=this->index;
-
-    // Return error
-    if(queue[instance_index]->empty()) {
+    // called in ISR context
+    if (this->error_flag) {
+        // return infinity (error)
         return std::numeric_limits<float>::infinity();
+    } else {
+    	if (queue[this->instance_idx]->empty()) {
+    		// this buffer does not contain any temp values, return infinity
+    		return std::numeric_limits<float>::infinity();
+    	} else {
+    		// return an average of the last readings
+    		return this->sum / queue[this->instance_idx]->get_size();
+    	}
     }
-
-    // Return an average of the last readings
-    float sum=0;
-    queue[instance_index]->end_iteration();
-    while(!(queue[instance_index]->is_at_head())){
-        sum += *queue[instance_index]->get_ref();
-        queue[instance_index]->next_iteration();
-    }
-    return sum / queue[instance_index]->get_size();
 }

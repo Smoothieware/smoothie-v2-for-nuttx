@@ -20,19 +20,20 @@ class Max31855 : public TempSensor
     public:
 
         /**
-         * @brief   Initialize target sensor
+         * @brief   Initialize target instance
          * @param   Nothing
          * @return  Nothing
-         * @note    The module is initialized with a null pointer
+         * @note    The device is initialized with respective buffer
          */
         Max31855();
 
         /**
-         * @brief   Deinitialize target sensor
+         * @brief   Deinitialize target instance
          * @param   Nothing
          * @return  Nothing
+         * @note    The device is deinitialized with respective buffer
          */
-        ~Max31855() {};
+        ~Max31855();
 
         /**
          * @brief   Configure the module using the parameters from the config file
@@ -46,31 +47,39 @@ class Max31855 : public TempSensor
         /**
          * @brief   Output average temperature value of the sensor
          * @param   Nothing
+         * @return  Infinity if a single bad reading occurs
          * @return  Average of the last acquired temperature values
          */
         float get_temperature();
 
         /**
-         * @brief   Acquire temperature data from the sensor
-         * @param   os          : output stream
+         * @brief   Thread launcher
+         * @param   Nothing
          * @return  Nothing
-         * @note    Raw data is acquired and converted to temperature in Nuttx
+         * @note    This function runs only once since it works for all devices simultaneously
          */
-        void get_raw(OutputStream& os);
+        static void* temp_thread(void *);
 
-        //The following variables need to be public as Nuttx functions need access to them
-        Pin spi_cs_pin;   //configure as GPIO pin
-        static Max31855* instance[];
-        static uint8_t instance_index;
+        /**
+         * @brief   Thread for obtaining readings from all devices
+         * @param   Nothing
+         * @return  Undeclared pointer
+         * @note    This thread runs indefinitely and sleeps for 100 ms
+         */
+        void temperature_thread();
     private:
-        uint8_t spi_channel;
-        uint8_t index;
-        uint8_t tool_id;
+        static const int num_dev = 2; // define maximum number of max31855 sensors which may be configured
+        static Max31855* instances[num_dev]; // array of device instances
+        static int ninstances; // number of configured devices
+        static RingBuffer<float,16> *queue[num_dev]; // buffer to store last acquired temperature values
+        static bool thread_flag; // flag for launching thread only once
+        pthread_t temp_thread_p;
+        int instance_idx;
+        int dev_id;
+        int tool_id;
         std::string designator;
-        bool read_flag; //when true, the next call to get_raw will read a new temperature value
-        static RingBuffer *queue[]; //buffer to store last acquired temperature values
-        int fd; //handler for opening the reading file corresponding to the selected SPI channel
-
+        float sum; // accumulates last acquired temperature values for moving average calculation
+        struct { bool error_flag; }; // when true, a bad reading is detected and the system will halt
+        int fd; // handler for opening the reading file corresponding to the selected SSP channel
 };
-
 #endif
