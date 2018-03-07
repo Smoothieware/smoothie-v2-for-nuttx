@@ -14,7 +14,7 @@
 
 #define designator_key           "designator"
 #define tool_id_key                 "tool_id"
-#define dev_id_key					 "dev_id"
+#define dev_id_key                   "dev_id"
 
 Max31855 *Max31855::instances[Max31855::num_dev] = {nullptr};
 RingBuffer<float,16> *Max31855::queue[Max31855::num_dev] = {nullptr};
@@ -71,44 +71,44 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
     // we have to do this the long way as we want to set the stack size
     if (thread_flag)
     {
-    	// this flag is necessary since we want to launch this thread only once
-    	thread_flag = false;
-		pthread_attr_t attr;
-		struct sched_param sparam;
-		int status;
+        // this flag is necessary since we want to launch this thread only once
+        thread_flag = false;
+        pthread_attr_t attr;
+        struct sched_param sparam;
+        int status;
 
-		status = pthread_attr_init(&attr);
-		if (status != 0) {
-			printf("max31855: pthread_attr_init failed, status=%d\n", status);
-		}
+        status = pthread_attr_init(&attr);
+        if (status != 0) {
+            printf("max31855: pthread_attr_init failed, status=%d\n", status);
+        }
 
-		status = pthread_attr_setstacksize(&attr, 2000);
-		if (status != 0) {
-			printf("max31855: pthread_attr_setstacksize failed, status=%d\n", status);
-			return true;
-		}
+        status = pthread_attr_setstacksize(&attr, 2000);
+        if (status != 0) {
+            printf("max31855: pthread_attr_setstacksize failed, status=%d\n", status);
+            return true;
+        }
 
-		status = pthread_attr_setschedpolicy(&attr, SCHED_RR);
-		if (status != OK) {
-			printf("max31855: pthread_attr_setschedpolicy failed, status=%d\n", status);
-			return true;
-		} else {
-			printf("max31855: Set max31855 thread policy to SCHED_RR\n");
-		}
+        status = pthread_attr_setschedpolicy(&attr, SCHED_RR);
+        if (status != OK) {
+            printf("max31855: pthread_attr_setschedpolicy failed, status=%d\n", status);
+            return true;
+        } else {
+            printf("max31855: Set max31855 thread policy to SCHED_RR\n");
+        }
 
-		sparam.sched_priority = 90; // set lower than comms threads... 150; // (prio_min + prio_mid) / 2;
-		status = pthread_attr_setschedparam(&attr, &sparam);
-		if (status != OK) {
-			printf("max31855: pthread_attr_setschedparam failed, status=%d\n", status);
-			return true;
-		} else {
-			printf("max31855: Set max31855 thread priority to %d\n", sparam.sched_priority);
-		}
+        sparam.sched_priority = 90; // set lower than comms threads... 150; // (prio_min + prio_mid) / 2;
+        status = pthread_attr_setschedparam(&attr, &sparam);
+        if (status != OK) {
+            printf("max31855: pthread_attr_setschedparam failed, status=%d\n", status);
+            return true;
+        } else {
+            printf("max31855: Set max31855 thread priority to %d\n", sparam.sched_priority);
+        }
 
-		status = pthread_create(&temp_thread_p, &attr, temp_thread, NULL);
-		if (status != 0) {
-			printf("max31855: pthread_create failed, status=%d\n", status);
-		}
+        status = pthread_create(&temp_thread_p, &attr, temp_thread, NULL);
+        if (status != 0) {
+            printf("max31855: pthread_create failed, status=%d\n", status);
+        }
     }
     return true;
 }
@@ -116,7 +116,7 @@ bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 /* Thread launcher */
 void* Max31855::temp_thread(void*)
 {
-	// this runs indefinitely, first created instance represents the thread function
+    // this runs indefinitely, first created instance represents the thread function
     instances[0]->temperature_thread();
     return nullptr;
 }
@@ -125,31 +125,31 @@ void* Max31855::temp_thread(void*)
 void Max31855::temperature_thread()
 {
     // called in thread context
-	int i;
+    int i;
     uint16_t data;
     while (true)
     {
         usleep(100000); // sleep thread during 100 ms
         for (i = 0; i < ninstances; i++) {
-			// obtain temp value from SPI
-			int ret = read(instances[i]->fd, &data, 2);
+            // obtain temp value from SPI
+            int ret = read(instances[i]->fd, &data, 2);
 
-			// process temp
-			if (ret == -1) {
-				// error
-				// if enabled, debug error messages from Nuttx are provided at this point
-				printf("ERROR: On tool %s%d\n\n", instances[i]->designator.c_str(), instances[i]->tool_id);
-				instances[i]->error_flag = true;
-			} else {
-				if (queue[i]->full()) {
-					// when buffer is full, we remove the oldest element from it
-					instances[i]->sum -= queue[i]->pop_front();
-				}
-				float temperature = (data & 0x1FFF) / 4.f;
-				// get new element into the buffer
-				queue[i]->push_back(temperature);
-				instances[i]->sum += temperature;
-			}
+            // process temp
+            if (ret == -1) {
+                // error
+                // if enabled, debug error messages from Nuttx are provided at this point
+                printf("ERROR: On tool %s%d\n\n", instances[i]->designator.c_str(), instances[i]->tool_id);
+                instances[i]->error_flag = true;
+            } else {
+                if (queue[i]->full()) {
+                    // when buffer is full, we remove the oldest element from it
+                    instances[i]->sum -= queue[i]->pop_front();
+                }
+                float temperature = (data & 0x1FFF) / 4.f;
+                // get new element into the buffer
+                queue[i]->push_back(temperature);
+                instances[i]->sum += temperature;
+            }
         }
     }
 }
@@ -162,12 +162,12 @@ float Max31855::get_temperature()
         // return infinity (error)
         return std::numeric_limits<float>::infinity();
     } else {
-    	if (queue[this->instance_idx]->empty()) {
-    		// this buffer does not contain any temp values, return infinity
-    		return std::numeric_limits<float>::infinity();
-    	} else {
-    		// return an average of the last readings
-    		return this->sum / queue[this->instance_idx]->get_size();
-    	}
+        if (queue[this->instance_idx]->empty()) {
+            // this buffer does not contain any temp values, return infinity
+            return std::numeric_limits<float>::infinity();
+        } else {
+            // return an average of the last readings
+            return this->sum / queue[this->instance_idx]->get_size();
+        }
     }
 }

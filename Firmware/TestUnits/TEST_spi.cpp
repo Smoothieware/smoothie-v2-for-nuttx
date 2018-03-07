@@ -42,19 +42,19 @@ REGISTER_TEST(SPITest, read_max31855)
     int test = 0; 
     while (test < ntests) {
         usleep(100000); // sleep thread during 100 ms
-    	for(int i = 0; i < ninstances; i++) {
-    	    //Obtain temp value from SPI
-     	    int ret = read(fd[i], &data, 2);
+        for(int i = 0; i < ninstances; i++) {
+            //Obtain temp value from SPI
+             int ret = read(fd[i], &data, 2);
 
-   	 	    //Process temp
-        	if (ret == -1) {
-            	//Error
-            	temperature = std::numeric_limits<float>::infinity();
-        	} else {
-            	temperature = (data & 0x1FFF) / 4.f;
-        	}
-        	printf("instance = %d temperature = %0.1f ºC\n", i, temperature);
-        	test++;
+                //Process temp
+            if (ret == -1) {
+                //Error
+                temperature = std::numeric_limits<float>::infinity();
+            } else {
+                temperature = (data & 0x1FFF) / 4.f;
+            }
+            printf("instance = %d temperature = %0.1f ºC\n", i, temperature);
+            test++;
         }
     }
 }
