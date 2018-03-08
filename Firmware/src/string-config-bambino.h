@@ -105,7 +105,7 @@ hotend.set_m_code = 104           # M-code to set the temperature for this modul
 hotend.set_and_wait_m_code = 109  # M-code to set-and-wait for this module\n\
 hotend.designator = T             # Designator letter for this module\n\
 hotend.sensor = max31855          # Type of sensor\n\
-hotend.dev_id = 2                 # Device ID number\n\
+hotend.dev_path_id = 2            # Device path ID number\n\
 hotend.readings_per_second = 9    # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
@@ -115,7 +115,7 @@ hotend2.set_m_code = 104          # M-code to set the temperature for this modul
 hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
 hotend2.sensor = max31855         # Type of sensor\n\
-hotend2.dev_id = 3                # Device ID number\n\
+hotend2.dev_path_id = 3           # Device path ID number\n\
 hotend2.readings_per_second = 9   # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\

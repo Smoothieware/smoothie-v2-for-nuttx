@@ -75,9 +75,7 @@ class Max31855 : public TempSensor
         static bool thread_flag; // flag for launching thread only once
         pthread_t temp_thread_p;
         int instance_idx;
-        int dev_id;
-        int tool_id;
-        std::string designator;
+        int dev_path_id;
         float sum; // accumulates last acquired temperature values for moving average calculation
         struct { bool error_flag; }; // when true, a bad reading is detected and the system will halt
         int fd; // handler for opening the reading file corresponding to the selected SSP channel

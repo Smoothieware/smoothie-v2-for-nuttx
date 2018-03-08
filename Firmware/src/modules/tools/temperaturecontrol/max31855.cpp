@@ -12,9 +12,7 @@
 #include "OutputStream.h"
 #include "main.h"
 
-#define designator_key           "designator"
-#define tool_id_key                 "tool_id"
-#define dev_id_key                   "dev_id"
+#define dev_path_id_key                   "dev_path_id"
 
 Max31855 *Max31855::instances[Max31855::num_dev] = {nullptr};
 RingBuffer<float,16> *Max31855::queue[Max31855::num_dev] = {nullptr};
@@ -46,24 +44,20 @@ Max31855::~Max31855()
 /* Configure the module using the parameters from the config file */
 bool Max31855::configure(ConfigReader& cr, ConfigReader::section_map_t& m)
 {
-    /* open file in Nuttx corresponding to the selected device ID:
-        dev_id 0: File /dev/temp0, Channel SSP0, Device 0
-        dev_id 1: File /dev/temp1, Channel SSP0, Device 1
-        dev_id 2: File /dev/temp2, Channel SSP1, Device 0
-        dev_id 3: File /dev/temp3, Channel SSP1, Device 1   */
-    std::string devpath = "/dev/temp";
-    this->dev_id = cr.get_int(m, dev_id_key, 0);
-    devpath += std::to_string(this->dev_id);
-    this->fd = open(devpath.c_str(), O_RDONLY);
+    /* open temperature device file from Nuttx corresponding to the selected device path ID number:
+        dev_path_id 0: File /dev/temp0, Channel SSP0, Device 0
+        dev_path_id 1: File /dev/temp1, Channel SSP0, Device 1
+        dev_path_id 2: File /dev/temp2, Channel SSP1, Device 0
+        dev_path_id 3: File /dev/temp3, Channel SSP1, Device 1   */
+    std::string dev_path = "/dev/temp";
+    this->dev_path_id = cr.get_int(m, dev_path_id_key, 0);
+    dev_path += std::to_string(this->dev_path_id);
+    this->fd = open(dev_path.c_str(), O_RDONLY);
     // negative handler if can't successfully open, positive if it is open
     if (this->fd < 0) {
-        printf("ERROR: Could not open file %s\n",devpath);
+        printf("ERROR: Could not open file %s\n", dev_path);
         return false;
     }
-
-    // identifying tool
-    this->designator = cr.get_string(m, designator_key, "");
-    this->tool_id = cr.get_int(m, tool_id_key, 0);
 
     // initialize sum of temp values in buffer for moving average calculation
     this->sum = 0;
@@ -138,7 +132,6 @@ void Max31855::temperature_thread()
             if (ret == -1) {
                 // error
                 // if enabled, debug error messages from Nuttx are provided at this point
-                printf("ERROR: On tool %s%d\n\n", instances[i]->designator.c_str(), instances[i]->tool_id);
                 instances[i]->error_flag = true;
             } else {
                 if (queue[i]->full()) {
