@@ -189,12 +189,12 @@ Adc* Adc::from_string(const char *name)
         uint16_t modefunc = 1 << 4; // disable pullup,
         Chip_SCU_PinMuxSet(port, pin, modefunc);
 
+        // TODO do not hard code ADC0
+        Chip_SCU_ADC_Channel_Config(0, channel);
+    		
     } else {
         return nullptr;
     }
-
-    // TODO do not hard code ADC0
-    Chip_SCU_ADC_Channel_Config(0, channel);
 
     memset(sample_buffer, 0, sizeof(sample_buffer));
     memset(ave_buf, 0, sizeof(ave_buf));
