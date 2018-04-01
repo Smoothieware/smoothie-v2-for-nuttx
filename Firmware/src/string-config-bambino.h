@@ -98,23 +98,25 @@ hotend2.y_offset = 25.0          # y offset from origin in mm\n\
 hotend2.z_offset = 0             # z offset from origin in mm\n\
 \n\
 [temperature control]\n\
-hotend.enable = true             # Whether to activate this ( 'hotend' ) module at all.\n\
-hotend.tool_id = 0               # T0 will select\n\
-hotend.thermistor_pin = P7.5     # Pin for the thermistor to read\n\
-hotend.heater_pin = P6.7         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
-hotend.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
-hotend.set_m_code = 104          # M-code to set the temperature for this module\n\
-hotend.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
-hotend.designator = T            # Designator letter for this module\n\
+hotend.enable = true              # Whether to activate this ( 'hotend' ) module at all.\n\
+hotend.tool_id = 0                # T0 will select\n\
+hotend.heater_pin = P6.7          # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
+hotend.set_m_code = 104           # M-code to set the temperature for this module\n\
+hotend.set_and_wait_m_code = 109  # M-code to set-and-wait for this module\n\
+hotend.designator = T             # Designator letter for this module\n\
+hotend.sensor = max31855          # Type of sensor\n\
+hotend.dev_path_id = 2            # Device path ID number\n\
+hotend.readings_per_second = 9    # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 hotend2.enable = false            # Whether to activate this ( 'hotend' ) module at all.\n\
 hotend2.tool_id = 1               # T1 will select\n\
-hotend2.thermistor_pin = P7.4     # Pin for the thermistor to read\n\
 hotend2.heater_pin = P6.8         # Pin that controls the heater, set to nc if a readonly thermistor is being defined\n\
-hotend2.thermistor = EPCOS100K    # See http://smoothieware.org/temperaturecontrol#toc5\n\
 hotend2.set_m_code = 104          # M-code to set the temperature for this module\n\
 hotend2.set_and_wait_m_code = 109 # M-code to set-and-wait for this module\n\
 hotend2.designator = T            # Designator letter for this module\n\
+hotend2.sensor = max31855         # Type of sensor\n\
+hotend2.dev_path_id = 3           # Device path ID number\n\
+hotend2.readings_per_second = 9   # Recommended 9 for max31855 and 4 for max6675\n\
 \n\
 bed.enable = true # Whether to activate this module at all.\n\
 bed.tool_id = 250                 # beds do not have tool ids but we need to set a unique one anyway\n\
